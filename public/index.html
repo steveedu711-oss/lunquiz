@@ -467,6 +467,7 @@
             let batches = Math.ceil(total / batchSize);
             let scorePerQ = Math.floor(100 / total);
             let allItems = [];
+            let simTimer = null;
 
             uploadItems.filter(item => item.type === 'docx').forEach(item => { contentText += "\n[附件 " + item.name + "]:\n" + item.content; });
 
@@ -477,7 +478,16 @@
                 const API_URL = API_BASE + "/api/generate";
                 for(let i=0; i<batches; i++) {
                     document.getElementById('status').innerText = "生成中... " + (i+1) + "/" + batches;
-                    document.getElementById('bar').style.width = Math.round(((i)/batches)*100) + "%";
+                    let baseP = Math.round((i/batches)*100);
+                    let nextP = Math.round(((i+1)/batches)*100);
+                    let simP = baseP;
+                    document.getElementById('bar').style.width = baseP + "%";
+                    simTimer = setInterval(() => {
+                        if (simP < nextP - 1) {
+                            simP++;
+                            document.getElementById('bar').style.width = simP + "%";
+                        }
+                    }, 250);
 
                     let currentCount = Math.min(batchSize, total - allItems.length);
                     let startNum = i * batchSize + 1;
@@ -516,6 +526,9 @@
                         body: JSON.stringify({ contents: [{ parts: parts }] })
                     });
 
+                    clearInterval(simTimer);
+                    document.getElementById('bar').style.width = nextP + "%";
+
                     if (geminiRes.status === 429) {
                         let cd = await geminiRes.json().catch(() => ({}));
                         let remaining = (cd.error && cd.error.remaining) || 30;
@@ -552,6 +565,7 @@
                 document.getElementById('bar').style.width = "100%";
                 renderPaperFixed(allItems);
             } catch(e) {
+                if (simTimer) clearInterval(simTimer);
                 alert("錯誤: " + e.message);
                 document.getElementById('btnGo').disabled = false;
                 document.getElementById('btnGo').innerText = "🚀 小綸開始出題";
