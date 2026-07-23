@@ -14,6 +14,7 @@
             background-color: #525659;
             margin: 0;
             padding-bottom: 50px;
+            overflow-x: hidden;
         }
 
         /* 嚴格控制 box-sizing */
@@ -132,6 +133,26 @@
         }
 
         .hidden { display: none !important; }
+
+        /* --- 手機/小螢幕適配（各種機型寬度，僅影響螢幕預覽，不影響列印） --- */
+        @media screen and (max-width: 820px) {
+            .a4-page {
+                width: 100%;
+                min-height: auto;
+                padding: 16px;
+                margin: 16px auto;
+                font-size: 10.5pt;
+            }
+            .q-num-box { width: 56px; font-size: 0.95em; }
+            .paper-header h2 { font-size: 16pt; }
+            .paper-info { flex-direction: column; gap: 4px; text-align: center; }
+            .source-btn { font-size: 1em; padding: 12px 8px; }
+        }
+
+        @media screen and (max-width: 480px) {
+            .a4-page { padding: 12px; font-size: 10pt; }
+            .q-num-box { width: 48px; }
+        }
     </style>
 </head>
 <body class="text-slate-800">
@@ -164,7 +185,7 @@
 
             <div class="mb-8">
                 <h3 class="section-title">1. 請選擇出題模式</h3>
-                <div class="flex gap-4">
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <div id="btnSourceAI" class="source-btn" style="background-color: #d1fae5; border-color: #10b981; color: #065f46;" onclick="toggleSource('1')">🤖 AI 智慧搜尋</div>
                     <div id="btnSourceFile" class="source-btn" style="background-color: #ffffff; border-color: #e5e7eb; color: #6b7280;" onclick="toggleSource('2')">📂 上傳檔案 / 圖片</div>
                     <input type="hidden" id="sourceType" value="1">
@@ -272,20 +293,20 @@
     </div>
 
     <div id="resultSection" class="hidden w-full min-h-screen bg-gray-600 pb-20">
-        <div class="sticky-header sticky top-0 bg-slate-800 text-white p-3 shadow-lg z-50 flex justify-center items-center gap-6">
-            <div class="flex gap-2">
-                <button onclick="switchSheet('quiz')" id="btnQuiz" class="bg-emerald-600 px-4 py-1.5 rounded font-bold hover:bg-emerald-500">題目卷</button>
-                <button onclick="switchSheet('key')" id="btnKey" class="bg-slate-600 px-4 py-1.5 rounded font-bold hover:bg-slate-500">答案卷</button>
+        <div class="sticky-header sticky top-0 bg-slate-800 text-white p-2 sm:p-3 shadow-lg z-50 flex flex-wrap justify-center items-center gap-2 sm:gap-6">
+            <div class="flex gap-2 order-1">
+                <button onclick="switchSheet('quiz')" id="btnQuiz" class="bg-emerald-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-emerald-500">題目卷</button>
+                <button onclick="switchSheet('key')" id="btnKey" class="bg-slate-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-slate-500">答案卷</button>
             </div>
 
-            <div class="flex-1 text-center max-w-md">
-                <span class="text-yellow-400 text-sm font-bold animate-pulse">💡 點擊試卷即可修改內容</span>
+            <div class="w-full sm:w-auto sm:flex-1 text-center sm:max-w-md order-3 sm:order-2">
+                <span class="text-yellow-400 text-xs sm:text-sm font-bold animate-pulse">💡 點擊試卷即可修改內容</span>
             </div>
 
-            <div class="flex gap-2">
-                <button onclick="location.reload()" class="bg-gray-600 px-3 py-1.5 rounded hover:bg-gray-500">🔄 重新出題</button>
-                <button onclick="dlDoc()" class="bg-blue-600 px-3 py-1.5 rounded hover:bg-blue-500">⬇️ 下載</button>
-                <button onclick="window.print()" class="bg-emerald-600 px-3 py-1.5 rounded hover:bg-emerald-500">🖨️ 列印</button>
+            <div class="flex gap-2 order-2 sm:order-3">
+                <button onclick="location.reload()" class="bg-gray-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-gray-500">🔄 重新出題</button>
+                <button onclick="dlDoc()" class="bg-blue-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-blue-500">⬇️ 下載</button>
+                <button onclick="window.print()" class="bg-emerald-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-emerald-500">🖨️ 列印</button>
             </div>
         </div>
         <div id="paperContainer" class="max-w-5xl mx-auto pt-6"></div>
