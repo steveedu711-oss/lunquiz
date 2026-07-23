@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小綸出題小幫手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        /* 全域設定 */
+        body {
+            font-family: "Microsoft JhengHei", "PMingLiU", serif;
+            background-color: #525659;
+            margin: 0;
+            padding-bottom: 50px;
+        }
+
+        /* 嚴格控制 box-sizing */
+        .a4-page, .a4-page * { box-sizing: border-box; }
+
+        /* UI 樣式 */
+        .section-title { font-weight: bold; font-size: 1.2em; color: #047857; margin-bottom: 12px; border-left: 6px solid #10b981; padding-left: 10px; margin-top: 10px; }
+        .input-custom { display: none; margin-top: 8px; width: 100%; padding: 8px; border: 2px solid #6366f1; border-radius: 6px; background-color: #eef2ff; }
+        .source-btn { flex: 1; padding: 15px; border: 2px solid #e5e7eb; border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; transition: all 0.2s; font-size: 1.1em; }
+
+        /* --- 試卷排版核心 (螢幕預覽) --- */
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            /* 預覽邊界：上下 10mm (1cm), 左右 12.5mm (1.25cm) */
+            padding: 10mm 12.5mm;
+            margin: 40px auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            color: black;
+            font-family: "PMingLiU", serif;
+            font-size: 11pt;
+            line-height: 1.35;
+            position: relative;
+            outline: none;
+        }
+
+        .page-content { width: 100%; }
+
+        /* 題目區塊 */
+        .q-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 12pt;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .q-num-box {
+            width: 90px;
+            flex-shrink: 0;
+            font-weight: bold;
+            white-space: nowrap;
+            margin-right: 5px;
+            text-align: left;
+        }
+
+        .q-content-box { flex-grow: 1; }
+        .q-text { font-weight: bold; margin-bottom: 3pt; display: block; }
+        .q-opts { margin-left: 0; }
+        .q-opt { margin-bottom: 2pt; display: block; }
+
+        .writing-space {
+            margin-top: 10pt;
+            width: 100%;
+            height: 45pt;
+            border-bottom: 1px dashed #000;
+        }
+
+        .paper-header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 15pt; padding-bottom: 8pt; }
+        .paper-header h2 { font-size: 20pt; font-weight: bold; margin: 0 0 8pt 0; }
+        .paper-info { display: flex; justify-content: space-between; font-size: 11pt; }
+
+        .page-footer {
+            position: absolute;
+            bottom: 10mm;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 10pt;
+            color: #000;
+        }
+
+        [contenteditable="true"]:hover { background-color: #fff9db; cursor: text; }
+        [contenteditable="true"]:focus { background-color: #fff; outline: none; }
+
+        .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); transition: width 0.3s ease; text-align: center; color: white; font-size: 10px; line-height: 16px; }
+
+        /* --- 列印專用設定 (終極修復) --- */
+        @media print {
+            /* 強制清除瀏覽器邊界 */
+            @page {
+                margin: 0;
+                size: A4;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+
+            #inputForm, .no-print, .sticky-header { display: none !important; }
+            #resultSection { display: block !important; width: 100%; margin: 0; padding: 0; }
+
+            .a4-page {
+                margin: 0 !important;
+                box-shadow: none;
+                /* ★ 使用相同的 padding 模擬邊界，確保位置與預覽重疊 */
+                padding: 10mm 12.5mm !important;
+                page-break-after: always;
+                /* ★ 寬度設為 100% 以填滿 @page 定義的 A4 區域，避免像素換算誤差 */
+                width: 100% !important;
+                max-width: 210mm; /* 雙重保險 */
+                min-height: auto;
+                height: auto;
+                background-color: white !important;
+                overflow: visible !important;
+            }
+
+            .a4-page:last-child {
+                page-break-after: auto;
+            }
+
+            .editable-text:hover { background: none; outline: none; }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div id="inputForm" class="max-w-5xl mx-auto p-4 no-print bg-gray-50 min-h-screen">
+        <div class="mb-6 text-center">
+            <img src="https://i.urusai.cc/QnrVb.webp" alt="Lun EduHelper Banner" class="w-full h-auto max-h-[300px] object-cover rounded-2xl shadow-md">
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-lg border border-emerald-100">
+            <div class="mb-6 flex justify-end">
+                <button onclick="unlockAdmin()" id="adminBtn" class="text-xs text-gray-400 underline hover:text-gray-600">🔓 管理者解除限制</button>
+            </div>
+
+            <div class="mb-6 bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                <label class="block font-bold mb-2 text-lg text-emerald-800">🔑 你自己的 Google API Key（選填）</label>
+                <div class="flex gap-2">
+                    <input type="password" id="userKey" onchange="localStorage.setItem('lun_key',this.value)" class="w-full p-3 border-2 border-emerald-300 rounded-lg outline-none" placeholder="貼上您的 AIza... 金鑰（不填則使用小綸內建額度）">
+                    <button onclick="let x=document.getElementById('userKey');x.type=x.type==='password'?'text':'password'" class="p-3 bg-white border rounded text-xl">👁️</button>
+                </div>
+                <p class="text-sm text-emerald-600 mt-2 font-bold">💡 不填：使用小綸內建額度，每次出題間隔 30 秒冷卻。填入自己的 Key：不受冷卻限制，用量算在自己的額度上。</p>
+                <div class="flex justify-between items-center mt-3 text-sm">
+                    <div class="flex gap-4">
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-emerald-600 underline font-bold hover:text-emerald-800">👉 申請 Google API Key</a>
+                        <a href="https://youtube.com/shorts/Tv8jERHp7kM" target="_blank" class="text-blue-500 underline font-bold hover:text-blue-700">📚 申請教學</a>
+                    </div>
+                    <button onclick="window.forgetKey()" class="text-red-500 font-bold px-3 py-1 bg-red-50 rounded hover:bg-red-100 border border-red-200">🗑️ 清除記憶 / 登出</button>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="section-title">1. 請選擇出題模式</h3>
+                <div class="flex gap-4">
+                    <div id="btnSourceAI" class="source-btn" style="background-color: #d1fae5; border-color: #10b981; color: #065f46;" onclick="toggleSource('1')">🤖 AI 智慧搜尋</div>
+                    <div id="btnSourceFile" class="source-btn" style="background-color: #ffffff; border-color: #e5e7eb; color: #6b7280;" onclick="toggleSource('2')">📂 上傳檔案 / 圖片</div>
+                    <input type="hidden" id="sourceType" value="1">
+                </div>
+            </div>
+
+            <h3 class="section-title">2. 詳細設定</h3>
+            <div id="aiInputs" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="font-bold text-sm">年級 <span class="text-red-500">*</span></label>
+                    <select id="grade" onchange="checkCustom(this, 'c_grade')" class="w-full p-3 border rounded-lg">
+                        <option value="" disabled selected>請選擇...</option>
+                        <option value="Custom">✍️ 自定義</option>
+                        <optgroup label="國小"><option>國小一年級</option><option>國小二年級</option><option>國小三年級</option><option>國小四年級</option><option>國小五年級</option><option>國小六年級</option></optgroup>
+                        <optgroup label="國中"><option>國中一年級</option><option>國中二年級</option><option>國中三年級</option></optgroup>
+                        <optgroup label="高中"><option>高中一年級</option><option>高中二年級</option><option>高中三年級</option></optgroup>
+                    </select>
+                    <input type="text" id="c_grade" class="input-custom" placeholder="請輸入年級">
+                </div>
+                <div>
+                    <label class="font-bold text-sm">科目 <span class="text-red-500">*</span></label>
+                    <input type="text" id="subject" class="w-full p-3 border rounded-lg" placeholder="例：自然">
+                </div>
+                <div>
+                    <label class="font-bold text-sm">版本 <span class="text-red-500">*</span></label>
+                    <select id="publisher" onchange="checkCustom(this, 'c_publisher')" class="w-full p-3 border rounded-lg">
+                        <option value="" disabled selected>請選擇...</option>
+                        <option value="由小綸自由發揮">由小綸自由發揮 (不限版本)</option>
+                        <option value="Custom">✍️ 依照課本資訊填入</option>
+                    </select>
+                    <input type="text" id="c_publisher" class="input-custom" placeholder="請輸入自定義版本資訊">
+                </div>
+                <div>
+                    <label class="font-bold text-sm">範圍 <span class="text-red-500">*</span></label>
+                    <input type="text" id="scope" class="w-full p-3 border rounded-lg" placeholder="例 : 第一課~第三課">
+                </div>
+            </div>
+
+            <div id="fileInputs" style="display:none;" class="mb-6">
+                <div onclick="document.getElementById('fUp').click()" class="border-2 border-dashed border-emerald-300 p-8 text-center cursor-pointer hover:bg-emerald-50 rounded-xl mb-3 transition">
+                    <p class="text-xl text-emerald-600 font-bold">📂 點此選擇檔案 / 圖片</p>
+                    <input type="file" id="fUp" multiple style="display:none;" onchange="handleFiles(this)">
+                </div>
+                <div id="fList" class="mt-3"></div>
+                <textarea id="uTxt" rows="3" class="w-full mt-4 p-3 border rounded-lg" placeholder="或者在此貼上補充文字..."></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div>
+                    <label class="font-bold text-sm">題數 <span class="text-red-500">*</span></label>
+                    <select id="count" onchange="checkCustom(this, 'c_count')" class="w-full p-3 border rounded-lg">
+                        <option value="" disabled selected>請選擇...</option>
+                        <option value="Custom">✍️ 自定義</option>
+                        <option value="5">5 題</option><option value="10">10 題</option><option value="20">20 題</option><option value="25">25 題</option><option value="50">50 題</option><option value="100">100 題</option>
+                    </select>
+                    <input type="number" id="c_count" class="input-custom" placeholder="請輸入數字">
+                </div>
+                <div>
+                    <label class="font-bold text-sm">題型 <span class="text-red-500">*</span></label>
+                    <select id="qType" onchange="checkCustom(this, 'c_qType')" class="w-full p-3 border rounded-lg">
+                        <option value="" disabled selected>請選擇...</option>
+                        <option value="Custom">✍️ 自定義</option>
+                        <option value="全部單選題">全部單選題</option>
+                        <option value="全部複選題">全部複選題</option>
+                        <option value="Mixed_10_10">混搭 (10單選+10複選)</option>
+                        <option value="全部填充題">全部填充題</option>
+                        <option value="全部簡答題(計算題)">全部簡答題(計算題)</option>
+                    </select>
+                    <input type="text" id="c_qType" class="input-custom" placeholder="例: 20題單選">
+                </div>
+                <div>
+                    <label class="font-bold text-sm">難度 <span class="text-red-500">*</span></label>
+                    <select id="difficulty" onchange="checkCustom(this, 'c_diff')" class="w-full p-3 border rounded-lg">
+                        <option value="" disabled selected>請選擇...</option>
+                        <option value="Custom">✍️ 自定義</option>
+                        <option value="簡單">簡單</option>
+                        <option value="適中">適中</option>
+                        <option value="困難">困難</option>
+                    </select>
+                    <input type="text" id="c_diff" class="input-custom" placeholder="例: 適中">
+                </div>
+                <div>
+                    <label class="font-bold text-sm">輸出語言 <span class="text-red-500">*</span></label>
+                    <select id="lang" class="w-full p-3 border rounded-lg">
+                        <option value="繁體中文">繁體中文</option>
+                        <option value="English (英文)">English (英文)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="startGen()" id="btnGo" class="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-xl hover:bg-emerald-700 shadow-lg transition">🚀 小綸開始出題</button>
+            <div id="barBox" class="hidden mt-4 h-4 w-full bg-gray-200 rounded-full overflow-hidden border border-emerald-200"><div id="bar" class="progress-bar">0%</div></div>
+            <p id="status" class="text-center text-sm mt-2 text-emerald-600 font-bold animate-pulse"></p>
+
+            <div class="mt-10 pt-6 border-t border-gray-200">
+                <h4 class="font-bold mb-3 text-gray-700">【免責聲明與使用規範】</h4>
+                <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                    <li>本系統為輔助工具，試題由 AI 生成，<strong>務必自行審核、校對並修改</strong>。</li>
+                    <li>請確認擁有上傳教材之合法使用權。本工具不儲存使用者檔案，亦不承擔版權責任。</li>
+                    <li>使用小綸內建額度時，每次出題間隔 30 秒冷卻時間；填入自己的 API Key 則不受此限制。</li>
+                    <li>公用電腦請務必使用「清除記憶 / 登出」功能。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultSection" class="hidden w-full min-h-screen bg-gray-600 pb-20">
+        <div class="sticky-header sticky top-0 bg-slate-800 text-white p-3 shadow-lg z-50 flex justify-center items-center gap-6">
+            <div class="flex gap-2">
+                <button onclick="switchSheet('quiz')" id="btnQuiz" class="bg-emerald-600 px-4 py-1.5 rounded font-bold hover:bg-emerald-500">題目卷</button>
+                <button onclick="switchSheet('key')" id="btnKey" class="bg-slate-600 px-4 py-1.5 rounded font-bold hover:bg-slate-500">答案卷</button>
+            </div>
+
+            <div class="flex-1 text-center max-w-md">
+                <span class="text-yellow-400 text-sm font-bold animate-pulse">💡 點擊試卷即可修改內容</span>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="location.reload()" class="bg-gray-600 px-3 py-1.5 rounded hover:bg-gray-500">🔄 重新出題</button>
+                <button onclick="dlDoc()" class="bg-blue-600 px-3 py-1.5 rounded hover:bg-blue-500">⬇️ 下載</button>
+                <button onclick="window.print()" class="bg-emerald-600 px-3 py-1.5 rounded hover:bg-emerald-500">🖨️ 列印</button>
+            </div>
+        </div>
+        <div id="paperContainer" class="max-w-5xl mx-auto pt-6"></div>
+    </div>
+
+    <script>
+        // 部署後端 Worker 後，請把這裡換成實際的 Worker 網址
+        // 例：https://linquiz-api.<你的subdomain>.workers.dev
+        const API_BASE = "https://linquiz-api.steve-edu711.workers.dev";
+
+        let uploadItems = [];
+
+        window.onload = function() {
+            let k = localStorage.getItem('lun_key');
+            if (k) document.getElementById('userKey').value = k;
+        };
+
+        window.forgetKey = function() {
+            if (confirm("確定清除記憶的 API Key？")) {
+                localStorage.removeItem('lun_key');
+                document.getElementById('userKey').value = '';
+            }
+        };
+
+        function toggleSource(val) {
+            document.getElementById('sourceType').value = val;
+            const btnAI = document.getElementById('btnSourceAI');
+            const btnFile = document.getElementById('btnSourceFile');
+            const aiInputs = document.getElementById('aiInputs');
+            const fileInputs = document.getElementById('fileInputs');
+            if(val === '1') {
+                aiInputs.style.display = 'grid'; fileInputs.style.display = 'none';
+                btnAI.style.backgroundColor = '#d1fae5'; btnAI.style.borderColor = '#10b981'; btnAI.style.color = '#065f46';
+                btnFile.style.backgroundColor = '#ffffff'; btnFile.style.borderColor = '#e5e7eb'; btnFile.style.color = '#6b7280';
+            } else {
+                aiInputs.style.display = 'none'; fileInputs.style.display = 'block';
+                btnAI.style.backgroundColor = '#ffffff'; btnAI.style.borderColor = '#e5e7eb'; btnAI.style.color = '#6b7280';
+                btnFile.style.backgroundColor = '#d1fae5'; btnFile.style.borderColor = '#10b981'; btnFile.style.color = '#065f46';
+            }
+        }
+        function checkCustom(select, inputId) {
+            const box = document.getElementById(inputId);
+            if(select.value === 'Custom') { box.style.display = 'block'; box.focus(); } else { box.style.display = 'none'; box.value = ''; }
+        }
+        function handleFiles(el) {
+            if(!el.files.length) return;
+            Array.from(el.files).forEach(async (f) => {
+                if(f.name.endsWith('.docx')) {
+                    let ab = await f.arrayBuffer();
+                    let res = await mammoth.extractRawText({arrayBuffer:ab});
+                    uploadItems.push({ type: 'docx', name: f.name, content: res.value });
+                    renderFileList();
+                } else {
+                    let r = new FileReader();
+                    r.onload = e => { uploadItems.push({ type: 'file', name: f.name, mime: f.type, data: e.target.result.split(',')[1] }); renderFileList(); };
+                    r.readAsDataURL(f);
+                }
+            });
+            el.value = '';
+        }
+        function renderFileList() {
+            let html = "";
+            uploadItems.forEach((item, idx) => {
+                html += "<div class='flex justify-between items-center bg-emerald-50 p-3 rounded-lg mb-2 border border-emerald-100 text-emerald-800 text-sm font-bold shadow-sm'><span class='truncate mr-4'>✅ " + item.name + "</span><button onclick='removeFile(" + idx + ")' class='text-red-500 hover:text-red-700 bg-white border border-red-200 hover:bg-red-50 px-3 py-1 rounded shadow-sm transition'>✖ 刪除</button></div>";
+            });
+            document.getElementById('fList').innerHTML = html;
+        }
+        window.removeFile = function(idx) { uploadItems.splice(idx, 1); renderFileList(); };
+
+        // --- 管理者解除冷卻限制 ---
+        function unlockAdmin() {
+            const btn = document.getElementById('adminBtn');
+            if (sessionStorage.getItem('linquiz_admin')) {
+                sessionStorage.removeItem('linquiz_admin');
+                btn.innerText = "🔓 管理者解除限制";
+                alert("已恢復一般冷卻限制");
+                return;
+            }
+            let pw = prompt("請輸入管理者密碼：");
+            if (pw === null || pw === "") return;
+            sessionStorage.setItem('linquiz_admin', pw);
+            btn.innerText = "🔒 已解除限制（點擊恢復）";
+        }
+
+        // --- 冷卻倒數 UI ---
+        let cooldownTimer = null;
+        function startCooldownUI(seconds) {
+            const btn = document.getElementById('btnGo');
+            const original = "🚀 小綸開始出題";
+            let remaining = Math.max(1, Math.ceil(seconds));
+            btn.disabled = true;
+            document.getElementById('barBox').classList.add('hidden');
+            document.getElementById('status').innerText = "";
+            if (cooldownTimer) clearInterval(cooldownTimer);
+            const tick = () => {
+                btn.innerText = "⏳ 冷卻中，請等待 " + remaining + " 秒";
+                remaining--;
+                if (remaining < 0) {
+                    clearInterval(cooldownTimer);
+                    cooldownTimer = null;
+                    btn.disabled = false;
+                    btn.innerText = original;
+                }
+            };
+            tick();
+            cooldownTimer = setInterval(tick, 1000);
+        }
+
+        // ... API 呼叫邏輯 ...
+        async function startGen() {
+            let sType = document.getElementById('sourceType').value;
+
+            if (sType === '2') {
+                let textVal = document.getElementById('uTxt').value.trim();
+                if (uploadItems.length === 0 && textVal === "") {
+                    return alert("❌ 未上傳資料！請上傳檔案、圖片或貼上文字內容。");
+                }
+            }
+
+            let grade = document.getElementById('grade').value;
+            if(grade === 'Custom') grade = document.getElementById('c_grade').value.trim();
+            if(sType === '1' && (!grade || grade === '')) return alert("❌ 請選擇或輸入【年級】！");
+
+            let subject = document.getElementById('subject').value.trim();
+            if(sType === '1' && !subject) return alert("❌ 請輸入【科目】！");
+
+            let publisher = document.getElementById('publisher').value;
+            if(publisher === 'Custom') publisher = document.getElementById('c_publisher').value.trim();
+            if(sType === '1' && (!publisher || publisher === '')) return alert("❌ 請選擇或輸入【版本】！");
+
+            let scope = document.getElementById('scope').value.trim();
+            if(sType === '1' && !scope) return alert("❌ 請輸入【範圍】！");
+
+            let countVal = document.getElementById('count').value;
+            if(countVal === 'Custom') countVal = document.getElementById('c_count').value.trim();
+            let total = parseInt(countVal);
+            if(!total) return alert("❌ 請設定【題數】！");
+
+            let typeVal = document.getElementById('qType').value;
+            if(typeVal === 'Custom') typeVal = document.getElementById('c_qType').value.trim();
+            if(!typeVal || typeVal === '') return alert("❌ 請設定【題型】！");
+
+            let diffVal = document.getElementById('difficulty').value;
+            if(diffVal === 'Custom') diffVal = document.getElementById('c_diff').value.trim();
+            if(!diffVal || diffVal === '') return alert("❌ 請設定【難度】！");
+
+            let langVal = document.getElementById('lang').value;
+            let contentText = document.getElementById('uTxt').value;
+
+            document.getElementById('btnGo').disabled = true;
+            document.getElementById('btnGo').innerText = "⏳ 運算中...";
+            document.getElementById('barBox').classList.remove('hidden');
+
+            let batchSize = 10;
+            if (typeVal.includes("簡答") || typeVal.includes("填充")) batchSize = 8;
+            if (typeVal === 'Mixed_10_10') { typeVal = "前10單選,後10複選"; total=20; batchSize=10; }
+
+            let batches = Math.ceil(total / batchSize);
+            let scorePerQ = Math.floor(100 / total);
+            let allItems = [];
+
+            uploadItems.filter(item => item.type === 'docx').forEach(item => { contentText += "\n[附件 " + item.name + "]:\n" + item.content; });
+
+            const adminPass = sessionStorage.getItem('linquiz_admin') || "";
+            const userKey = document.getElementById('userKey').value.trim();
+
+            try {
+                const API_URL = API_BASE + "/api/generate";
+                for(let i=0; i<batches; i++) {
+                    document.getElementById('status').innerText = "生成中... " + (i+1) + "/" + batches;
+                    document.getElementById('bar').style.width = Math.round(((i)/batches)*100) + "%";
+
+                    let currentCount = Math.min(batchSize, total - allItems.length);
+                    let startNum = i * batchSize + 1;
+                    let endNum = i * batchSize + currentCount;
+
+                    let taskDescription = "";
+                    if (sType === "2") {
+                         taskDescription = "閱讀附件，製作測驗卷。整份考卷共有 " + total + " 題，題型順序要求為：「" + typeVal + "」。\n";
+                    } else {
+                         let pubStr = publisher === '由小綸自由發揮' ? '不限版本，請依一般課綱知識出題' : publisher;
+                         taskDescription = "【最高指令】：完全依照以下條件出題，絕不可偏離範圍！\n";
+                         taskDescription += "- 年級：" + grade + "\n- 科目：" + subject + "\n- 版本：" + pubStr + "\n- 範圍：" + scope + "\n";
+                         taskDescription += "- 總題數：" + total + " 題\n- 難度：" + diffVal + "\n- 題型要求：「" + typeVal + "」\n\n";
+                    }
+                    taskDescription += "【語言】：請務必使用「" + langVal + "」撰寫所有內容！\n\n";
+                    taskDescription += "【批次定位】：這是第 " + (i+1) + " 批，請僅生成【第 " + startNum + " 題 到 第 " + endNum + " 題】（共 " + currentCount + " 題）。\n";
+                    taskDescription += "若為單/複選題，'o' 給選項，'a' 給答案；若為填充/簡答/計算題，'o' 必須且只能回傳空陣列 []，並將解答寫在 'a'！題目中預留極長的底線(________________________)供填寫。配分固定為 " + scorePerQ + " 分。\n";
+                    const formatRule = ' 【嚴格格式要求】：必須且只能回傳合法的 JSON Array。格式：[{"q":"題目內容","o":["選項1","選項2"],"a":"答案","e":"解析","s":' + scorePerQ + '}]。';
+
+                    let parts = [{ text: taskDescription + formatRule }];
+                    if (sType === "2" && uploadItems.length > 0) {
+                        uploadItems.filter(item => item.type === 'file').forEach(file => {
+                            parts.push({ inline_data: { mime_type: file.mime, data: file.data } });
+                        });
+                    }
+                    if (contentText) parts.push({ text: "\n參考內容:\n" + contentText });
+
+                    let geminiRes = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Batch-Index': String(i),
+                            'X-Admin-Pass': adminPass,
+                            'X-Gemini-Api-Key': userKey
+                        },
+                        body: JSON.stringify({ contents: [{ parts: parts }] })
+                    });
+
+                    if (geminiRes.status === 429) {
+                        let cd = await geminiRes.json().catch(() => ({}));
+                        let remaining = (cd.error && cd.error.remaining) || 30;
+                        startCooldownUI(remaining);
+                        return;
+                    }
+
+                    let geminiData = await geminiRes.json();
+                    if(geminiData.error) throw new Error(geminiData.error.message);
+
+                    let rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    const bt = String.fromCharCode(96).repeat(3);
+                    let cleanJSON = rawText.replace(new RegExp(bt + 'json', 'gi'), '').replace(new RegExp(bt, 'g'), '').trim();
+                    cleanJSON = cleanJSON.replace(/[\r\n]+/g, ' ');
+                    let startIdx = cleanJSON.indexOf('[');
+                    let endIdx = cleanJSON.lastIndexOf(']');
+                    if (startIdx !== -1 && endIdx !== -1) {
+                         cleanJSON = cleanJSON.substring(startIdx, endIdx + 1);
+                         cleanJSON = cleanJSON.replace(/,\s*\]/g, ']');
+                         cleanJSON = cleanJSON.replace(/,\s*\}/g, '}');
+                    } else {
+                         let objectRegex = /\{"q":.*?\}/g;
+                         let matchedObjects = cleanJSON.match(objectRegex);
+                         if (matchedObjects) cleanJSON = "[" + matchedObjects.join(",") + "]";
+                    }
+
+                    try {
+                        let parsed = JSON.parse(cleanJSON);
+                        if (!Array.isArray(parsed)) parsed = [parsed];
+                        allItems = allItems.concat(parsed);
+                    } catch(e) { console.error(e); }
+                }
+
+                document.getElementById('bar').style.width = "100%";
+                renderPaperFixed(allItems);
+            } catch(e) {
+                alert("錯誤: " + e.message);
+                document.getElementById('btnGo').disabled = false;
+                document.getElementById('btnGo').innerText = "🚀 小綸開始出題";
+                document.getElementById('barBox').classList.add('hidden');
+                document.getElementById('status').innerText = "";
+            }
+        }
+
+        function renderPaperFixed(items) {
+            const inputForm = document.getElementById('inputForm');
+            const resultSection = document.getElementById('resultSection');
+            inputForm.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+
+            let container = document.getElementById('paperContainer');
+            container.innerHTML = "";
+
+            let title = (document.getElementById('sourceType').value==='1' ? (document.getElementById('grade').value==='Custom'?document.getElementById('c_grade').value:document.getElementById('grade').value)+" "+document.getElementById('subject').value : "測驗") + "試卷";
+            let sub = "範圍：" + (document.getElementById('scope').value || "綜合");
+            window.docName = (title + "_" + sub).replace(/[<>:"/\\|?*]/g, "");
+
+            const qTypeVal = document.getElementById('qType').value || "";
+            const isWriting = qTypeVal.includes('簡答') || qTypeVal.includes('填充') || qTypeVal.includes('計算');
+            const ITEMS_PER_PAGE = isWriting ? 8 : 10;
+
+            let chunks = [];
+            for (let i = 0; i < items.length; i += ITEMS_PER_PAGE) {
+                chunks.push(items.slice(i, i + ITEMS_PER_PAGE));
+            }
+
+            chunks.forEach((chunk, pageIdx) => {
+                let pageNum = pageIdx + 1;
+                let pageDiv = document.createElement('div');
+                pageDiv.className = "a4-page quiz-page";
+                pageDiv.contentEditable = "true";
+
+                let headerHTML = "";
+                if (pageNum === 1) {
+                    headerHTML = "<div class='paper-header' contenteditable='true'>" +
+                        "<h2>"+title+"</h2>" +
+                        "<div class='paper-info'>" +
+                        "<span>"+sub+"</span><span>班級：＿＿＿＿＿ 姓名：＿＿＿＿＿ 座號：＿＿＿＿＿</span></div></div>";
+                } else {
+                    headerHTML = "<div style='height: 30pt;'></div>";
+                }
+
+                let contentHTML = "";
+                chunk.forEach((q, localIdx) => {
+                    let globalNum = (pageIdx * ITEMS_PER_PAGE) + localIdx + 1;
+                    let optsHTML = "";
+                    if(q.o && q.o.length > 0) {
+                        optsHTML += "<div class='q-opts'>";
+                        q.o.forEach((o, oi) => {
+                            let label = String.fromCharCode(65+oi);
+                            optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+o+"</div>";
+                        });
+                        optsHTML += "</div>";
+                    }
+                    let prefix = (q.o && q.o.length > 0) ? (globalNum + ". (　　)") : (globalNum + ".");
+                    let answerSpace = (!q.o || q.o.length === 0) ? "<div class='writing-space'></div>" : "";
+
+                    contentHTML += "<div class='q-item'>" +
+                       "<div class='q-num-box'>" + prefix + "</div>" +
+                       "<div class='q-content-box'>" +
+                           "<div class='q-text editable-text' contenteditable='true'>" + q.q + " <span style='font-size:10pt; color:#666;'>(" + q.s + "分)</span></div>" +
+                           optsHTML +
+                           answerSpace +
+                       "</div></div>";
+                });
+
+                let footerHTML = "<div class='page-footer' contenteditable='false'>第 " + pageNum + " 頁 / 共 " + chunks.length + " 頁</div>";
+                pageDiv.innerHTML = headerHTML + "<div class='page-content'>" + contentHTML + "</div>" + footerHTML;
+                container.appendChild(pageDiv);
+            });
+
+            let kDiv = document.createElement('div');
+            kDiv.className = "a4-page key-page";
+            kDiv.style.display = 'none';
+            kDiv.contentEditable = "true";
+            let kHtml = "<h2 style='text-align:center; font-size:18pt; font-weight:bold; margin-bottom:20px;'>解析卷</h2>";
+            items.forEach((q, i) => {
+                let ans = q.a;
+                if(Array.isArray(q.a)) ans = q.a.map(x=>String.fromCharCode(65+x)).join('');
+                else if(typeof q.a==='number') ans = String.fromCharCode(65+q.a);
+                else ans = q.a || '(略)';
+                kHtml += "<div style='margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;'><b>"+(i+1)+".</b> <span style='color:red; font-weight:bold; margin-right:10px;'>"+ans+"</span> <span style='font-size:10pt; color:#666;'>"+(q.e||'')+"</span></div>";
+            });
+            kDiv.innerHTML = kHtml;
+            container.appendChild(kDiv);
+        }
+
+        function switchSheet(t) {
+            let qs = document.querySelectorAll('.quiz-page');
+            let ks = document.querySelectorAll('.key-page');
+            let b1 = document.getElementById('btnQuiz');
+            let b2 = document.getElementById('btnKey');
+            if(t==='quiz') {
+                qs.forEach(e => e.style.display='block');
+                ks.forEach(e => e.style.display='none');
+                b1.className = "bg-emerald-600 px-4 py-1.5 rounded font-bold hover:bg-emerald-500";
+                b2.className = "bg-slate-600 px-4 py-1.5 rounded font-bold hover:bg-slate-500";
+            } else {
+                qs.forEach(e => e.style.display='none');
+                ks.forEach(e => e.style.display='block');
+                b1.className = "bg-slate-600 px-4 py-1.5 rounded font-bold hover:bg-slate-500";
+                b2.className = "bg-emerald-600 px-4 py-1.5 rounded font-bold hover:bg-emerald-500";
+            }
+        }
+
+        async function dlDoc() {
+            let content = "";
+            document.querySelectorAll('#paperContainer > .quiz-page').forEach(page => {
+                if(page.style.display === 'none') return;
+
+                let pageClone = page.cloneNode(true);
+                pageClone.removeAttribute('contenteditable');
+                pageClone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+
+                let qItems = pageClone.querySelectorAll('.q-item');
+                qItems.forEach(item => {
+                    let numBox = item.querySelector('.q-num-box').innerHTML;
+                    let contentBox = item.querySelector('.q-content-box').innerHTML;
+
+                    let tableHTML = '<table width="100%" style="margin-bottom:12pt; border-collapse:collapse;">' +
+                        '<tr>' +
+                            '<td valign="top" width="90" style="width:90px; font-weight:bold; padding-right:5px;">' + numBox + '</td>' +
+                            '<td valign="top">' + contentBox + '</td>' +
+                        '</tr>' +
+                    '</table>';
+
+                    let wrapper = document.createElement('div');
+                    wrapper.innerHTML = tableHTML;
+                    item.parentNode.replaceChild(wrapper.firstChild, item);
+                });
+
+                let footer = pageClone.querySelector('.page-footer');
+                if(footer) footer.remove();
+
+                content += pageClone.innerHTML + "<br clear=all style='page-break-before:always'>";
+            });
+
+            document.querySelectorAll('.key-page').forEach(p => {
+                if(p.style.display !== 'none') content += p.innerHTML;
+            });
+
+            const style = "<style>" +
+                "@page { size: A4; margin: 1cm 1.25cm; } " +
+                "body { font-family: 'PMingLiU', serif; font-size: 11pt; line-height: 1.35; }" +
+                "h2 { text-align: center; font-size: 20pt; margin-bottom: 20pt; }" +
+                ".paper-info { text-align: center; margin-bottom: 20pt; font-size: 11pt; }" +
+                "table { width: 100%; }" +
+                ".writing-space { height: 45pt; border-bottom: 1px dashed #000; }" +
+                "</style>";
+
+            let html = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'>" + style + "</head><body>" + content + "</body></html>";
+            let blob = new Blob([html], {type:'application/msword'});
+            let fileName = (window.docName || "試卷") + ".doc";
+
+            if (window.showSaveFilePicker) {
+                try {
+                    const h = await showSaveFilePicker({suggestedName: fileName, types:[{description:'Word', accept:{'application/msword':['.doc']}}]});
+                    const w = await h.createWritable();
+                    await w.write(blob); await w.close(); return;
+                } catch(e) { return; }
+            }
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
+        }
+    </script>
+</body>
+</html>

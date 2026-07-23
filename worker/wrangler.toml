@@ -1,0 +1,7 @@
+name = "linquiz-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[[kv_namespaces]]
+binding = "COOLDOWN_KV"
+id = "53865c1abe754d3faf61c3492b4060cd"
