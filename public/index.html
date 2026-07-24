@@ -1272,14 +1272,35 @@
         }
 
         // --- 手機線上作答＋自動評分 ---
+        // 把q.a(答案)轉成選項字母(A/B/C...)給線上作答自動判分比對用。
+        // AI有時不是回傳字母(如"B")，而是直接回傳完整選項文字(如"眼睛看、鼻子聞、雙手觸摸")，
+        // 這時先去比對選項清單找出對應字母，找不到才退回字母萃取，避免解析成空字串
+        function matchOptionLetter(q, rawAnswer) {
+            const raw = String(rawAnswer).trim();
+            if (!raw) return null;
+            let idx = q.o.findIndex(o => o.trim() === raw);
+            if (idx < 0) idx = q.o.findIndex(o => raw.includes(o.trim()) || o.trim().includes(raw));
+            return idx >= 0 ? String.fromCharCode(65 + idx) : null;
+        }
+
         function getCorrectLetters(q) {
             if (!q.o || q.o.length === 0) return null;
             if (Array.isArray(q.a)) {
-                return q.a.map(x => typeof x === 'number' ? String.fromCharCode(65 + x) : String(x).toUpperCase().trim());
+                return q.a.map(x => {
+                    if (typeof x === 'number') return String.fromCharCode(65 + x);
+                    const s = String(x).trim();
+                    if (/^[A-Za-z]$/.test(s)) return s.toUpperCase();
+                    return matchOptionLetter(q, s) || s.toUpperCase();
+                });
             } else if (typeof q.a === 'number') {
                 return [String.fromCharCode(65 + q.a)];
             } else if (typeof q.a === 'string') {
-                return q.a.toUpperCase().replace(/[^A-Z]/g, '').split('');
+                const raw = q.a.trim();
+                const directMatch = matchOptionLetter(q, raw);
+                if (directMatch) return [directMatch];
+                const lettersOnly = raw.toUpperCase().replace(/[^A-Z]/g, '');
+                if (lettersOnly && lettersOnly.length <= q.o.length) return lettersOnly.split('');
+                return [];
             }
             return [];
         }
@@ -1327,8 +1348,10 @@
                     const correct = (letters || []).slice().sort();
                     const isCorrect = checked.length > 0 && checked.length === correct.length && checked.every((v, idx) => v === correct[idx]);
                     if (isCorrect) totalScore += (q.s || 0);
+                    // 萬一連字母都比對不出來(AI答案格式異常)，退而顯示原始答案內容，不要留空白
+                    const correctDisplay = correct.length > 0 ? correct.join('') : (String(q.a || '').trim() || '(無法判讀，請自行核對)');
                     fb.className = 'ans-feedback mt-2 text-sm ' + (isCorrect ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold');
-                    fb.innerText = isCorrect ? '✅ 答對了！' : ('❌ 答錯了，正確答案：' + correct.join(''));
+                    fb.innerText = isCorrect ? '✅ 答對了！' : ('❌ 答錯了，正確答案：' + correctDisplay);
                     fb.classList.remove('hidden');
                 } else {
                     const inputEl = document.getElementById('ans-text-' + i);
