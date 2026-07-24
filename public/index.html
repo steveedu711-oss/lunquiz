@@ -27,10 +27,87 @@
         /* 嚴格控制 box-sizing */
         .a4-page, .a4-page * { box-sizing: border-box; }
 
+        /* ============================================================
+           質感UI Design Tokens — 沿用 brand.css 的 Google 四色系統(--hl-blue/red/yellow/green)，
+           統一全站按鈕的「語意配色」：主要動作一律hl-blue、分享一律hl-green、
+           刪除/清除一律hl-red、中性次要動作用灰階外框，取代原本紅橙紫粉靛各按鈕各用一色的混亂配色
+           ============================================================ */
+        :root {
+            --lq-radius-sm: 0.625rem;
+            --lq-radius: 1rem;
+            --lq-shadow-sm: 0 1px 3px rgba(15,23,42,0.08);
+            --lq-shadow: 0 6px 20px rgba(15,23,42,0.10);
+            --lq-shadow-lg: 0 16px 40px rgba(15,23,42,0.16);
+        }
+
+        .lq-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.4em;
+            font-weight: 700; border-radius: var(--lq-radius-sm);
+            border: 1.5px solid transparent;
+            transition: transform 0.12s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            cursor: pointer;
+        }
+        .lq-btn:active { transform: scale(0.97); }
+        .lq-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(26,115,232,0.35); }
+        .lq-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+        .lq-btn-primary { background: var(--hl-blue); color: #fff; box-shadow: var(--lq-shadow-sm); }
+        .lq-btn-primary:hover:not(:disabled) { background: var(--hl-blue-hover); box-shadow: var(--lq-shadow); }
+
+        .lq-btn-share { background: var(--hl-green); color: #fff; box-shadow: var(--lq-shadow-sm); }
+        .lq-btn-share:hover:not(:disabled) { background: var(--hl-green-hover); box-shadow: var(--lq-shadow); }
+
+        .lq-btn-danger { background: #fff; color: var(--hl-red); border-color: #fecaca; }
+        .lq-btn-danger:hover:not(:disabled) { background: var(--hl-red); color: #fff; border-color: var(--hl-red); }
+
+        .lq-btn-secondary { background: #fff; color: #475569; border-color: #e2e8f0; }
+        .lq-btn-secondary:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
+
+        .lq-btn-ghost { background: transparent; color: #64748b; border-color: transparent; font-weight: 600; }
+        .lq-btn-ghost:hover:not(:disabled) { color: #1e293b; background: rgba(0,0,0,0.04); }
+
+        /* 深色版：sticky header 用（背景是深色，白按鈕反而刺眼，改用半透明白疊層） */
+        .lq-btn-dark { background: rgba(255,255,255,0.08); color: #e2e8f0; border-color: rgba(255,255,255,0.12); }
+        .lq-btn-dark:hover:not(:disabled) { background: rgba(255,255,255,0.16); color: #fff; }
+        .lq-btn-dark.is-active { background: var(--hl-blue); color: #fff; border-color: var(--hl-blue); }
+
+        /* 主要出題CTA：呼應進場頁徽章的品牌四色光暈，是全頁唯一使用這個signature動效的地方 */
+        .lq-cta { position: relative; isolation: isolate; }
+        .lq-cta::before {
+            content: ''; position: absolute; inset: -3px; border-radius: calc(var(--lq-radius) + 3px);
+            background: conic-gradient(from var(--hl-angle), var(--hl-blue), var(--hl-red), var(--hl-yellow), var(--hl-green), var(--hl-blue));
+            opacity: 0; transition: opacity 0.35s ease; z-index: -1;
+            animation: hl-rotate-border 5s linear infinite;
+        }
+        .lq-cta:hover::before, .lq-cta:focus-visible::before { opacity: 1; }
+
+        .lq-card { background: #fff; border-radius: var(--lq-radius); box-shadow: var(--lq-shadow-sm); border: 1px solid #eef0f3; }
+
+        .lq-input {
+            width: 100%; padding: 0.75rem 0.9rem; border: 1.5px solid #e2e8f0; border-radius: var(--lq-radius-sm);
+            background: #fff; transition: border-color 0.15s ease, box-shadow 0.15s ease; font-size: 0.95rem;
+        }
+        .lq-input:hover { border-color: #cbd5e1; }
+        .lq-input:focus { outline: none; border-color: var(--hl-blue); box-shadow: 0 0 0 3px rgba(26,115,232,0.14); }
+
+        @media (prefers-reduced-motion: reduce) {
+            .lq-cta::before, .hl-spin-slow, .hl-spin-slow-reverse,
+            .ans-card.ans-correct, .ans-card.ans-wrong, .ans-badge, .ans-score-pop { animation: none !important; }
+        }
+
         /* UI 樣式 */
-        .section-title { font-weight: bold; font-size: 1.2em; color: #047857; margin-bottom: 12px; border-left: 6px solid #10b981; padding-left: 10px; margin-top: 10px; }
-        .input-custom { display: none; margin-top: 8px; width: 100%; padding: 8px; border: 2px solid #6366f1; border-radius: 6px; background-color: #eef2ff; }
-        .source-btn { flex: 1; padding: 15px; border: 2px solid #e5e7eb; border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; transition: all 0.2s; font-size: 1.1em; }
+        .section-title {
+            font-weight: 800; font-size: 1.05rem; color: #1e293b; margin: 1.75rem 0 1rem;
+            display: flex; align-items: center; gap: 0.6rem;
+        }
+        .section-title::before {
+            content: ''; width: 1.75rem; height: 1.75rem; border-radius: 9999px;
+            background: linear-gradient(135deg, var(--hl-blue), #60a5fa);
+            flex-shrink: 0;
+        }
+        .input-custom { display: none; margin-top: 8px; width: 100%; padding: 0.75rem 0.9rem; border: 1.5px solid #a5b4fc; border-radius: var(--lq-radius-sm); background-color: #eef2ff; }
+        .source-btn { flex: 1; padding: 15px; border: 2px solid #e5e7eb; border-radius: var(--lq-radius); text-align: center; cursor: pointer; font-weight: bold; transition: all 0.2s ease; font-size: 1.05em; }
+        .source-btn:hover { transform: translateY(-1px); box-shadow: var(--lq-shadow-sm); }
 
         /* --- 試卷排版核心 (螢幕預覽) --- */
         .a4-page {
@@ -228,37 +305,37 @@
             <img src="https://i.urusai.cc/QnrVb.webp" alt="Lun EduHelper Banner" class="w-full h-auto max-h-[300px] object-cover rounded-2xl shadow-md">
         </div>
 
-        <div class="bg-white p-6 rounded-2xl shadow-lg border border-emerald-100">
+        <div class="lq-card p-6 sm:p-8">
             <div class="mb-6 flex justify-between items-center flex-wrap gap-2">
-                <button onclick="openUsageGuide()" id="usageGuideBtn" class="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-1.5 rounded-full border border-blue-200 hover:bg-blue-100">❓ 使用說明</button>
+                <button onclick="openUsageGuide()" id="usageGuideBtn" class="lq-btn lq-btn-secondary text-xs px-3 py-1.5 rounded-full">❓ 使用說明</button>
                 <div class="flex gap-4">
-                    <button onclick="openHistory()" id="historyBtn" class="text-xs text-gray-400 underline hover:text-gray-600">📜 出題紀錄</button>
-                    <button onclick="unlockAdmin()" id="adminBtn" class="text-xs text-gray-400 underline hover:text-gray-600">🔓 管理者解除限制</button>
+                    <button onclick="openHistory()" id="historyBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">📜 出題紀錄</button>
+                    <button onclick="unlockAdmin()" id="adminBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">🔓 管理者解除限制</button>
                 </div>
             </div>
 
-            <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-wrap items-center justify-center gap-2 text-sm font-bold text-blue-700">
+            <div class="mb-8 bg-blue-50 border border-blue-100 rounded-xl p-3 flex flex-wrap items-center justify-center gap-2 text-sm font-bold text-blue-700">
                 <span>① 填年級/科目/範圍</span><span class="text-blue-300">→</span>
                 <span>② 按「小綸開始出題」</span><span class="text-blue-300">→</span>
                 <span>③ 完成後可下載/列印/線上作答/分享</span>
             </div>
 
-            <div id="apiKeyBox" class="mb-6 bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+            <div id="apiKeyBox" class="mb-8 bg-emerald-50/70 p-4 sm:p-5 rounded-xl border border-emerald-100">
                 <label class="block font-bold mb-2 text-lg text-emerald-800">🔑 你自己的 Google API Key（選填）</label>
                 <div class="flex gap-2">
-                    <input type="password" id="userKey" onchange="localStorage.setItem('lun_key',this.value)" class="w-full p-3 border-2 border-emerald-300 rounded-lg outline-none" placeholder="貼上您的 AIza... 金鑰（不填則使用小綸內建額度）">
-                    <button onclick="let x=document.getElementById('userKey');x.type=x.type==='password'?'text':'password'" class="p-3 bg-white border rounded text-xl">👁️</button>
+                    <input type="password" id="userKey" onchange="localStorage.setItem('lun_key',this.value)" class="lq-input" placeholder="貼上您的 AIza... 金鑰（不填則使用小綸內建額度）">
+                    <button onclick="let x=document.getElementById('userKey');x.type=x.type==='password'?'text':'password'" class="lq-btn lq-btn-secondary px-3 text-lg" aria-label="顯示/隱藏金鑰">👁️</button>
                 </div>
-                <p class="text-sm text-emerald-600 mt-2 font-bold">💡 不填：使用小綸內建額度，每次出題間隔 30 秒冷卻。填入自己的 Key：不受冷卻限制，用量算在自己的額度上。</p>
-                <div class="flex justify-between items-center mt-3 text-sm">
+                <p class="text-sm text-emerald-700 mt-2 font-bold">💡 不填：使用小綸內建額度，每次出題間隔 30 秒冷卻。填入自己的 Key：不受冷卻限制，用量算在自己的額度上。</p>
+                <div class="flex justify-between items-center mt-3 text-sm flex-wrap gap-2">
                     <div class="flex gap-4">
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-emerald-600 underline font-bold hover:text-emerald-800">👉 申請 Google API Key</a>
-                        <a href="https://youtube.com/shorts/Tv8jERHp7kM" target="_blank" class="text-blue-500 underline font-bold hover:text-blue-700">📚 申請教學</a>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-emerald-700 underline font-bold hover:text-emerald-900">👉 申請 Google API Key</a>
+                        <a href="https://youtube.com/shorts/Tv8jERHp7kM" target="_blank" class="text-blue-600 underline font-bold hover:text-blue-800">📚 申請教學</a>
                     </div>
-                    <button onclick="window.forgetKey()" class="text-red-500 font-bold px-3 py-1 bg-red-50 rounded hover:bg-red-100 border border-red-200">🗑️ 清除記憶 / 登出</button>
+                    <button onclick="window.forgetKey()" class="lq-btn lq-btn-danger text-xs px-3 py-1.5">🗑️ 清除記憶 / 登出</button>
                 </div>
             </div>
-            <button type="button" id="showKeyBoxLink" onclick="showApiKeyBox()" class="hidden text-xs text-emerald-600 underline hover:text-emerald-800 mb-6">🔑 其實我有自己的 API Key，改用這個</button>
+            <button type="button" id="showKeyBoxLink" onclick="showApiKeyBox()" class="hidden lq-btn lq-btn-ghost text-xs mb-8">🔑 其實我有自己的 API Key，改用這個</button>
 
             <div class="mb-8">
                 <h3 class="section-title">1. 請選擇出題模式</h3>
@@ -273,7 +350,7 @@
             <div id="aiInputs" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="font-bold text-sm">年級 <span class="text-red-500">*</span></label>
-                    <select id="grade" onchange="checkCustom(this, 'c_grade')" class="w-full p-3 border rounded-lg">
+                    <select id="grade" onchange="checkCustom(this, 'c_grade')" class="lq-input">
                         <option value="" disabled selected>請選擇...</option>
                         <option value="Custom">✍️ 自定義</option>
                         <optgroup label="國小"><option>國小一年級</option><option>國小二年級</option><option>國小三年級</option><option>國小四年級</option><option>國小五年級</option><option>國小六年級</option></optgroup>
@@ -284,11 +361,11 @@
                 </div>
                 <div>
                     <label class="font-bold text-sm">科目 <span class="text-red-500">*</span></label>
-                    <input type="text" id="subject" class="w-full p-3 border rounded-lg" placeholder="例：自然">
+                    <input type="text" id="subject" class="lq-input" placeholder="例：自然">
                 </div>
                 <div>
                     <label class="font-bold text-sm">版本 <span class="text-red-500">*</span></label>
-                    <select id="publisher" onchange="checkCustom(this, 'c_publisher')" class="w-full p-3 border rounded-lg">
+                    <select id="publisher" onchange="checkCustom(this, 'c_publisher')" class="lq-input">
                         <option value="" disabled selected>請選擇...</option>
                         <option value="由小綸自由發揮">由小綸自由發揮 (不限版本)</option>
                         <option value="Custom">✍️ 依照課本資訊填入</option>
@@ -297,23 +374,23 @@
                 </div>
                 <div>
                     <label class="font-bold text-sm">範圍 <span class="text-red-500">*</span></label>
-                    <input type="text" id="scope" class="w-full p-3 border rounded-lg" placeholder="例 : 第一課~第三課">
+                    <input type="text" id="scope" class="lq-input" placeholder="例 : 第一課~第三課">
                 </div>
             </div>
 
             <div id="fileInputs" style="display:none;" class="mb-6">
-                <div onclick="document.getElementById('fUp').click()" class="border-2 border-dashed border-emerald-300 p-8 text-center cursor-pointer hover:bg-emerald-50 rounded-xl mb-3 transition">
+                <div onclick="document.getElementById('fUp').click()" class="border-2 border-dashed border-emerald-300 p-8 text-center cursor-pointer hover:bg-emerald-50 hover:border-emerald-400 rounded-xl mb-3 transition">
                     <p class="text-xl text-emerald-600 font-bold">📂 點此選擇檔案 / 圖片</p>
                     <input type="file" id="fUp" multiple style="display:none;" onchange="handleFiles(this)">
                 </div>
                 <div id="fList" class="mt-3"></div>
-                <textarea id="uTxt" rows="3" class="w-full mt-4 p-3 border rounded-lg" placeholder="或者在此貼上補充文字..."></textarea>
+                <textarea id="uTxt" rows="3" class="lq-input mt-4" placeholder="或者在此貼上補充文字..."></textarea>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                 <div>
                     <label class="font-bold text-sm">題數 <span class="text-red-500">*</span></label>
-                    <select id="count" onchange="checkCustom(this, 'c_count')" class="w-full p-3 border rounded-lg">
+                    <select id="count" onchange="checkCustom(this, 'c_count')" class="lq-input">
                         <option value="" disabled selected>請選擇...</option>
                         <option value="Custom">✍️ 自定義</option>
                         <option value="5">5 題</option><option value="10">10 題</option><option value="20">20 題</option><option value="25">25 題</option><option value="50">50 題</option><option value="100">100 題</option>
@@ -322,7 +399,7 @@
                 </div>
                 <div>
                     <label class="font-bold text-sm">題型 <span class="text-red-500">*</span></label>
-                    <select id="qType" onchange="checkCustom(this, 'c_qType')" class="w-full p-3 border rounded-lg">
+                    <select id="qType" onchange="checkCustom(this, 'c_qType')" class="lq-input">
                         <option value="" disabled selected>請選擇...</option>
                         <option value="Custom">✍️ 自定義</option>
                         <option value="全部單選題">全部單選題</option>
@@ -335,7 +412,7 @@
                 </div>
                 <div>
                     <label class="font-bold text-sm">難度 <span class="text-red-500">*</span></label>
-                    <select id="difficulty" onchange="checkCustom(this, 'c_diff')" class="w-full p-3 border rounded-lg">
+                    <select id="difficulty" onchange="checkCustom(this, 'c_diff')" class="lq-input">
                         <option value="" disabled selected>請選擇...</option>
                         <option value="Custom">✍️ 自定義</option>
                         <option value="簡單">簡單</option>
@@ -346,21 +423,21 @@
                 </div>
                 <div>
                     <label class="font-bold text-sm">輸出語言 <span class="text-red-500">*</span></label>
-                    <select id="lang" class="w-full p-3 border rounded-lg">
+                    <select id="lang" class="lq-input">
                         <option value="繁體中文">繁體中文</option>
                         <option value="English (英文)">English (英文)</option>
                     </select>
                 </div>
             </div>
 
-            <button onclick="startGen()" id="btnGo" class="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-xl hover:bg-emerald-700 shadow-lg transition">🚀 小綸開始出題</button>
+            <button onclick="startGen()" id="btnGo" class="lq-btn lq-cta lq-btn-primary w-full py-4 rounded-xl text-xl">🚀 小綸開始出題</button>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
-                <button onclick="saveDefaultSettings()" class="w-full py-2 bg-white border-2 border-indigo-500 text-indigo-700 rounded-xl font-bold hover:bg-indigo-50 transition text-sm sm:text-base">💾 儲存設定條件</button>
-                <button onclick="clearAllSettings()" class="w-full py-2 bg-white border-2 border-red-400 text-red-600 rounded-xl font-bold hover:bg-red-50 transition text-sm sm:text-base">🗑️ 清除所有條件</button>
-                <button onclick="copySettingsLink()" class="w-full py-2 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition text-sm sm:text-base">🔗 複製設定連結</button>
+                <button onclick="saveDefaultSettings()" class="lq-btn lq-btn-secondary w-full py-2 text-sm sm:text-base">💾 儲存設定條件</button>
+                <button onclick="clearAllSettings()" class="lq-btn lq-btn-danger w-full py-2 text-sm sm:text-base">🗑️ 清除所有條件</button>
+                <button onclick="copySettingsLink()" class="lq-btn lq-btn-secondary w-full py-2 text-sm sm:text-base">🔗 複製設定連結</button>
             </div>
-            <div id="barBox" class="hidden mt-4 h-4 w-full bg-gray-200 rounded-full overflow-hidden border border-emerald-200"><div id="bar" class="progress-bar">0%</div></div>
-            <p id="status" class="text-center text-sm mt-2 text-emerald-600 font-bold animate-pulse"></p>
+            <div id="barBox" class="hidden mt-4 h-3 w-full bg-gray-200 rounded-full overflow-hidden"><div id="bar" class="progress-bar">0%</div></div>
+            <p id="status" class="text-center text-sm mt-2 text-blue-700 font-bold animate-pulse"></p>
 
             <div class="mt-10 pt-6 border-t border-gray-200">
                 <h4 class="font-bold mb-3 text-gray-700">【免責聲明與使用規範】</h4>
@@ -376,11 +453,10 @@
     </div>
 
     <div id="resultSection" class="hidden w-full min-h-screen bg-gray-600 pb-20">
-        <div class="sticky-header sticky top-0 bg-slate-800 text-white p-2 sm:p-3 shadow-lg z-50 flex flex-wrap justify-center items-center gap-2 sm:gap-6">
-            <div class="flex gap-2 order-1">
-                <button onclick="switchSheet('quiz')" id="btnQuiz" class="bg-emerald-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-emerald-500">題目卷</button>
-                <button onclick="switchSheet('key')" id="btnKey" class="bg-slate-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-slate-500">答案卷</button>
-                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="bg-purple-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-purple-500">📱 線上作答（開新分頁）</button>
+        <div class="sticky-header sticky top-0 bg-slate-900 text-white p-2 sm:p-3 shadow-lg z-50 flex flex-wrap justify-center items-center gap-2 sm:gap-6">
+            <div class="flex gap-1 order-1 bg-white/5 p-1 rounded-xl">
+                <button onclick="switchSheet('quiz')" id="btnQuiz" class="lq-btn lq-btn-dark is-active px-3 sm:px-4 py-1.5 text-sm sm:text-base">題目卷</button>
+                <button onclick="switchSheet('key')" id="btnKey" class="lq-btn lq-btn-dark px-3 sm:px-4 py-1.5 text-sm sm:text-base">答案卷</button>
             </div>
 
             <div class="w-full sm:w-auto sm:flex-1 text-center sm:max-w-md order-3 sm:order-2">
@@ -388,19 +464,23 @@
             </div>
 
             <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3">
-                <button id="btnReload" onclick="location.reload()" class="bg-gray-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-gray-500">🔄 重新出題</button>
+                <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base">🔄 重新出題</button>
+                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base">📱 線上作答預覽</button>
                 <div class="relative inline-block" id="downloadMenuWrap">
-                    <button onclick="toggleDownloadMenu()" class="bg-blue-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-blue-500">⬇️ 下載 ▾</button>
+                    <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base">⬇️ 下載 ▾</button>
                     <div id="downloadMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-40">
                         <button onclick="dlDoc(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📄 Word (.doc)</button>
                         <button onclick="dlPDF(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📕 PDF</button>
                         <button onclick="dlTxt(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📝 純文字 (.txt)</button>
                     </div>
                 </div>
-                <button onclick="window.print()" class="bg-emerald-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-emerald-500">🖨️ 列印</button>
-                <div class="flex gap-2" id="shareBtnsWrap">
-                    <button onclick="shareQuiz('student')" class="bg-pink-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-pink-500">📤 分享題目(學生作答)</button>
-                    <button onclick="shareQuiz('key')" class="bg-orange-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-orange-500">📤 分享答案(家長)</button>
+                <button onclick="window.print()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base">🖨️ 列印</button>
+                <div class="relative inline-block" id="shareBtnsWrap">
+                    <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base">📤 分享 ▾</button>
+                    <div id="shareMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
+                        <button onclick="shareQuiz('student'); closeShareMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">🧒 學生作答連結</button>
+                        <button onclick="shareQuiz('key'); closeShareMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">👨‍👩‍👧 家長答案連結</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -409,21 +489,21 @@
         <p class="no-print text-center text-sm text-gray-300 py-6">有任何問題？請點<a href="https://hunglun-new.pages.dev/" target="_blank" rel="noopener noreferrer" class="text-emerald-400 underline font-bold hover:text-emerald-300">鴻綸科技官方網站</a></p>
     </div>
 
-    <div id="historyModal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 no-print">
-        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-6">
+    <div id="historyModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-lg w-full max-h-[80vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-bold text-lg">📜 出題紀錄（僅存在這台裝置）</h3>
-                <button onclick="closeHistory()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                <button onclick="closeHistory()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
             </div>
             <div id="historyList"></div>
         </div>
     </div>
 
-    <div id="usageGuideModal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 no-print">
-        <div class="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[85vh] overflow-y-auto p-6">
+    <div id="usageGuideModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-xl w-full max-h-[85vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-bold text-lg">❓ 小綸出題小幫手 使用說明</h3>
-                <button onclick="closeUsageGuide()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                <button onclick="closeUsageGuide()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
             </div>
             <div class="space-y-4 text-sm text-gray-700 leading-relaxed">
                 <div>
@@ -445,9 +525,10 @@
                         <li><b>🔁 重新出這題</b>：只有某一題不滿意，不用整份重出</li>
                         <li><b>⬇️ 下載</b>：可選 Word / PDF / 純文字三種格式</li>
                         <li><b>🖨️ 列印</b>：直接印出或存成PDF</li>
-                        <li><b>📱 線上作答（開新分頁）</b>：自己先開一個新分頁測試看看學生作答會看到什麼畫面、怎麼自動評分</li>
-                        <li><b>📤 分享題目(學生作答)</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
-                        <li><b>📤 分享答案(家長)</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
+                        <li><b>📱 線上作答預覽</b>：自己先開一個新分頁測試看看學生作答會看到什麼畫面、怎麼自動評分</li>
+                        <li><b>📤 分享 ▾ 學生作答連結</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
+                        <li><b>📤 分享 ▾ 家長答案連結</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
+                        <li><b>學生線上作答</b>：可選「⚡每題即時看結果」或「📋全部寫完再送出」，並可選填姓名/年級/班級/座號；送出評分後可再產生「結果連結」分享回給老師/家長核對</li>
                         <li><b>📜 出題紀錄</b>：這台裝置留有最近20次出題紀錄，可以重新開啟</li>
                         <li><b>🔗 複製目前設定連結</b>：把年級/科目/範圍等設定分享給同事，對方開了會自動帶入表單</li>
                         <li><b>💾 儲存設定條件</b>：把目前的年級/科目/範圍等設定存在這台裝置，下次打開頁面自動帶入，手機上不用每次重填</li>
@@ -510,6 +591,12 @@
                 .then(r => r.json())
                 .then(d => { document.getElementById('visitCount').textContent = d.count; })
                 .catch(() => {});
+
+            const resultViewed = await loadResultViewIfAny();
+            if (resultViewed) {
+                document.getElementById('hlSplash').style.display = 'none';
+                return;
+            }
 
             const shared = await loadSharedQuizIfAny();
             if (shared) {
@@ -688,6 +775,69 @@
             if (shareBtnsWrap) shareBtnsWrap.classList.add('hidden');
         }
 
+        // --- 作答結果分享連結(給家長/老師看,唯讀,不可重測) ---
+        async function loadResultViewIfAny() {
+            const params = new URLSearchParams(location.search);
+            const resultId = params.get('result');
+            if (!resultId) return false;
+
+            document.getElementById('inputForm').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+            const stickyHeader = document.querySelector('.sticky-header');
+            if (stickyHeader) stickyHeader.classList.add('hidden');
+            const ansContainer = document.getElementById('answerModeContainer');
+            if (ansContainer) ansContainer.style.display = 'none';
+            const paperContainer = document.getElementById('paperContainer');
+            paperContainer.style.display = 'block';
+            paperContainer.innerHTML = "<div class='text-center text-white py-20 text-lg'>⏳ 載入結果中...</div>";
+
+            try {
+                const res = await fetch(API_BASE + "/api/result/" + encodeURIComponent(resultId));
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+                renderResultView(data);
+            } catch (e) {
+                paperContainer.innerHTML = "<div class='text-center text-white py-20 text-lg'>❌ 載入失敗：" + escapeHtml(e.message) + "</div>";
+            }
+            return true;
+        }
+
+        function renderResultView(data) {
+            const container = document.getElementById('paperContainer');
+            const s = data.studentInfo || {};
+            const infoParts = [];
+            if (s.grade) infoParts.push(escapeHtml(s.grade));
+            if (s.className) infoParts.push(escapeHtml(s.className));
+            if (s.seat) infoParts.push('座號' + escapeHtml(s.seat));
+            if (s.name) infoParts.push(escapeHtml(s.name));
+            const infoLine = infoParts.length > 0 ? infoParts.join('・') : '(未填寫學生資料)';
+
+            let html = "<div class='max-w-2xl mx-auto p-4'>";
+            html += "<div class='lq-card p-5 mb-4 text-center'>" +
+                "<div class='text-xs text-gray-400 mb-1'>📋 線上作答結果(唯讀)</div>" +
+                "<h2 class='font-bold text-lg mb-1'>" + escapeHtml(data.title || '測驗') + "</h2>" +
+                "<div class='text-sm text-gray-500 mb-3'>" + infoLine + "</div>" +
+                "<div class='text-3xl font-bold' style='color:var(--hl-blue);'>" + (Number(data.totalScore) || 0) + " / " + (Number(data.maxScore) || 0) + " 分</div>" +
+                "<div class='text-sm text-gray-500'>約 " + (Number(data.pct) || 0) + " 分</div>" +
+                "</div>";
+
+            (data.details || []).forEach((d, i) => {
+                const badge = d.reviewNeeded ? (d.isCorrect ? '🤔' : '📝') : (d.isCorrect ? '✅' : '❌');
+                const borderClass = d.reviewNeeded ? 'border-blue-300' : (d.isCorrect ? 'border-emerald-300' : 'border-rose-300');
+                html += "<div class='lq-card p-4 mb-3 border-2 " + borderClass + "'>";
+                html += "<div class='font-bold mb-2'>" + (i + 1) + ". " + escapeHtml(d.q || '') + " <span class='text-xs text-gray-400'>(" + (Number(d.max) || 0) + "分)</span></div>";
+                html += "<div class='text-sm mb-1'>" + badge + " 作答：" + escapeHtml(d.userDisplay || '') + "</div>";
+                if (!d.isCorrect || d.reviewNeeded) {
+                    html += "<div class='text-sm text-gray-600'>參考答案：" + escapeHtml(d.correctDisplay || '') + (d.explain ? ('｜解析：' + escapeHtml(d.explain)) : '') + "</div>";
+                }
+                html += "</div>";
+            });
+
+            html += "<div class='text-center text-xs text-gray-400 mt-6'>有任何問題？請點<a href='https://hunglun-new.pages.dev/' target='_blank' class='underline text-emerald-400'>鴻綸科技官方網站</a></div>";
+            html += "</div>";
+            container.innerHTML = html;
+        }
+
         // --- 複製設定連結 / 帶入連結設定 ---
         function applySettings(s) {
             function setSelectOrCustom(selectId, customId, value) {
@@ -823,11 +973,11 @@
                 list.innerHTML = "<p class='text-gray-500 text-center py-8'>還沒有出題紀錄</p>";
             } else {
                 list.innerHTML = hist.map((h, i) =>
-                    "<div class='flex justify-between items-center bg-gray-50 p-3 rounded-lg mb-2 border'>" +
+                    "<div class='flex justify-between items-center bg-gray-50 p-3 rounded-xl mb-2 border border-gray-100'>" +
                     "<div class='truncate mr-2'><div class='font-bold truncate'>" + escapeHtml(h.title) + "</div><div class='text-xs text-gray-500'>" + escapeHtml(h.createdAt) + "・" + (h.items ? h.items.length : 0) + "題</div></div>" +
                     "<div class='flex gap-2 flex-shrink-0'>" +
-                    "<button onclick='loadHistory(" + i + ")' class='bg-emerald-600 text-white px-3 py-1 rounded text-sm'>開啟</button>" +
-                    "<button onclick='deleteHistory(" + i + ")' class='bg-red-100 text-red-600 px-3 py-1 rounded text-sm'>刪除</button>" +
+                    "<button onclick='loadHistory(" + i + ")' class='lq-btn lq-btn-primary px-3 py-1 text-sm'>開啟</button>" +
+                    "<button onclick='deleteHistory(" + i + ")' class='lq-btn lq-btn-danger px-3 py-1 text-sm'>刪除</button>" +
                     "</div></div>"
                 ).join('');
             }
@@ -1332,17 +1482,14 @@
             let paperContainer = document.getElementById('paperContainer');
             let b1 = document.getElementById('btnQuiz');
             let b2 = document.getElementById('btnKey');
-            let b3 = document.getElementById('btnAnswerMode');
 
             qs.forEach(e => e.style.display = (t === 'quiz') ? 'block' : 'none');
             ks.forEach(e => e.style.display = (t === 'key') ? 'block' : 'none');
             if (ansContainer) ansContainer.style.display = (t === 'answer') ? 'block' : 'none';
             if (paperContainer) paperContainer.style.display = (t === 'answer') ? 'none' : 'block';
 
-            const base = "px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base ";
-            b1.className = base + (t === 'quiz' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-600 hover:bg-slate-500');
-            b2.className = base + (t === 'key' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-600 hover:bg-slate-500');
-            if (b3) b3.className = base + (t === 'answer' ? 'bg-purple-700' : 'bg-purple-600 hover:bg-purple-500');
+            if (b1) b1.classList.toggle('is-active', t === 'quiz');
+            if (b2) b2.classList.toggle('is-active', t === 'key');
 
             if (t === 'answer' && ansContainer && !ansContainer.dataset.rendered) {
                 renderAnswerMode();
@@ -1384,31 +1531,56 @@
             return [];
         }
 
+        // 選擇/複選題在「即時模式」下才會逐題觸發即時判分；填空/簡答題不管哪個模式都是送出評分後才看結果(文字比對本來就只能算參考)
+        function getGradeMode() {
+            const el = document.querySelector('input[name="ansGradeMode"]:checked');
+            return el ? el.value : 'instant';
+        }
+
+        function onAnswerChanged(i) {
+            if (getGradeMode() !== 'instant') return;
+            gradeOneQuestion(i);
+        }
+
         function renderAnswerMode() {
             const container = document.getElementById('answerModeContainer');
             if (!container) return;
             const items = window.currentItems || [];
             let html = "<div class='max-w-2xl mx-auto p-4'>";
-            html += "<div class='bg-white rounded-xl p-4 mb-4 text-center shadow'><h2 class='font-bold text-lg mb-1'>📱 線上作答</h2><p class='text-sm text-gray-500'>作答完按下方「送出評分」。選擇/複選題會自動判分；填空/簡答題只能做文字比對，僅供參考，請自行核對。</p></div>";
+            html += "<div class='lq-card p-5 mb-4 text-center'><h2 class='font-bold text-lg mb-1'>📱 線上作答</h2><p class='text-sm text-gray-500'>選擇/複選題會自動判分；填空/簡答題只能做文字比對，僅供參考，請自行核對。</p></div>";
+
+            html += "<div class='lq-card p-4 mb-4'>" +
+                "<div class='text-sm text-gray-500 mb-2'>👤 填寫資料（選填，方便老師/家長核對是誰寫的）</div>" +
+                "<div class='grid grid-cols-2 sm:grid-cols-4 gap-2'>" +
+                "<input id='ansStuGrade' placeholder='年級' class='lq-input text-sm py-1.5'>" +
+                "<input id='ansStuClass' placeholder='班級' class='lq-input text-sm py-1.5'>" +
+                "<input id='ansStuSeat' placeholder='座號' class='lq-input text-sm py-1.5'>" +
+                "<input id='ansStuName' placeholder='姓名' class='lq-input text-sm py-1.5'>" +
+                "</div></div>";
+
+            html += "<div class='lq-card p-3 mb-4 flex items-center justify-center gap-4 sm:gap-6 text-sm flex-wrap'>" +
+                "<label class='flex items-center gap-1.5 cursor-pointer font-semibold'><input type='radio' name='ansGradeMode' value='instant' checked> ⚡ 每題即時看結果</label>" +
+                "<label class='flex items-center gap-1.5 cursor-pointer font-semibold'><input type='radio' name='ansGradeMode' value='batch'> 📋 全部寫完再送出</label>" +
+                "</div>";
             items.forEach((q, i) => {
                 const letters = getCorrectLetters(q);
-                html += "<div class='bg-white rounded-xl p-4 mb-3 shadow ans-card' id='ans-card-" + i + "'>";
+                html += "<div class='lq-card p-4 mb-3 ans-card' id='ans-card-" + i + "'>";
                 html += "<div class='font-bold mb-2'>" + (i + 1) + ". " + escapeHtml(q.q) + " <span class='text-xs text-gray-400'>(" + q.s + "分)</span></div>";
                 if (q.o && q.o.length > 0) {
                     const inputType = letters && letters.length > 1 ? 'checkbox' : 'radio';
                     q.o.forEach((o, oi) => {
                         const label = String.fromCharCode(65 + oi);
-                        html += "<label class='flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-50 cursor-pointer'>" +
-                            "<input type='" + inputType + "' name='ans-" + i + "' value='" + label + "' class='w-4 h-4 flex-shrink-0'>" +
+                        html += "<label class='flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 cursor-pointer'>" +
+                            "<input type='" + inputType + "' name='ans-" + i + "' value='" + label + "' class='w-4 h-4 flex-shrink-0 accent-[color:var(--hl-blue)]' onchange='onAnswerChanged(" + i + ")'>" +
                             "<span>(" + label + ") " + escapeHtml(o) + "</span></label>";
                     });
                 } else {
-                    html += "<textarea class='w-full border rounded-lg p-2 mt-1' rows='2' id='ans-text-" + i + "' placeholder='請輸入答案'></textarea>";
+                    html += "<textarea class='lq-input mt-1' rows='2' id='ans-text-" + i + "' placeholder='請輸入答案'></textarea>";
                 }
                 html += "<div class='ans-feedback mt-2 text-sm hidden' id='ans-feedback-" + i + "'></div>";
                 html += "</div>";
             });
-            html += "<button onclick='gradeAnswers()' class='w-full py-3 bg-purple-600 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-purple-700'>✅ 送出評分</button>";
+            html += "<button onclick='gradeAnswers()' class='lq-btn lq-btn-primary w-full py-3 rounded-xl text-lg'>✅ 送出評分</button>";
             html += "<div id='scoreResult' class='mt-4'></div>";
             html += "</div>";
             container.innerHTML = html;
@@ -1436,45 +1608,118 @@
             card.classList.add(correct ? 'ans-correct' : 'ans-wrong');
         }
 
+        // 單題判分：即時模式的onchange跟批次的送出評分共用同一套邏輯，
+        // 結果存進window.gradedDetails[i]供之後「分享結果」組資料使用
+        function gradeOneQuestion(i) {
+            const items = window.currentItems || [];
+            const q = items[i];
+            const fb = document.getElementById('ans-feedback-' + i);
+            if (!q || !fb) return null;
+            const letters = getCorrectLetters(q);
+            let result;
+            if (q.o && q.o.length > 0) {
+                const checked = Array.from(document.querySelectorAll('input[name="ans-' + i + '"]:checked')).map(el => el.value).sort();
+                const correct = (letters || []).slice().sort();
+                const isCorrect = checked.length > 0 && checked.length === correct.length && checked.every((v, idx) => v === correct[idx]);
+                // 萬一連字母都比對不出來(AI答案格式異常)，退而顯示原始答案內容，不要留空白
+                const correctDisplay = correct.length > 0 ? correct.join('') : (String(q.a || '').trim() || '(無法判讀，請自行核對)');
+                const userDisplay = checked.length > 0 ? checked.join('') : '(未作答)';
+                const restText = isCorrect ? '答對了！' : ('答錯了，正確答案：' + correctDisplay + (q.e ? ('｜解析：' + q.e) : ''));
+                setAnswerFeedback(fb, isCorrect ? '✅' : '❌', restText, 'ans-feedback mt-2 text-sm ' + (isCorrect ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold'));
+                flashAnswerCard(i, isCorrect);
+                result = { score: isCorrect ? (q.s || 0) : 0, max: q.s || 0, isCorrect, reviewNeeded: false, userDisplay, correctDisplay };
+            } else {
+                const inputEl = document.getElementById('ans-text-' + i);
+                const userAns = ((inputEl && inputEl.value) || '').trim();
+                const correctAns = String(q.a || '').trim();
+                const roughMatch = userAns !== '' && userAns.replace(/\s/g, '') === correctAns.replace(/\s/g, '');
+                const restText = (roughMatch ? '文字比對相符(僅供參考)' : '請自行核對') + '，參考答案：' + correctAns + (q.e ? ('｜解析：' + q.e) : '');
+                setAnswerFeedback(fb, roughMatch ? '🤔' : '📝', restText, 'ans-feedback mt-2 text-sm text-blue-600');
+                flashAnswerCard(i, roughMatch);
+                result = { score: roughMatch ? (q.s || 0) : 0, max: q.s || 0, isCorrect: roughMatch, reviewNeeded: true, userDisplay: userAns || '(未作答)', correctDisplay: correctAns };
+            }
+            window.gradedDetails = window.gradedDetails || {};
+            window.gradedDetails[i] = result;
+            return result;
+        }
+
         function gradeAnswers() {
             const items = window.currentItems || [];
             let totalScore = 0, maxScore = 0, needReview = 0;
+            window.gradedDetails = {};
             items.forEach((q, i) => {
+                const r = gradeOneQuestion(i);
                 maxScore += (q.s || 0);
-                const fb = document.getElementById('ans-feedback-' + i);
-                if (!fb) return;
-                const letters = getCorrectLetters(q);
-                if (q.o && q.o.length > 0) {
-                    const checked = Array.from(document.querySelectorAll('input[name="ans-' + i + '"]:checked')).map(el => el.value).sort();
-                    const correct = (letters || []).slice().sort();
-                    const isCorrect = checked.length > 0 && checked.length === correct.length && checked.every((v, idx) => v === correct[idx]);
-                    if (isCorrect) totalScore += (q.s || 0);
-                    // 萬一連字母都比對不出來(AI答案格式異常)，退而顯示原始答案內容，不要留空白
-                    const correctDisplay = correct.length > 0 ? correct.join('') : (String(q.a || '').trim() || '(無法判讀，請自行核對)');
-                    const restText = isCorrect ? '答對了！' : ('答錯了，正確答案：' + correctDisplay + (q.e ? ('｜解析：' + q.e) : ''));
-                    setAnswerFeedback(fb, isCorrect ? '✅' : '❌', restText, 'ans-feedback mt-2 text-sm ' + (isCorrect ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold'));
-                    flashAnswerCard(i, isCorrect);
-                } else {
-                    const inputEl = document.getElementById('ans-text-' + i);
-                    const userAns = ((inputEl && inputEl.value) || '').trim();
-                    const correctAns = String(q.a || '').trim();
-                    const roughMatch = userAns !== '' && userAns.replace(/\s/g, '') === correctAns.replace(/\s/g, '');
-                    if (roughMatch) totalScore += (q.s || 0);
-                    needReview++;
-                    const restText = (roughMatch ? '文字比對相符(僅供參考)' : '請自行核對') + '，參考答案：' + correctAns + (q.e ? ('｜解析：' + q.e) : '');
-                    setAnswerFeedback(fb, roughMatch ? '🤔' : '📝', restText, 'ans-feedback mt-2 text-sm text-blue-600');
-                    flashAnswerCard(i, roughMatch);
-                }
+                if (!r) return;
+                totalScore += r.score;
+                if (r.reviewNeeded) needReview++;
             });
 
             const pct = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-            let resultHTML = "<div class='bg-white rounded-xl p-5 shadow text-center border-2 border-purple-300 ans-score-pop'>";
-            resultHTML += "<div class='text-3xl font-bold text-purple-700 mb-1'>" + totalScore + " / " + maxScore + " 分</div>";
-            resultHTML += "<div class='text-sm text-gray-500'>約 " + pct + " 分" + (needReview > 0 ? "（含填空/簡答題的文字比對估算，建議自行核對）" : "（選擇/複選題自動判分）") + "</div>";
+            window.lastGradeSummary = { totalScore, maxScore, pct };
+            let resultHTML = "<div class='lq-card p-5 text-center ans-score-pop' style='border:2px solid var(--hl-blue);'>";
+            resultHTML += "<div class='text-3xl font-bold mb-1' style='color:var(--hl-blue);'>" + totalScore + " / " + maxScore + " 分</div>";
+            resultHTML += "<div class='text-sm text-gray-500 mb-3'>約 " + pct + " 分" + (needReview > 0 ? "（含填空/簡答題的文字比對估算，建議自行核對）" : "（選擇/複選題自動判分）") + "</div>";
+            resultHTML += "<button onclick='shareResult(this)' class='lq-btn lq-btn-share px-4 py-2 text-sm'>📤 分享結果給家長/老師</button>";
+            resultHTML += "<div id='shareResultMsg' class='text-xs text-gray-500 mt-2'></div>";
             resultHTML += "</div>";
             const scoreEl = document.getElementById('scoreResult');
             scoreEl.innerHTML = resultHTML;
             scoreEl.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 把作答結果(含選填的學生資料)存到後端換一個唯讀結果連結,複製給家長/老師
+        async function shareResult(btnEl) {
+            const items = window.currentItems || [];
+            const details = items.map((q, i) => {
+                const r = (window.gradedDetails && window.gradedDetails[i]) || null;
+                return {
+                    q: q.q,
+                    max: q.s || 0,
+                    score: r ? r.score : 0,
+                    isCorrect: r ? !!r.isCorrect : false,
+                    reviewNeeded: r ? !!r.reviewNeeded : false,
+                    userDisplay: r ? r.userDisplay : '(未作答)',
+                    correctDisplay: r ? r.correctDisplay : '',
+                    explain: q.e || '',
+                };
+            });
+            const studentInfo = {
+                grade: (document.getElementById('ansStuGrade') || {}).value?.trim() || '',
+                className: (document.getElementById('ansStuClass') || {}).value?.trim() || '',
+                seat: (document.getElementById('ansStuSeat') || {}).value?.trim() || '',
+                name: (document.getElementById('ansStuName') || {}).value?.trim() || '',
+            };
+            const s = window.lastGradeSummary || {};
+            const msgEl = document.getElementById('shareResultMsg');
+            const originalLabel = btnEl ? btnEl.innerText : '';
+            if (btnEl) { btnEl.disabled = true; btnEl.innerText = '⏳ 產生連結中...'; }
+            try {
+                const res = await fetch(API_BASE + "/api/result", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: window.docName || '測驗',
+                        studentInfo,
+                        totalScore: s.totalScore || 0,
+                        maxScore: s.maxScore || 0,
+                        pct: s.pct || 0,
+                        details,
+                    }),
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const url = location.origin + location.pathname + "?result=" + data.id;
+                let copied = false;
+                try { await navigator.clipboard.writeText(url); copied = true; } catch (e) {}
+                if (msgEl) msgEl.textContent = copied ? '✅ 結果連結已複製！可貼給家長/老師查看(30天內有效，唯讀)' : ('連結：' + url);
+                if (!copied) prompt('複製失敗，請手動複製以下連結：', url);
+            } catch (e) {
+                if (msgEl) msgEl.textContent = '❌ 產生連結失敗：' + e.message;
+            } finally {
+                if (btnEl) { btnEl.disabled = false; btnEl.innerText = originalLabel; }
+            }
         }
 
         // --- 下載選單（多格式）---
@@ -1487,6 +1732,18 @@
         document.addEventListener('click', function(e) {
             const wrap = document.getElementById('downloadMenuWrap');
             if (wrap && !wrap.contains(e.target)) closeDownloadMenu();
+        });
+
+        // --- 分享選單（學生作答連結/家長答案連結，合併成一個下拉，取代原本兩顆各自散落的分享按鈕）---
+        function toggleShareMenu() {
+            document.getElementById('shareMenu').classList.toggle('hidden');
+        }
+        function closeShareMenu() {
+            document.getElementById('shareMenu').classList.add('hidden');
+        }
+        document.addEventListener('click', function(e) {
+            const wrap = document.getElementById('shareBtnsWrap');
+            if (wrap && !wrap.contains(e.target)) closeShareMenu();
         });
 
         function dlTxt() {

@@ -16,6 +16,8 @@ const DEFAULT_ADMIN_PASSWORD = "5407";
 const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
 const SHARE_TTL_SECONDS = 60 * 60 * 24 * 30; // 分享連結30天後過期
 const SHARE_MAX_BYTES = 500 * 1024; // 單份分享內容上限500KB,避免濫用KV空間
+const RESULT_TTL_SECONDS = 60 * 60 * 24 * 30; // 作答結果連結30天後過期
+const RESULT_MAX_BYTES = 300 * 1024; // 單份結果內容上限300KB
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -41,6 +43,12 @@ export default {
     }
     if (url.pathname.startsWith("/api/share/")) {
       return handleShareGet(request, env, url.pathname.slice("/api/share/".length));
+    }
+    if (url.pathname === "/api/result" && request.method !== "GET") {
+      return handleResultCreate(request, env);
+    }
+    if (url.pathname.startsWith("/api/result/")) {
+      return handleResultGet(request, env, url.pathname.slice("/api/result/".length));
     }
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
@@ -112,6 +120,92 @@ async function handleShareGet(request, env, id) {
   const raw = await env.COOLDOWN_KV.get("share:" + id);
   if (!raw) {
     return new Response(JSON.stringify({ error: { message: "找不到這份分享內容，可能已過期(30天)或連結錯誤" } }), {
+      status: 404,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  return new Response(raw, {
+    status: 200,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
+
+// 學生線上作答完成後，把評分結果(含選填的學生資料)存進KV,產生短ID,
+// 讓學生可以複製連結分享給家長/老師查看(唯讀,不可重測)。存在既有的 COOLDOWN_KV(key前綴 result:),30天後過期。
+// 跟 /api/share 一樣沒有身分驗證，僅限存放「已作答完的結果摘要」，不接受任意大小內容(300KB上限)。
+async function handleResultCreate(request, env) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+  if (request.method !== "POST") {
+    return new Response(JSON.stringify({ error: { message: "Method Not Allowed" } }), {
+      status: 405,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const body = await request.json();
+    const details = body.details;
+    if (!Array.isArray(details) || details.length === 0) {
+      return new Response(JSON.stringify({ error: { message: "沒有作答結果可以分享" } }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    const payload = JSON.stringify({
+      title: String(body.title || "測驗").slice(0, 200),
+      studentInfo: {
+        grade: String((body.studentInfo && body.studentInfo.grade) || "").slice(0, 50),
+        className: String((body.studentInfo && body.studentInfo.className) || "").slice(0, 50),
+        seat: String((body.studentInfo && body.studentInfo.seat) || "").slice(0, 20),
+        name: String((body.studentInfo && body.studentInfo.name) || "").slice(0, 50),
+      },
+      totalScore: Number(body.totalScore) || 0,
+      maxScore: Number(body.maxScore) || 0,
+      pct: Number(body.pct) || 0,
+      details,
+      createdAt: Date.now(),
+    });
+
+    if (payload.length > RESULT_MAX_BYTES) {
+      return new Response(JSON.stringify({ error: { message: "作答結果內容太大，無法分享" } }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+    await env.COOLDOWN_KV.put("result:" + id, payload, { expirationTtl: RESULT_TTL_SECONDS });
+
+    return new Response(JSON.stringify({ id }), {
+      status: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: { message: err.message } }), {
+      status: 500,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+}
+
+async function handleResultGet(request, env, id) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+  if (!id) {
+    return new Response(JSON.stringify({ error: { message: "缺少結果ID" } }), {
+      status: 400,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  const raw = await env.COOLDOWN_KV.get("result:" + id);
+  if (!raw) {
+    return new Response(JSON.stringify({ error: { message: "找不到這份作答結果，可能已過期(30天)或連結錯誤" } }), {
       status: 404,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
