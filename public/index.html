@@ -312,8 +312,8 @@
                 <span class="text-yellow-400 text-xs sm:text-sm font-bold animate-pulse">💡 點擊試卷即可修改內容</span>
             </div>
 
-            <div class="flex gap-2 order-2 sm:order-3">
-                <button onclick="location.reload()" class="bg-gray-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-gray-500">🔄 重新出題</button>
+            <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3">
+                <button id="btnReload" onclick="location.reload()" class="bg-gray-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-gray-500">🔄 重新出題</button>
                 <div class="relative inline-block" id="downloadMenuWrap">
                     <button onclick="toggleDownloadMenu()" class="bg-blue-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-blue-500">⬇️ 下載 ▾</button>
                     <div id="downloadMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-40">
@@ -323,6 +323,10 @@
                     </div>
                 </div>
                 <button onclick="window.print()" class="bg-emerald-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-emerald-500">🖨️ 列印</button>
+                <div class="flex gap-2" id="shareBtnsWrap">
+                    <button onclick="shareQuiz('student')" class="bg-pink-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-pink-500">📤 分享題目(學生作答)</button>
+                    <button onclick="shareQuiz('key')" class="bg-orange-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-orange-500">📤 分享答案(家長)</button>
+                </div>
             </div>
         </div>
         <div id="paperContainer" class="max-w-5xl mx-auto pt-6"></div>
@@ -357,7 +361,10 @@
             return id;
         }
 
-        window.onload = function() {
+        window.isSharedView = false;
+        window.sharedMode = null;
+
+        window.onload = async function() {
             let k = localStorage.getItem('lun_key');
             if (k) document.getElementById('userKey').value = k;
 
@@ -366,8 +373,104 @@
                 .then(d => { document.getElementById('visitCount').textContent = d.count; })
                 .catch(() => {});
 
-            applySettingsFromURL();
+            const shared = await loadSharedQuizIfAny();
+            if (!shared) applySettingsFromURL();
         };
+
+        // --- 分享題目(給學生線上作答) / 分享答案(給家長查看) ---
+        async function shareQuiz(mode) {
+            if (!window.currentItems || window.currentItems.length === 0) {
+                alert('目前沒有題目可以分享');
+                return;
+            }
+            const btn = event && event.target;
+            const originalText = btn ? btn.innerText : '';
+            if (btn) { btn.disabled = true; btn.innerText = '⏳ 產生連結中...'; }
+            try {
+                const res = await fetch(API_BASE + "/api/share", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: window.currentItems, title: window.docName || '測驗' })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const url = location.origin + location.pathname + "?share=" + data.id + "&mode=" + mode;
+                const msg = mode === 'student'
+                    ? '✅ 學生作答連結已複製！（30天內有效，貼給學生開啟後可直接線上作答＋自動評分，看不到答案卷）'
+                    : '✅ 答案連結已複製！（30天內有效，貼給家長開啟可查看題目與解析，唯讀不可編輯）';
+
+                let copied = false;
+                try {
+                    await navigator.clipboard.writeText(url);
+                    copied = true;
+                } catch (e) {}
+
+                if (copied) {
+                    alert(msg);
+                } else {
+                    prompt(msg + '\n複製失敗，請手動複製以下連結：', url);
+                }
+            } catch (e) {
+                alert('產生分享連結失敗: ' + e.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = originalText; }
+            }
+        }
+
+        async function loadSharedQuizIfAny() {
+            const params = new URLSearchParams(location.search);
+            const shareId = params.get('share');
+            if (!shareId) return false;
+
+            window.isSharedView = true;
+            window.sharedMode = params.get('mode') === 'key' ? 'key' : 'student';
+
+            document.getElementById('inputForm').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('paperContainer').innerHTML = "<div class='text-center text-white py-20 text-lg'>⏳ 載入題目中...</div>";
+
+            try {
+                const res = await fetch(API_BASE + "/api/share/" + encodeURIComponent(shareId));
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+
+                window.currentItems = data.items;
+                window.currentSettings = { sType: '1' };
+
+                renderPaperFixed(data.items, data.title);
+                document.querySelectorAll('#paperContainer [contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+
+                switchSheet(window.sharedMode === 'student' ? 'answer' : 'key');
+                applySharedViewChrome();
+            } catch (e) {
+                document.getElementById('paperContainer').innerHTML = "<div class='text-center text-white py-20 text-lg'>❌ 載入失敗：" + e.message + "</div>";
+            }
+            return true;
+        }
+
+        function applySharedViewChrome() {
+            const btnQuiz = document.getElementById('btnQuiz');
+            const btnKey = document.getElementById('btnKey');
+            const btnAnswerMode = document.getElementById('btnAnswerMode');
+            const btnReload = document.getElementById('btnReload');
+            const downloadWrap = document.getElementById('downloadMenuWrap');
+            const shareBtnsWrap = document.getElementById('shareBtnsWrap');
+            const hintSpan = document.querySelector('.sticky-header .animate-pulse');
+
+            if (window.sharedMode === 'student') {
+                if (btnQuiz) btnQuiz.classList.add('hidden');
+                if (btnKey) btnKey.classList.add('hidden');
+                if (btnAnswerMode) btnAnswerMode.classList.add('hidden');
+                if (hintSpan) hintSpan.textContent = "📱 請完成以下題目，作答完按「送出評分」";
+            } else {
+                if (btnAnswerMode) btnAnswerMode.classList.add('hidden');
+                if (hintSpan) hintSpan.textContent = "👨‍👩‍👧 家長答案檢視（僅供查看，內容不可編輯）";
+            }
+            if (btnReload) btnReload.classList.add('hidden');
+            if (downloadWrap) downloadWrap.classList.add('hidden');
+            if (shareBtnsWrap) shareBtnsWrap.classList.add('hidden');
+        }
 
         // --- 複製設定連結 / 帶入連結設定 ---
         function applySettings(s) {
@@ -746,6 +849,7 @@
 
         // --- 單題重新出（會再打一次API，一樣受30秒冷卻限制） ---
         function regenBtnHTML(idx) {
+            if (window.isSharedView) return "";
             return "<div class='no-print' contenteditable='false' style='margin-bottom:4px;'><button type='button' onclick='regenerateQuestion(" + idx + ", this)' class='text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-0.5 rounded border border-amber-300' style='cursor:pointer;'>🔁 重新出這題</button></div>";
         }
 
@@ -867,7 +971,7 @@
             }
         }
 
-        function renderPaperFixed(items) {
+        function renderPaperFixed(items, titleOverride) {
             const inputForm = document.getElementById('inputForm');
             const resultSection = document.getElementById('resultSection');
             inputForm.classList.add('hidden');
@@ -880,7 +984,7 @@
             let ansContainer = document.getElementById('answerModeContainer');
             if (ansContainer) { ansContainer.dataset.rendered = ''; ansContainer.style.display = 'none'; }
 
-            let title = (document.getElementById('sourceType').value==='1' ? (document.getElementById('grade').value==='Custom'?document.getElementById('c_grade').value:document.getElementById('grade').value)+" "+document.getElementById('subject').value : "測驗") + "試卷";
+            let title = titleOverride || ((document.getElementById('sourceType').value==='1' ? (document.getElementById('grade').value==='Custom'?document.getElementById('c_grade').value:document.getElementById('grade').value)+" "+document.getElementById('subject').value : "測驗") + "試卷");
             let sub = "範圍：" + (document.getElementById('scope').value || "綜合");
             window.docName = (title + "_" + sub).replace(/[<>:"/\\|?*]/g, "");
 

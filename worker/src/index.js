@@ -14,6 +14,8 @@
 const COOLDOWN_MS = 30000;
 const DEFAULT_ADMIN_PASSWORD = "5407";
 const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
+const SHARE_TTL_SECONDS = 60 * 60 * 24 * 30; // 分享連結30天後過期
+const SHARE_MAX_BYTES = 500 * 1024; // 單份分享內容上限500KB,避免濫用KV空間
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +36,12 @@ export default {
     if (url.pathname === "/api/keys-check") {
       return handleKeysCheck(request, env);
     }
+    if (url.pathname === "/api/share" && request.method !== "GET") {
+      return handleShareCreate(request, env);
+    }
+    if (url.pathname.startsWith("/api/share/")) {
+      return handleShareGet(request, env, url.pathname.slice("/api/share/".length));
+    }
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
@@ -41,6 +49,79 @@ export default {
     return new Response("linquiz API worker is running.", { status: 200 });
   },
 };
+
+// 分享功能：老師出完題後把題目存進KV,產生短ID,分享給學生(線上作答)或家長(答案卷)。
+// 存在既有的 COOLDOWN_KV(key 前綴 share:),30天後自動過期(expirationTtl)。
+async function handleShareCreate(request, env) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+  if (request.method !== "POST") {
+    return new Response(JSON.stringify({ error: { message: "Method Not Allowed" } }), {
+      status: 405,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const body = await request.json();
+    const items = body.items;
+    const title = String(body.title || "測驗").slice(0, 200);
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return new Response(JSON.stringify({ error: { message: "沒有題目內容可以分享" } }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    const payload = JSON.stringify({ items, title, createdAt: Date.now() });
+    if (payload.length > SHARE_MAX_BYTES) {
+      return new Response(JSON.stringify({ error: { message: "題目內容太大，無法分享（請減少題數）" } }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+    await env.COOLDOWN_KV.put("share:" + id, payload, { expirationTtl: SHARE_TTL_SECONDS });
+
+    return new Response(JSON.stringify({ id }), {
+      status: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: { message: err.message } }), {
+      status: 500,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+}
+
+async function handleShareGet(request, env, id) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+  if (!id) {
+    return new Response(JSON.stringify({ error: { message: "缺少分享ID" } }), {
+      status: 400,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  const raw = await env.COOLDOWN_KV.get("share:" + id);
+  if (!raw) {
+    return new Response(JSON.stringify({ error: { message: "找不到這份分享內容，可能已過期(30天)或連結錯誤" } }), {
+      status: 404,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  return new Response(raw, {
+    status: 200,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
 
 // 真實瀏覽人次計數：以「來源IP + 當天日期」去重，同一人同一天重整頁面不會重複累加，
 // 隔天再訪問才會再算一次。計數存在既有的 COOLDOWN_KV（key 前綴 visit:）。
