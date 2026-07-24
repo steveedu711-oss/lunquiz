@@ -167,7 +167,8 @@
         </div>
 
         <div class="bg-white p-6 rounded-2xl shadow-lg border border-emerald-100">
-            <div class="mb-6 flex justify-end">
+            <div class="mb-6 flex justify-end gap-4">
+                <button onclick="openHistory()" id="historyBtn" class="text-xs text-gray-400 underline hover:text-gray-600">📜 出題紀錄</button>
                 <button onclick="unlockAdmin()" id="adminBtn" class="text-xs text-gray-400 underline hover:text-gray-600">🔓 管理者解除限制</button>
             </div>
 
@@ -281,6 +282,7 @@
             </div>
 
             <button onclick="startGen()" id="btnGo" class="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-xl hover:bg-emerald-700 shadow-lg transition">🚀 小綸開始出題</button>
+            <button onclick="copySettingsLink()" class="w-full mt-3 py-2 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition">🔗 複製目前設定連結（分享給同事）</button>
             <div id="barBox" class="hidden mt-4 h-4 w-full bg-gray-200 rounded-full overflow-hidden border border-emerald-200"><div id="bar" class="progress-bar">0%</div></div>
             <p id="status" class="text-center text-sm mt-2 text-emerald-600 font-bold animate-pulse"></p>
 
@@ -316,6 +318,16 @@
         <div id="paperContainer" class="max-w-5xl mx-auto pt-6"></div>
     </div>
 
+    <div id="historyModal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">📜 出題紀錄（僅存在這台裝置）</h3>
+                <button onclick="closeHistory()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
     <script>
         // 部署後端 Worker 後，請把這裡換成實際的 Worker 網址
         // 例：https://linquiz-api.<你的subdomain>.workers.dev
@@ -342,7 +354,129 @@
                 .then(r => r.json())
                 .then(d => { document.getElementById('visitCount').textContent = d.count; })
                 .catch(() => {});
+
+            applySettingsFromURL();
         };
+
+        // --- 複製設定連結 / 帶入連結設定 ---
+        function applySettings(s) {
+            function setSelectOrCustom(selectId, customId, value) {
+                if (!value) return;
+                const sel = document.getElementById(selectId);
+                let matched = false;
+                for (let opt of sel.options) {
+                    if (opt.value === value || opt.text === value) { sel.value = opt.value; matched = true; break; }
+                }
+                if (!matched) {
+                    sel.value = 'Custom';
+                    const custom = document.getElementById(customId);
+                    custom.value = value;
+                    custom.style.display = 'block';
+                }
+            }
+            setSelectOrCustom('grade', 'c_grade', s.grade);
+            if (s.subject) document.getElementById('subject').value = s.subject;
+            setSelectOrCustom('publisher', 'c_publisher', s.publisher);
+            if (s.scope) document.getElementById('scope').value = s.scope;
+            setSelectOrCustom('count', 'c_count', s.count);
+            setSelectOrCustom('qType', 'c_qType', s.qType);
+            setSelectOrCustom('difficulty', 'c_diff', s.difficulty);
+            if (s.lang) document.getElementById('lang').value = s.lang;
+        }
+
+        function applySettingsFromURL() {
+            const params = new URLSearchParams(location.search);
+            if ([...params.keys()].length === 0) return;
+            applySettings({
+                grade: params.get('grade'), subject: params.get('subject'), publisher: params.get('publisher'),
+                scope: params.get('scope'), count: params.get('count'), qType: params.get('qType'),
+                difficulty: params.get('difficulty'), lang: params.get('lang')
+            });
+        }
+
+        function copySettingsLink() {
+            let grade = document.getElementById('grade').value;
+            if (grade === 'Custom') grade = document.getElementById('c_grade').value.trim();
+            let subject = document.getElementById('subject').value.trim();
+            let publisher = document.getElementById('publisher').value;
+            if (publisher === 'Custom') publisher = document.getElementById('c_publisher').value.trim();
+            let scope = document.getElementById('scope').value.trim();
+            let countVal = document.getElementById('count').value;
+            if (countVal === 'Custom') countVal = document.getElementById('c_count').value.trim();
+            let typeVal = document.getElementById('qType').value;
+            if (typeVal === 'Custom') typeVal = document.getElementById('c_qType').value.trim();
+            let diffVal = document.getElementById('difficulty').value;
+            if (diffVal === 'Custom') diffVal = document.getElementById('c_diff').value.trim();
+            let langVal = document.getElementById('lang').value;
+
+            const params = new URLSearchParams({
+                grade: grade || '', subject: subject || '', publisher: publisher || '',
+                scope: scope || '', count: countVal || '', qType: typeVal || '',
+                difficulty: diffVal || '', lang: langVal || ''
+            });
+            const url = location.origin + location.pathname + "?" + params.toString();
+
+            navigator.clipboard.writeText(url).then(() => {
+                alert("✅ 設定連結已複製！貼給同事開啟後，表單會自動帶入這些設定。");
+            }).catch(() => {
+                prompt("複製失敗，請手動複製以下連結：", url);
+            });
+        }
+
+        // --- 出題紀錄（存在這台裝置的 localStorage，最多留20筆） ---
+        function saveQuizToHistory() {
+            try {
+                let hist = JSON.parse(localStorage.getItem('lun_history') || '[]');
+                hist.unshift({
+                    id: Date.now(),
+                    title: window.docName || '未命名試卷',
+                    createdAt: new Date().toLocaleString('zh-TW'),
+                    settings: window.currentSettings,
+                    items: window.currentItems
+                });
+                if (hist.length > 20) hist = hist.slice(0, 20);
+                localStorage.setItem('lun_history', JSON.stringify(hist));
+            } catch(e) { console.error('儲存歷史紀錄失敗', e); }
+        }
+
+        function openHistory() {
+            let hist = [];
+            try { hist = JSON.parse(localStorage.getItem('lun_history') || '[]'); } catch(e) {}
+            let list = document.getElementById('historyList');
+            if (hist.length === 0) {
+                list.innerHTML = "<p class='text-gray-500 text-center py-8'>還沒有出題紀錄</p>";
+            } else {
+                list.innerHTML = hist.map((h, i) =>
+                    "<div class='flex justify-between items-center bg-gray-50 p-3 rounded-lg mb-2 border'>" +
+                    "<div class='truncate mr-2'><div class='font-bold truncate'>" + h.title + "</div><div class='text-xs text-gray-500'>" + h.createdAt + "・" + (h.items ? h.items.length : 0) + "題</div></div>" +
+                    "<div class='flex gap-2 flex-shrink-0'>" +
+                    "<button onclick='loadHistory(" + i + ")' class='bg-emerald-600 text-white px-3 py-1 rounded text-sm'>開啟</button>" +
+                    "<button onclick='deleteHistory(" + i + ")' class='bg-red-100 text-red-600 px-3 py-1 rounded text-sm'>刪除</button>" +
+                    "</div></div>"
+                ).join('');
+            }
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+        function closeHistory() { document.getElementById('historyModal').classList.add('hidden'); }
+        function loadHistory(i) {
+            let hist = [];
+            try { hist = JSON.parse(localStorage.getItem('lun_history') || '[]'); } catch(e) {}
+            let h = hist[i];
+            if (!h) return;
+            if (h.settings) applySettings(h.settings);
+            window.currentItems = h.items;
+            window.currentSettings = h.settings;
+            closeHistory();
+            renderPaperFixed(h.items);
+        }
+        function deleteHistory(i) {
+            if (!confirm('確定刪除這筆歷史紀錄？')) return;
+            let hist = [];
+            try { hist = JSON.parse(localStorage.getItem('lun_history') || '[]'); } catch(e) {}
+            hist.splice(i, 1);
+            localStorage.setItem('lun_history', JSON.stringify(hist));
+            openHistory();
+        }
 
         window.forgetKey = function() {
             if (confirm("確定清除記憶的 API Key？")) {
@@ -585,6 +719,10 @@
 
                 document.getElementById('bar').style.width = "100%";
                 renderPaperFixed(allItems);
+
+                window.currentItems = allItems;
+                window.currentSettings = { sType, grade, subject, publisher, scope, count: total, qType: typeVal, difficulty: diffVal, lang: langVal, contentText };
+                saveQuizToHistory();
             } catch(e) {
                 if (simTimer) clearInterval(simTimer);
                 alert("錯誤: " + e.message);
@@ -592,6 +730,127 @@
                 document.getElementById('btnGo').innerText = "🚀 小綸開始出題";
                 document.getElementById('barBox').classList.add('hidden');
                 document.getElementById('status').innerText = "";
+            }
+        }
+
+        // --- 單題重新出（會再打一次API，一樣受30秒冷卻限制） ---
+        function regenBtnHTML(idx) {
+            return "<div class='no-print' contenteditable='false' style='margin-bottom:4px;'><button type='button' onclick='regenerateQuestion(" + idx + ", this)' class='text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-0.5 rounded border border-amber-300' style='cursor:pointer;'>🔁 重新出這題</button></div>";
+        }
+
+        function buildRegenPrompt(idx) {
+            const orig = window.currentItems[idx];
+            const s = window.currentSettings || {};
+            const isChoice = orig.o && orig.o.length > 0;
+            let p = "請只出【1題】新題目，取代原本的第" + (idx+1) + "題，條件如下：\n";
+            if (s.sType === '1') {
+                let pubStr = s.publisher === '由小綸自由發揮' ? '不限版本，請依一般課綱知識出題' : s.publisher;
+                p += "- 年級：" + s.grade + "\n- 科目：" + s.subject + "\n- 版本：" + pubStr + "\n- 範圍：" + s.scope + "\n- 難度：" + s.difficulty + "\n";
+            } else {
+                p += "請依照參考附件/資料內容出題。\n";
+            }
+            p += "- 題型：" + (isChoice ? ("選擇題，共" + orig.o.length + "個選項") : "填充題或簡答題(無選項)") + "\n";
+            p += "- 配分：" + orig.s + "分\n";
+            p += "【避免重複】：請勿與以下已存在的題目重複或雷同：\n";
+            (window.currentItems || []).forEach((it, i) => { if (i !== idx && it && it.q) p += (i+1) + ". " + it.q + "\n"; });
+            p += "\n【語言】：請務必使用「" + (s.lang || '繁體中文') + "」撰寫所有內容！\n";
+            p += '【嚴格格式要求】：必須且只能回傳合法的 JSON Array，且只包含1個物件。格式：[{"q":"題目內容","o":["選項1","選項2"],"a":"答案","e":"解析","s":' + orig.s + '}]。若為填充/簡答/計算題，"o" 必須且只能回傳空陣列 []，並將解答寫在 "a"，題目中預留底線(________________________)供填寫。';
+            return p;
+        }
+
+        function updateQuestionDOM(idx, q) {
+            let qItem = document.querySelector('.q-item[data-idx="' + idx + '"]');
+            if (qItem) {
+                let box = qItem.querySelector('.q-content-box');
+                let optsHTML = "";
+                if (q.o && q.o.length > 0) {
+                    optsHTML += "<div class='q-opts'>";
+                    q.o.forEach((o, oi) => {
+                        let label = String.fromCharCode(65+oi);
+                        optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+o+"</div>";
+                    });
+                    optsHTML += "</div>";
+                }
+                let answerSpace = (!q.o || q.o.length === 0) ? "<div class='writing-space'></div>" : "";
+                box.innerHTML = regenBtnHTML(idx) +
+                    "<div class='q-text editable-text' contenteditable='true'>" + q.q + " <span style='font-size:10pt; color:#666;'>(" + q.s + "分)</span></div>" +
+                    optsHTML + answerSpace;
+
+                let numBox = qItem.querySelector('.q-num-box');
+                let globalNum = idx + 1;
+                numBox.innerHTML = (q.o && q.o.length > 0) ? (globalNum + ". (　　)") : (globalNum + ".");
+            }
+
+            let keyItem = document.querySelector('.key-item[data-idx="' + idx + '"]');
+            if (keyItem) {
+                let ans = q.a;
+                if (Array.isArray(q.a)) ans = q.a.map(x=>String.fromCharCode(65+x)).join('');
+                else if (typeof q.a === 'number') ans = String.fromCharCode(65+q.a);
+                else ans = q.a || '(略)';
+                keyItem.innerHTML = "<b>"+(idx+1)+".</b> <span style='color:red; font-weight:bold; margin-right:10px;'>"+ans+"</span> <span style='font-size:10pt; color:#666;'>"+(q.e||'')+"</span>";
+            }
+        }
+
+        async function regenerateQuestion(idx, btnEl) {
+            if (!window.currentItems || !window.currentItems[idx]) return;
+            const originalLabel = btnEl.innerHTML;
+            btnEl.disabled = true;
+            btnEl.innerText = "⏳ 出題中...";
+            try {
+                let parts = [{ text: buildRegenPrompt(idx) }];
+                const s = window.currentSettings || {};
+                if (s.sType === '2') {
+                    uploadItems.filter(item => item.type === 'file').forEach(file => {
+                        parts.push({ inline_data: { mime_type: file.mime, data: file.data } });
+                    });
+                }
+                if (s.contentText) parts.push({ text: "\n參考內容:\n" + s.contentText });
+
+                const adminPass = sessionStorage.getItem('linquiz_admin') || "";
+                const userKey = document.getElementById('userKey').value.trim();
+
+                let res = await fetch(API_BASE + "/api/generate", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Batch-Index': '0',
+                        'X-Admin-Pass': adminPass,
+                        'X-Gemini-Api-Key': userKey,
+                        'X-Client-Id': getClientId()
+                    },
+                    body: JSON.stringify({ contents: [{ parts: parts }] })
+                });
+
+                if (res.status === 429) {
+                    let cd = await res.json().catch(() => ({}));
+                    let remaining = (cd.error && cd.error.remaining) || 30;
+                    alert("⏳ 目前冷卻中，請等待 " + remaining + " 秒後再試一次單題重出");
+                    startCooldownUI(remaining);
+                    return;
+                }
+
+                let data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+
+                let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                const bt = String.fromCharCode(96).repeat(3);
+                let cleanJSON = rawText.replace(new RegExp(bt + 'json', 'gi'), '').replace(new RegExp(bt, 'g'), '').trim();
+                cleanJSON = cleanJSON.replace(/[\r\n]+/g, ' ');
+                let s2 = cleanJSON.indexOf('['), e2 = cleanJSON.lastIndexOf(']');
+                if (s2 !== -1 && e2 !== -1) {
+                    cleanJSON = cleanJSON.substring(s2, e2+1).replace(/,\s*\]/g,']').replace(/,\s*\}/g,'}');
+                }
+                let parsed = JSON.parse(cleanJSON);
+                let newQ = Array.isArray(parsed) ? parsed[0] : parsed;
+                if (!newQ || !newQ.q) throw new Error("AI 回傳格式異常，請再試一次");
+
+                window.currentItems[idx] = newQ;
+                updateQuestionDOM(idx, newQ);
+            } catch(e) {
+                alert("重新出題失敗: " + e.message);
+            } finally {
+                btnEl.disabled = false;
+                btnEl.innerHTML = originalLabel;
             }
         }
 
@@ -647,10 +906,12 @@
                     }
                     let prefix = (q.o && q.o.length > 0) ? (globalNum + ". (　　)") : (globalNum + ".");
                     let answerSpace = (!q.o || q.o.length === 0) ? "<div class='writing-space'></div>" : "";
+                    let qIdx = globalNum - 1;
 
-                    contentHTML += "<div class='q-item'>" +
+                    contentHTML += "<div class='q-item' data-idx='" + qIdx + "'>" +
                        "<div class='q-num-box'>" + prefix + "</div>" +
                        "<div class='q-content-box'>" +
+                           regenBtnHTML(qIdx) +
                            "<div class='q-text editable-text' contenteditable='true'>" + q.q + " <span style='font-size:10pt; color:#666;'>(" + q.s + "分)</span></div>" +
                            optsHTML +
                            answerSpace +
@@ -672,7 +933,7 @@
                 if(Array.isArray(q.a)) ans = q.a.map(x=>String.fromCharCode(65+x)).join('');
                 else if(typeof q.a==='number') ans = String.fromCharCode(65+q.a);
                 else ans = q.a || '(略)';
-                kHtml += "<div style='margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;'><b>"+(i+1)+".</b> <span style='color:red; font-weight:bold; margin-right:10px;'>"+ans+"</span> <span style='font-size:10pt; color:#666;'>"+(q.e||'')+"</span></div>";
+                kHtml += "<div class='key-item' data-idx='" + i + "' style='margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;'><b>"+(i+1)+".</b> <span style='color:red; font-weight:bold; margin-right:10px;'>"+ans+"</span> <span style='font-size:10pt; color:#666;'>"+(q.e||'')+"</span></div>";
             });
             kDiv.innerHTML = kHtml;
             container.appendChild(kDiv);
@@ -703,6 +964,7 @@
 
                 let pageClone = page.cloneNode(true);
                 pageClone.removeAttribute('contenteditable');
+                pageClone.querySelectorAll('.no-print').forEach(el => el.remove());
                 pageClone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
 
                 let qItems = pageClone.querySelectorAll('.q-item');
