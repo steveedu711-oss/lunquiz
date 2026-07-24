@@ -100,6 +100,18 @@
 
         .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); transition: width 0.3s ease; text-align: center; color: white; font-size: 10px; line-height: 16px; }
 
+        /* --- 線上作答：答對/答錯回饋動畫 --- */
+        @keyframes lun-pop { 0%{transform:scale(1);} 35%{transform:scale(1.035);} 65%{transform:scale(0.99);} 100%{transform:scale(1);} }
+        @keyframes lun-shake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-8px);} 40%{transform:translateX(8px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(6px);} }
+        @keyframes lun-flash-green { 0%{box-shadow:0 0 0 0 rgba(16,185,129,0.55);} 100%{box-shadow:0 0 0 16px rgba(16,185,129,0);} }
+        @keyframes lun-flash-red { 0%{box-shadow:0 0 0 0 rgba(244,63,94,0.55);} 100%{box-shadow:0 0 0 16px rgba(244,63,94,0);} }
+        @keyframes lun-badge-pop { 0%{transform:scale(0) rotate(-12deg); opacity:0;} 60%{transform:scale(1.25) rotate(6deg); opacity:1;} 100%{transform:scale(1) rotate(0deg); opacity:1;} }
+        .ans-card { transition: border-color 0.2s; border: 2px solid transparent; }
+        .ans-card.ans-correct { animation: lun-pop 0.4s ease, lun-flash-green 0.7s ease; border-color: #10b981; }
+        .ans-card.ans-wrong { animation: lun-shake 0.4s ease, lun-flash-red 0.7s ease; border-color: #f43f5e; }
+        .ans-badge { display: inline-block; animation: lun-badge-pop 0.5s cubic-bezier(.34,1.56,.64,1); }
+        .ans-score-pop { animation: lun-pop 0.5s ease; }
+
         /* --- 列印專用設定 (終極修復) --- */
         @media print {
             /* 強制清除瀏覽器邊界 */
@@ -1380,7 +1392,7 @@
             html += "<div class='bg-white rounded-xl p-4 mb-4 text-center shadow'><h2 class='font-bold text-lg mb-1'>📱 線上作答</h2><p class='text-sm text-gray-500'>作答完按下方「送出評分」。選擇/複選題會自動判分；填空/簡答題只能做文字比對，僅供參考，請自行核對。</p></div>";
             items.forEach((q, i) => {
                 const letters = getCorrectLetters(q);
-                html += "<div class='bg-white rounded-xl p-4 mb-3 shadow'>";
+                html += "<div class='bg-white rounded-xl p-4 mb-3 shadow ans-card' id='ans-card-" + i + "'>";
                 html += "<div class='font-bold mb-2'>" + (i + 1) + ". " + escapeHtml(q.q) + " <span class='text-xs text-gray-400'>(" + q.s + "分)</span></div>";
                 if (q.o && q.o.length > 0) {
                     const inputType = letters && letters.length > 1 ? 'checkbox' : 'radio';
@@ -1402,6 +1414,28 @@
             container.innerHTML = html;
         }
 
+        // 用DOM節點組回饋文字(而非字串拼innerHTML)，即使q.e/correctAns等內容來自AI也不會有XSS風險，
+        // 同時讓✅/❌徽章可以套上獨立的彈跳動畫class
+        function setAnswerFeedback(fb, badge, restText, className) {
+            fb.className = className;
+            fb.innerHTML = '';
+            const badgeEl = document.createElement('span');
+            badgeEl.className = 'ans-badge';
+            badgeEl.textContent = badge;
+            fb.appendChild(badgeEl);
+            fb.appendChild(document.createTextNode(' ' + restText));
+            fb.classList.remove('hidden');
+        }
+
+        // 答對/答錯時整張題目卡片跳一下(答對)或抖一下(答錯)+外框變色，強制重播動畫要先移除class再reflow
+        function flashAnswerCard(i, correct) {
+            const card = document.getElementById('ans-card-' + i);
+            if (!card) return;
+            card.classList.remove('ans-correct', 'ans-wrong');
+            void card.offsetWidth;
+            card.classList.add(correct ? 'ans-correct' : 'ans-wrong');
+        }
+
         function gradeAnswers() {
             const items = window.currentItems || [];
             let totalScore = 0, maxScore = 0, needReview = 0;
@@ -1417,9 +1451,9 @@
                     if (isCorrect) totalScore += (q.s || 0);
                     // 萬一連字母都比對不出來(AI答案格式異常)，退而顯示原始答案內容，不要留空白
                     const correctDisplay = correct.length > 0 ? correct.join('') : (String(q.a || '').trim() || '(無法判讀，請自行核對)');
-                    fb.className = 'ans-feedback mt-2 text-sm ' + (isCorrect ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold');
-                    fb.innerText = isCorrect ? '✅ 答對了！' : ('❌ 答錯了，正確答案：' + correctDisplay + (q.e ? ('｜解析：' + q.e) : ''));
-                    fb.classList.remove('hidden');
+                    const restText = isCorrect ? '答對了！' : ('答錯了，正確答案：' + correctDisplay + (q.e ? ('｜解析：' + q.e) : ''));
+                    setAnswerFeedback(fb, isCorrect ? '✅' : '❌', restText, 'ans-feedback mt-2 text-sm ' + (isCorrect ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold'));
+                    flashAnswerCard(i, isCorrect);
                 } else {
                     const inputEl = document.getElementById('ans-text-' + i);
                     const userAns = ((inputEl && inputEl.value) || '').trim();
@@ -1427,14 +1461,14 @@
                     const roughMatch = userAns !== '' && userAns.replace(/\s/g, '') === correctAns.replace(/\s/g, '');
                     if (roughMatch) totalScore += (q.s || 0);
                     needReview++;
-                    fb.className = 'ans-feedback mt-2 text-sm text-blue-600';
-                    fb.innerText = (roughMatch ? '🤔 文字比對相符(僅供參考)' : '📝 請自行核對') + '，參考答案：' + correctAns + (q.e ? ('｜解析：' + q.e) : '');
-                    fb.classList.remove('hidden');
+                    const restText = (roughMatch ? '文字比對相符(僅供參考)' : '請自行核對') + '，參考答案：' + correctAns + (q.e ? ('｜解析：' + q.e) : '');
+                    setAnswerFeedback(fb, roughMatch ? '🤔' : '📝', restText, 'ans-feedback mt-2 text-sm text-blue-600');
+                    flashAnswerCard(i, roughMatch);
                 }
             });
 
             const pct = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-            let resultHTML = "<div class='bg-white rounded-xl p-5 shadow text-center border-2 border-purple-300'>";
+            let resultHTML = "<div class='bg-white rounded-xl p-5 shadow text-center border-2 border-purple-300 ans-score-pop'>";
             resultHTML += "<div class='text-3xl font-bold text-purple-700 mb-1'>" + totalScore + " / " + maxScore + " 分</div>";
             resultHTML += "<div class='text-sm text-gray-500'>約 " + pct + " 分" + (needReview > 0 ? "（含填空/簡答題的文字比對估算，建議自行核對）" : "（選擇/複選題自動判分）") + "</div>";
             resultHTML += "</div>";
