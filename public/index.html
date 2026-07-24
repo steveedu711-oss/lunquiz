@@ -216,9 +216,18 @@
         </div>
 
         <div class="bg-white p-6 rounded-2xl shadow-lg border border-emerald-100">
-            <div class="mb-6 flex justify-end gap-4">
-                <button onclick="openHistory()" id="historyBtn" class="text-xs text-gray-400 underline hover:text-gray-600">📜 出題紀錄</button>
-                <button onclick="unlockAdmin()" id="adminBtn" class="text-xs text-gray-400 underline hover:text-gray-600">🔓 管理者解除限制</button>
+            <div class="mb-6 flex justify-between items-center flex-wrap gap-2">
+                <button onclick="openUsageGuide()" id="usageGuideBtn" class="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-1.5 rounded-full border border-blue-200 hover:bg-blue-100">❓ 使用說明</button>
+                <div class="flex gap-4">
+                    <button onclick="openHistory()" id="historyBtn" class="text-xs text-gray-400 underline hover:text-gray-600">📜 出題紀錄</button>
+                    <button onclick="unlockAdmin()" id="adminBtn" class="text-xs text-gray-400 underline hover:text-gray-600">🔓 管理者解除限制</button>
+                </div>
+            </div>
+
+            <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-wrap items-center justify-center gap-2 text-sm font-bold text-blue-700">
+                <span>① 填年級/科目/範圍</span><span class="text-blue-300">→</span>
+                <span>② 按「小綸開始出題」</span><span class="text-blue-300">→</span>
+                <span>③ 完成後可下載/列印/線上作答/分享</span>
             </div>
 
             <div id="apiKeyBox" class="mb-6 bg-emerald-50 p-4 rounded-xl border border-emerald-200">
@@ -236,6 +245,7 @@
                     <button onclick="window.forgetKey()" class="text-red-500 font-bold px-3 py-1 bg-red-50 rounded hover:bg-red-100 border border-red-200">🗑️ 清除記憶 / 登出</button>
                 </div>
             </div>
+            <button type="button" id="showKeyBoxLink" onclick="showApiKeyBox()" class="hidden text-xs text-emerald-600 underline hover:text-emerald-800 mb-6">🔑 其實我有自己的 API Key，改用這個</button>
 
             <div class="mb-8">
                 <h3 class="section-title">1. 請選擇出題模式</h3>
@@ -352,7 +362,7 @@
             <div class="flex gap-2 order-1">
                 <button onclick="switchSheet('quiz')" id="btnQuiz" class="bg-emerald-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-emerald-500">題目卷</button>
                 <button onclick="switchSheet('key')" id="btnKey" class="bg-slate-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-slate-500">答案卷</button>
-                <button onclick="switchSheet('answer')" id="btnAnswerMode" class="bg-purple-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-purple-500">📱 線上作答</button>
+                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="bg-purple-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-purple-500">📱 線上作答（開新分頁）</button>
             </div>
 
             <div class="w-full sm:w-auto sm:flex-1 text-center sm:max-w-md order-3 sm:order-2">
@@ -387,6 +397,47 @@
                 <button onclick="closeHistory()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
             </div>
             <div id="historyList"></div>
+        </div>
+    </div>
+
+    <div id="usageGuideModal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[85vh] overflow-y-auto p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">❓ 小綸出題小幫手 使用說明</h3>
+                <button onclick="closeUsageGuide()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-4 text-sm text-gray-700 leading-relaxed">
+                <div>
+                    <p class="font-bold text-emerald-700 mb-1">🚀 快速開始</p>
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>選擇出題模式：「🤖 AI智慧搜尋」直接用課綱知識出題；「📂 上傳檔案/圖片」讓小綸讀你的教材出題</li>
+                        <li>填年級/科目/版本/範圍（AI搜尋模式）或上傳檔案（上傳模式），設定題數/題型/難度/語言</li>
+                        <li>按「🚀 小綸開始出題」，等待生成完成</li>
+                    </ol>
+                </div>
+                <div>
+                    <p class="font-bold text-emerald-700 mb-1">🔑 關於 API Key</p>
+                    <p>不填自己的Key：用小綸內建額度，每次出題間隔30秒冷卻。有自己的Google API Key：不受冷卻限制，用量算自己的（點畫面最上方進場頁的「我有自己的API Key」，或表單裡的小連結可以叫回填Key的欄位）。</p>
+                </div>
+                <div>
+                    <p class="font-bold text-emerald-700 mb-1">📝 出題完成後可以做什麼</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li><b>編輯內容</b>：直接點試卷上的文字修改，跟打字一樣</li>
+                        <li><b>🔁 重新出這題</b>：只有某一題不滿意，不用整份重出</li>
+                        <li><b>⬇️ 下載</b>：可選 Word / PDF / 純文字三種格式</li>
+                        <li><b>🖨️ 列印</b>：直接印出或存成PDF</li>
+                        <li><b>📱 線上作答（開新分頁）</b>：自己先開一個新分頁測試看看學生作答會看到什麼畫面、怎麼自動評分</li>
+                        <li><b>📤 分享題目(學生作答)</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
+                        <li><b>📤 分享答案(家長)</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
+                        <li><b>📜 出題紀錄</b>：這台裝置留有最近20次出題紀錄，可以重新開啟</li>
+                        <li><b>🔗 複製目前設定連結</b>：把年級/科目/範圍等設定分享給同事，對方開了會自動帶入表單</li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-bold text-emerald-700 mb-1">⚠️ 提醒</p>
+                    <p>AI生成的題目請務必自行審核校對；分享連結30天後會過期；填空/簡答題的線上作答評分只是文字比對僅供參考，還是要老師/家長自行核對。</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -429,9 +480,22 @@
         };
 
         // --- 品牌進場頁：直接進入 / 我有自己的API Key ---
+        function showApiKeyBox() {
+            const keyBox = document.getElementById('apiKeyBox');
+            const showLink = document.getElementById('showKeyBoxLink');
+            if (keyBox) keyBox.classList.remove('hidden');
+            if (showLink) showLink.classList.add('hidden');
+            const keyInput = document.getElementById('userKey');
+            if (keyInput) keyInput.focus();
+        }
+
         document.getElementById('hlEnterBuiltin').onclick = function() {
             document.getElementById('hlSplash').style.display = 'none';
             document.getElementById('inputForm').classList.remove('hidden');
+            // 選了「直接進入」代表沒有自己的Key，把Key欄位藏起來避免版面空格造成混亂，
+            // 但留一條小連結讓使用者可以隨時改用自己的Key
+            document.getElementById('apiKeyBox').classList.add('hidden');
+            document.getElementById('showKeyBoxLink').classList.remove('hidden');
         };
         document.getElementById('hlEnterOwnKey').onclick = function() {
             document.getElementById('hlSplash').style.display = 'none';
@@ -448,6 +512,42 @@
                 }
             }, 100);
         };
+
+        // --- 老師自己測試「線上作答」：開一個新分頁，跟原本出題頁完全分開(不影響原畫面) ---
+        async function openAnswerModeNewTab(btnEl) {
+            if (!window.currentItems || window.currentItems.length === 0) {
+                alert('目前沒有題目可以線上作答');
+                return;
+            }
+            const originalText = btnEl ? btnEl.innerHTML : '';
+            // window.open 必須在使用者點擊當下同步呼叫，不能等fetch跑完再開，否則會被瀏覽器擋成彈出視窗
+            const newTab = window.open('', '_blank');
+            if (newTab) {
+                newTab.document.write('<p style="font-family:sans-serif;padding:2rem;">⏳ 載入題目中...</p>');
+            }
+            if (btnEl) { btnEl.disabled = true; btnEl.innerText = '⏳ 準備中...'; }
+            try {
+                const res = await fetch(API_BASE + "/api/share", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: window.currentItems, title: window.docName || '測驗' })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const url = location.origin + location.pathname + "?share=" + data.id + "&mode=student";
+                if (newTab) {
+                    newTab.location.href = url;
+                } else {
+                    window.open(url, '_blank');
+                }
+            } catch (e) {
+                if (newTab) newTab.close();
+                alert('開啟線上作答分頁失敗: ' + e.message);
+            } finally {
+                if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = originalText; }
+            }
+        }
 
         // --- 分享題目(給學生線上作答) / 分享答案(給家長查看) ---
         async function shareQuiz(mode) {
@@ -644,6 +744,9 @@
             document.getElementById('historyModal').classList.remove('hidden');
         }
         function closeHistory() { document.getElementById('historyModal').classList.add('hidden'); }
+
+        function openUsageGuide() { document.getElementById('usageGuideModal').classList.remove('hidden'); }
+        function closeUsageGuide() { document.getElementById('usageGuideModal').classList.add('hidden'); }
         function loadHistory(i) {
             let hist = [];
             try { hist = JSON.parse(localStorage.getItem('lun_history') || '[]'); } catch(e) {}
