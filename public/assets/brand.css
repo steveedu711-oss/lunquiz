@@ -1,0 +1,276 @@
+/* ============================================================
+   鴻綸科技 Hunglun Technology — 品牌視覺系統 (Brand Kit)
+   來源：Sphere Core 鴻綸核心 (V4.0, Steve, 2026-03)
+   用法：<link rel="stylesheet" href="brand.css"> 放在專案自己的 CSS 之前
+   ============================================================ */
+
+/* ---------- 1. 字體與圖示（外部資源，需在 <head> 引入） ----------
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+------------------------------------------------------------- */
+
+:root {
+  /* Google 四色主色 */
+  --hl-blue: #1A73E8;       --hl-blue-hover: #1557B0;
+  --hl-red: #EA4335;        --hl-red-hover: #D93025;
+  --hl-yellow: #FBBC04;     --hl-yellow-hover: #F29900;
+  --hl-green: #34A853;      --hl-green-hover: #1E8E3E;
+  --hl-gray: #5F6368;
+  --hl-light-gray: #F8F9FA;
+
+  /* 淺色模式文字/背景 */
+  --hl-bg: var(--hl-light-gray);
+  --hl-text: #1f2937;
+  --hl-text-secondary: #5F6368;
+  --hl-card-bg: #ffffff;
+  --hl-border: #e5e7eb;
+}
+
+.dark, [data-theme="dark"] {
+  /* 深色背景改用與官方深色 logo 一致的深藍黑，卡片與頁面同色，避免色塊突兀 */
+  --hl-bg: #020617;
+  --hl-card-bg: #020617;
+  --hl-surface: #0f172a;
+  --hl-border: #1e293b;
+  --hl-text: #f1f5f9;
+  --hl-text-secondary: #cbd5e1;
+}
+
+@property --hl-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes hl-rotate-border { to { --hl-angle: 360deg; } }
+
+/* 原本是全域 `* {...}`，這裡改成只限定在 .hl-splash 品牌進場頁範圍內，
+   避免蓋掉 lunquiz 主功能頁原本的字型設定 */
+.hl-splash, .hl-splash * { font-family: 'Noto Sans TC', sans-serif; }
+
+/* ---------- 2. 基礎行為 ---------- */
+.hl-btn, .hl-clickable {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes hl-spin-slow { 100% { transform: rotate(360deg); } }
+.hl-spin-slow { animation: hl-spin-slow 8s linear infinite; }
+.hl-spin-slow-reverse { animation: hl-spin-slow 15s linear infinite reverse; }
+
+@keyframes hl-spin { 100% { transform: rotate(360deg); } }
+.hl-spinner {
+  border: 4px solid rgba(255,255,255,0.3);
+  border-left-color: var(--hl-blue);
+  border-radius: 50%;
+  width: 50px; height: 50px;
+  animation: hl-spin 1s linear infinite;
+}
+.dark .hl-spinner { border-left-color: #8AB4F8; }
+
+/* ---------- 3. 捲軸樣式 ---------- */
+.hl-scrollbar::-webkit-scrollbar { width: 12px; height: 12px; }
+.hl-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156,163,175,0.8);
+  border-radius: 12px; border: 3px solid transparent; background-clip: padding-box;
+}
+.dark .hl-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(107,114,128,0.8); }
+
+/* ---------- 4. work-card：稜鏡漸層邊框卡片 ---------- */
+.hl-work-card {
+  background: var(--hl-card-bg);
+  border-radius: 2.5rem;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+  overflow: hidden;
+  position: relative;
+}
+.hl-work-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: 2.5rem;
+  border: 8px solid transparent;
+  background: conic-gradient(from var(--hl-angle), var(--hl-blue) 0%, var(--hl-red) 25%, var(--hl-yellow) 50%, var(--hl-green) 75%, var(--hl-blue) 100%) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 50;
+  animation: hl-rotate-border 6s linear infinite;
+}
+
+/* ---------- 5. Header 品牌區塊 ---------- */
+.hl-header {
+  height: 5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem;
+  background: var(--hl-card-bg);
+  border-bottom: 1px solid var(--hl-border);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.hl-header-left { display: flex; align-items: center; gap: 1rem; }
+.hl-logo-icon {
+  width: 3rem; height: 3rem; border-radius: 1rem;
+  background: linear-gradient(to bottom right, var(--hl-blue), #1d4ed8);
+  display: flex; align-items: center; justify-content: center;
+  color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border: 1px solid rgba(59,130,246,0.3);
+  position: relative; overflow: hidden; flex-shrink: 0;
+}
+.hl-header-title {
+  font-size: 1.375rem; font-weight: 900; letter-spacing: -0.02em;
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  color: var(--hl-text);
+}
+.hl-header-divider { color: #d1d5db; font-weight: 300; font-size: 1.5rem; }
+.dark .hl-header-divider { color: #4b5563; }
+.hl-header-credit { color: var(--hl-blue); font-weight: 700; font-size: 1rem; }
+.hl-theme-toggle {
+  padding: 0.75rem; border-radius: 9999px; background: transparent;
+  color: var(--hl-text-secondary); border: none; cursor: pointer;
+}
+.hl-theme-toggle:hover { background: rgba(0,0,0,0.05); }
+.dark .hl-theme-toggle:hover { background: rgba(255,255,255,0.08); }
+
+/* ---------- 6. 作者/品牌識別：旋轉徽章 + 左右標籤 ---------- */
+.hl-badge-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 1.5rem; flex-wrap: wrap;
+}
+.hl-badge-ring {
+  position: relative;
+  width: 10rem; height: 10rem;
+  flex-shrink: 0;
+}
+.hl-badge-glow {
+  position: absolute; inset: -0.85rem;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, var(--hl-blue), var(--hl-red), var(--hl-yellow), var(--hl-green), var(--hl-blue));
+  filter: blur(10px) saturate(1.3);
+  opacity: 0.85;
+  box-shadow: 0 0 40px rgba(26,115,232,0.25);
+}
+.hl-badge-inner {
+  position: relative;
+  background: var(--hl-card-bg);
+  padding: 1rem; border-radius: 9999px;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.5);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; width: 100%; height: 100%;
+}
+.hl-badge-inner img { width: 100%; height: 100%; object-fit: contain; transform: scale(1.1); }
+.hl-badge-dashed-ring {
+  position: absolute; inset: 0.5rem;
+  border: 2px dashed var(--hl-border);
+  border-radius: 9999px;
+}
+
+/* 左右標籤：pl-8/pr-8 + 分隔線＝與徽章保持安全間距，避免旋轉光暈蓋到文字 */
+.hl-partner-col {
+  display: none;
+  flex-direction: column; gap: 0.375rem;
+  padding: 0 2rem;
+}
+@media (min-width: 768px) { .hl-partner-col { display: flex; } }
+.hl-partner-col.left { align-items: flex-end; border-right: 2px solid var(--hl-border); }
+.hl-partner-col.right { align-items: flex-start; border-left: 2px solid var(--hl-border); }
+.hl-partner-tag {
+  font-size: 0.6rem; font-weight: 700; color: var(--hl-text-secondary);
+  letter-spacing: 0.15em; text-transform: uppercase;
+}
+.hl-partner-pill {
+  font-size: 0.875rem; font-weight: 900; color: var(--hl-text);
+  background: var(--hl-card-bg);
+  padding: 0.5rem 1rem; border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  border: 1px solid var(--hl-border);
+  display: flex; align-items: center; gap: 0.5rem;
+  white-space: nowrap;
+}
+
+/* 官方 Logo 組合圖（矩形 lockup，含 Google for Education 標章）—— 放在 footer 等位置使用 */
+.hl-logo-lockup {
+  max-width: 100%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+.hl-logo-lockup img { display: block; max-width: 100%; height: auto; }
+.hl-logo-lockup .hl-logo-dark { display: none; }
+.dark .hl-logo-lockup .hl-logo-light { display: none; }
+.dark .hl-logo-lockup .hl-logo-dark { display: block; }
+
+.hl-contact-bar {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; justify-content: center;
+  background: rgba(0,0,0,0.03);
+  padding: 0.5rem; border-radius: 0.75rem;
+  border: 1px solid var(--hl-border);
+}
+.dark .hl-contact-bar { background: rgba(0,0,0,0.2); }
+.hl-contact-label {
+  font-size: 0.75rem; font-weight: 700; color: var(--hl-text-secondary);
+  text-transform: uppercase; letter-spacing: 0.15em; padding: 0 0.5rem;
+}
+.hl-contact-btn {
+  font-size: 0.8125rem; font-weight: 700; text-decoration: none;
+  padding: 0.375rem 0.75rem; border-radius: 0.5rem;
+  border: 1px solid transparent;
+  display: inline-flex; align-items: center; gap: 0.375rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.hl-contact-btn.mail {
+  color: var(--hl-red); background: #fef2f2; border-color: #fee2e2;
+}
+.hl-contact-btn.mail:hover { color: #fff; background: var(--hl-red); border-color: var(--hl-red); }
+.hl-contact-btn.line {
+  color: #06C755; background: #e6f9ed; border-color: #b3e8c9;
+}
+.hl-contact-btn.line:hover { color: #fff; background: #06C755; border-color: #06C755; }
+
+/* ---------- 6b. App 開場品牌頁 (splash-screen) ---------- */
+.hl-splash {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 2rem; box-sizing: border-box;
+  background: var(--hl-bg);
+}
+.hl-splash-card {
+  max-width: 60rem; width: 100%; max-height: 100%;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 3rem 2rem; box-sizing: border-box; overflow-y: auto;
+}
+.hl-splash-title {
+  font-size: clamp(1.75rem, 5vw, 3.5rem);
+  font-weight: 900; color: var(--hl-text);
+  margin: 0 0 0.5rem;
+}
+.hl-splash-subtitle {
+  font-size: clamp(1.125rem, 3vw, 1.75rem);
+  font-weight: 700; color: var(--hl-text-secondary);
+  margin: 0 0 2.5rem;
+}
+.hl-enter-btn {
+  width: 100%; max-width: 20rem;
+  padding: 1.125rem 2rem;
+  background: var(--hl-blue); color: #fff; border: none;
+  border-radius: 2rem; font-weight: 900; font-size: 1.25rem;
+  box-shadow: 0 4px 12px rgba(26,115,232,0.3);
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  cursor: pointer;
+}
+.hl-enter-btn:hover { background: var(--hl-blue-hover); }
+
+/* ---------- 7. Footer 版權區塊 ---------- */
+.hl-footer {
+  text-align: center; padding-top: 2rem;
+  border-top: 1px solid var(--hl-border);
+  color: var(--hl-text-secondary);
+}
+.hl-footer-title { font-size: 0.9375rem; font-weight: 700; }
+.hl-footer-sub { font-size: 0.75rem; color: var(--hl-text-secondary); margin-top: 0.25rem; }
+.hl-footer-legal {
+  margin-top: 0.75rem; font-size: 0.6875rem; color: var(--hl-text-secondary);
+  max-width: 56rem; margin-left: auto; margin-right: auto;
+  letter-spacing: 0.02em; line-height: 1.6;
+}
