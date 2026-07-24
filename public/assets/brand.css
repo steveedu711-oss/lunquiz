@@ -45,9 +45,9 @@
 }
 @keyframes hl-rotate-border { to { --hl-angle: 360deg; } }
 
-/* 原本是全域 `* {...}`，這裡改成只限定在 .hl-splash 品牌進場頁範圍內，
-   避免蓋掉 lunquiz 主功能頁原本的字型設定 */
-.hl-splash, .hl-splash * { font-family: 'Noto Sans TC', sans-serif; }
+/* Steve 2026-07-24 決定：Noto Sans TC 是Google通用字型，全站(不只品牌識別區塊)一律使用，
+   不再限定範圍。lunquiz的 body/.a4-page 字型也已同步改成 Noto Sans TC，見 index.html */
+* { font-family: 'Noto Sans TC', sans-serif; }
 
 /* ---------- 2. 基礎行為 ---------- */
 .hl-btn, .hl-clickable {
