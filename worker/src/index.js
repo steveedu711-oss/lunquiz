@@ -15,7 +15,7 @@ const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key",
 };
 
@@ -26,10 +26,89 @@ export default {
     if (url.pathname === "/api/generate") {
       return handleGenerate(request, env);
     }
+    if (url.pathname === "/api/visit") {
+      return handleVisit(request, env);
+    }
+    if (url.pathname === "/api/keys-check") {
+      return handleKeysCheck(request, env);
+    }
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: CORS_HEADERS });
+    }
 
     return new Response("linquiz API worker is running.", { status: 200 });
   },
 };
+
+// 真實瀏覽人次計數：以「來源IP + 當天日期」去重，同一人同一天重整頁面不會重複累加，
+// 隔天再訪問才會再算一次。計數存在既有的 COOLDOWN_KV（key 前綴 visit:）。
+async function handleVisit(request, env) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const today = new Date().toISOString().slice(0, 10);
+  const dedupeKey = `visited:${ip}:${today}`;
+  const countKey = "visit_count";
+
+  const alreadyVisited = await env.COOLDOWN_KV.get(dedupeKey);
+  let count = parseInt((await env.COOLDOWN_KV.get(countKey)) || "0", 10);
+
+  if (!alreadyVisited) {
+    count += 1;
+    await env.COOLDOWN_KV.put(countKey, String(count));
+    await env.COOLDOWN_KV.put(dedupeKey, "1", { expirationTtl: 86400 });
+  }
+
+  return new Response(JSON.stringify({ count }), {
+    status: 200,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
+
+// 管理者診斷用：逐一測試 GEMINI_API_KEYS 池裡每組 Key 是否有效（呼叫輕量的 models list，不耗生成額度）。
+// 需帶正確的 X-Admin-Pass，回應只顯示 Key 末4碼，不洩漏完整金鑰。
+async function handleKeysCheck(request, env) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
+  const adminPass = request.headers.get("X-Admin-Pass") || "";
+  const expectedAdminPass = env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
+  if (adminPass === "" || adminPass !== expectedAdminPass) {
+    return new Response(JSON.stringify({ error: { message: "需要管理者密碼" } }), {
+      status: 401,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  const apiKeys = getApiKeys(env);
+  const results = [];
+
+  for (let i = 0; i < apiKeys.length; i++) {
+    const apiKey = apiKeys[i];
+    const last4 = apiKey.slice(-4);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+      );
+      const data = await res.json();
+      if (data.error) {
+        results.push({ index: i, last4, ok: false, error: data.error.message });
+      } else {
+        results.push({ index: i, last4, ok: true });
+      }
+    } catch (err) {
+      results.push({ index: i, last4, ok: false, error: err.message });
+    }
+  }
+
+  return new Response(JSON.stringify({ total: apiKeys.length, results }), {
+    status: 200,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
 
 function getApiKeys(env) {
   const raw = env.GEMINI_API_KEYS || env.GEMINI_API_KEY || "";
