@@ -342,7 +342,11 @@
             </div>
 
             <button onclick="startGen()" id="btnGo" class="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-xl hover:bg-emerald-700 shadow-lg transition">🚀 小綸開始出題</button>
-            <button onclick="copySettingsLink()" class="w-full mt-3 py-2 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition">🔗 複製目前設定連結（分享給同事）</button>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                <button onclick="saveDefaultSettings()" class="w-full py-2 bg-white border-2 border-indigo-500 text-indigo-700 rounded-xl font-bold hover:bg-indigo-50 transition text-sm sm:text-base">💾 儲存設定條件</button>
+                <button onclick="clearAllSettings()" class="w-full py-2 bg-white border-2 border-red-400 text-red-600 rounded-xl font-bold hover:bg-red-50 transition text-sm sm:text-base">🗑️ 清除所有條件</button>
+                <button onclick="copySettingsLink()" class="w-full py-2 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl font-bold hover:bg-emerald-50 transition text-sm sm:text-base">🔗 複製設定連結</button>
+            </div>
             <div id="barBox" class="hidden mt-4 h-4 w-full bg-gray-200 rounded-full overflow-hidden border border-emerald-200"><div id="bar" class="progress-bar">0%</div></div>
             <p id="status" class="text-center text-sm mt-2 text-emerald-600 font-bold animate-pulse"></p>
 
@@ -434,6 +438,8 @@
                         <li><b>📤 分享答案(家長)</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
                         <li><b>📜 出題紀錄</b>：這台裝置留有最近20次出題紀錄，可以重新開啟</li>
                         <li><b>🔗 複製目前設定連結</b>：把年級/科目/範圍等設定分享給同事，對方開了會自動帶入表單</li>
+                        <li><b>💾 儲存設定條件</b>：把目前的年級/科目/範圍等設定存在這台裝置，下次打開頁面自動帶入，手機上不用每次重填</li>
+                        <li><b>🗑️ 清除所有條件</b>：把表單清空，也會刪掉已儲存的預設值</li>
                     </ul>
                 </div>
                 <div>
@@ -485,8 +491,12 @@
             const shared = await loadSharedQuizIfAny();
             if (shared) {
                 document.getElementById('hlSplash').style.display = 'none';
-            } else {
+            } else if ([...new URLSearchParams(location.search).keys()].length > 0) {
+                // 網址帶了設定參數(複製設定連結分享來的)，優先用連結裡的設定
                 applySettingsFromURL();
+            } else {
+                // 沒有帶連結參數，才套用這台裝置自己儲存的預設出題條件
+                loadSavedSettingsIfAny();
             }
         };
 
@@ -691,7 +701,9 @@
             });
         }
 
-        function copySettingsLink() {
+        // 讀取目前表單上的出題條件(年級/科目/版本/範圍/題數/題型/難度/語言)，
+        // 「複製設定連結」「儲存設定條件」共用同一套讀取邏輯
+        function getFormSettingsSnapshot() {
             let grade = document.getElementById('grade').value;
             if (grade === 'Custom') grade = document.getElementById('c_grade').value.trim();
             let subject = document.getElementById('subject').value.trim();
@@ -705,11 +717,15 @@
             let diffVal = document.getElementById('difficulty').value;
             if (diffVal === 'Custom') diffVal = document.getElementById('c_diff').value.trim();
             let langVal = document.getElementById('lang').value;
+            return { grade, subject, publisher, scope, count: countVal, qType: typeVal, difficulty: diffVal, lang: langVal };
+        }
 
+        function copySettingsLink() {
+            const s = getFormSettingsSnapshot();
             const params = new URLSearchParams({
-                grade: grade || '', subject: subject || '', publisher: publisher || '',
-                scope: scope || '', count: countVal || '', qType: typeVal || '',
-                difficulty: diffVal || '', lang: langVal || ''
+                grade: s.grade || '', subject: s.subject || '', publisher: s.publisher || '',
+                scope: s.scope || '', count: s.count || '', qType: s.qType || '',
+                difficulty: s.difficulty || '', lang: s.lang || ''
             });
             const url = location.origin + location.pathname + "?" + params.toString();
 
@@ -718,6 +734,46 @@
             }).catch(() => {
                 prompt("複製失敗，請手動複製以下連結：", url);
             });
+        }
+
+        // --- 儲存/清除出題條件（存在這台裝置的 localStorage，方便手機上不用每次重填） ---
+        function saveDefaultSettings() {
+            const s = getFormSettingsSnapshot();
+            if (!s.grade && !s.subject && !s.scope) {
+                alert('目前表單是空的，請先填一些出題條件再儲存');
+                return;
+            }
+            localStorage.setItem('lun_saved_settings', JSON.stringify(s));
+            alert('✅ 已儲存目前出題條件！下次打開頁面會自動帶入，不用重填。');
+        }
+
+        function loadSavedSettingsIfAny() {
+            const raw = localStorage.getItem('lun_saved_settings');
+            if (!raw) return;
+            try {
+                applySettings(JSON.parse(raw));
+            } catch (e) {}
+        }
+
+        function clearAllSettings() {
+            if (!confirm('確定要清除所有出題條件嗎？已儲存的預設值也會一併刪除。')) return;
+            localStorage.removeItem('lun_saved_settings');
+
+            function resetSelect(selectId, customId, defaultValue) {
+                document.getElementById(selectId).value = defaultValue !== undefined ? defaultValue : '';
+                const custom = document.getElementById(customId);
+                if (custom) { custom.value = ''; custom.style.display = 'none'; }
+            }
+            resetSelect('grade', 'c_grade');
+            document.getElementById('subject').value = '';
+            resetSelect('publisher', 'c_publisher');
+            document.getElementById('scope').value = '';
+            resetSelect('count', 'c_count');
+            resetSelect('qType', 'c_qType');
+            resetSelect('difficulty', 'c_diff');
+            document.getElementById('lang').value = '繁體中文';
+
+            alert('🗑️ 已清除所有出題條件');
         }
 
         // --- 出題紀錄（存在這台裝置的 localStorage，最多留20筆） ---
