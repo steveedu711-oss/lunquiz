@@ -1407,7 +1407,7 @@
                     // 萬一連字母都比對不出來(AI答案格式異常)，退而顯示原始答案內容，不要留空白
                     const correctDisplay = correct.length > 0 ? correct.join('') : (String(q.a || '').trim() || '(無法判讀，請自行核對)');
                     fb.className = 'ans-feedback mt-2 text-sm ' + (isCorrect ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold');
-                    fb.innerText = isCorrect ? '✅ 答對了！' : ('❌ 答錯了，正確答案：' + correctDisplay);
+                    fb.innerText = isCorrect ? '✅ 答對了！' : ('❌ 答錯了，正確答案：' + correctDisplay + (q.e ? ('｜解析：' + q.e) : ''));
                     fb.classList.remove('hidden');
                 } else {
                     const inputEl = document.getElementById('ans-text-' + i);
