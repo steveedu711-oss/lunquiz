@@ -323,6 +323,17 @@
 
         let uploadItems = [];
 
+        // 每台裝置的瀏覽器各自產生一個固定ID(存localStorage),讓冷卻機制以裝置為單位,
+        // 避免同校/同網路多位老師共用同一個IP時互相卡到彼此的30秒冷卻
+        function getClientId() {
+            let id = localStorage.getItem('lun_client_id');
+            if (!id) {
+                id = (crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2)));
+                localStorage.setItem('lun_client_id', id);
+            }
+            return id;
+        }
+
         window.onload = function() {
             let k = localStorage.getItem('lun_key');
             if (k) document.getElementById('userKey').value = k;
@@ -530,7 +541,8 @@
                             'Content-Type': 'application/json',
                             'X-Batch-Index': String(i),
                             'X-Admin-Pass': adminPass,
-                            'X-Gemini-Api-Key': userKey
+                            'X-Gemini-Api-Key': userKey,
+                            'X-Client-Id': getClientId()
                         },
                         body: JSON.stringify({ contents: [{ parts: parts }] })
                     });

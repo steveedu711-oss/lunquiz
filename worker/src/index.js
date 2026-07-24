@@ -3,7 +3,9 @@
 // - 沒填 Key 時用伺服器內建的 Key 池，支援多組 Gemini API Key 輪換：
 //   env.GEMINI_API_KEYS 用逗號分隔多組 Key（單組時退回用 env.GEMINI_API_KEY），
 //   失敗自動換下一組 Key，全部 Key 都試完再換下一個模型
-// - 走內建 Key 池時，以來源 IP 為單位，透過 KV 限制每次「開始出題」動作 30 秒冷卻
+// - 走內建 Key 池時，以「瀏覽器裝置 ID」(X-Client-Id，前端 localStorage 產生的隨機值) 為單位，
+//   透過 KV 限制每次「開始出題」動作 30 秒冷卻；沒帶裝置ID的舊前端才退回用來源IP判斷，
+//   避免同一所學校/同一個網路出口的多位老師互相卡到彼此的冷卻
 // - 同一次出題的多個批次 (X-Batch-Index > 0) 不重複計算冷卻，避免大題數被自己卡住
 // - 帶入正確的管理者密碼 (X-Admin-Pass) 可略過冷卻限制
 // - 模型比照 lunslip 專案做雙模型容錯：gemini-3.5-flash 失敗（額度滿/模型暫時異常）
@@ -16,7 +18,7 @@ const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key",
+  "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key, X-Client-Id",
 };
 
 export default {
@@ -133,12 +135,14 @@ async function handleGenerate(request, env) {
     const isAdmin = adminPass !== "" && adminPass === expectedAdminPass;
     const userApiKey = (request.headers.get("X-Gemini-Api-Key") || "").trim();
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const clientId = (request.headers.get("X-Client-Id") || "").trim();
 
     // 使用者自帶 Key（BYOK）時，用量算他自己的，跳過冷卻。
     // 只有走伺服器內建 Key 池時，才需要在每次出題的第一批 (batchIndex === 0) 檢查冷卻，
     // 讓同一次出題內續抓後續批次不會被自己的冷卻卡住。
+    // 冷卻以裝置ID為主、IP為備援，避免同校/同網路多位老師互相卡到彼此的冷卻。
     if (!isAdmin && !userApiKey && batchIndex === 0) {
-      const cooldownKey = `cooldown:${ip}`;
+      const cooldownKey = `cooldown:${clientId || ip}`;
       const lastTs = await env.COOLDOWN_KV.get(cooldownKey);
       const now = Date.now();
 
