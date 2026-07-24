@@ -457,6 +457,17 @@
 
         let uploadItems = [];
 
+        // 題目內容(q.q/q.o/q.a/q.e)來自AI回傳,分享題目(/api/share)又是任何人都能未經驗證寫入的公開端點,
+        // 所以在用innerHTML插入畫面前一律要escape,避免惡意分享連結在別人瀏覽器裡跑出XSS
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         // 每台裝置的瀏覽器各自產生一個固定ID(存localStorage),讓冷卻機制以裝置為單位,
         // 避免同校/同網路多位老師共用同一個IP時互相卡到彼此的30秒冷卻
         function getClientId() {
@@ -801,7 +812,7 @@
             } else {
                 list.innerHTML = hist.map((h, i) =>
                     "<div class='flex justify-between items-center bg-gray-50 p-3 rounded-lg mb-2 border'>" +
-                    "<div class='truncate mr-2'><div class='font-bold truncate'>" + h.title + "</div><div class='text-xs text-gray-500'>" + h.createdAt + "・" + (h.items ? h.items.length : 0) + "題</div></div>" +
+                    "<div class='truncate mr-2'><div class='font-bold truncate'>" + escapeHtml(h.title) + "</div><div class='text-xs text-gray-500'>" + escapeHtml(h.createdAt) + "・" + (h.items ? h.items.length : 0) + "題</div></div>" +
                     "<div class='flex gap-2 flex-shrink-0'>" +
                     "<button onclick='loadHistory(" + i + ")' class='bg-emerald-600 text-white px-3 py-1 rounded text-sm'>開啟</button>" +
                     "<button onclick='deleteHistory(" + i + ")' class='bg-red-100 text-red-600 px-3 py-1 rounded text-sm'>刪除</button>" +
@@ -1124,13 +1135,13 @@
                     optsHTML += "<div class='q-opts'>";
                     q.o.forEach((o, oi) => {
                         let label = String.fromCharCode(65+oi);
-                        optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+o+"</div>";
+                        optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+escapeHtml(o)+"</div>";
                     });
                     optsHTML += "</div>";
                 }
                 let answerSpace = (!q.o || q.o.length === 0) ? "<div class='writing-space'></div>" : "";
                 box.innerHTML = regenBtnHTML(idx) +
-                    "<div class='q-text editable-text' contenteditable='true'>" + q.q + " <span style='font-size:10pt; color:#666;'>(" + q.s + "分)</span></div>" +
+                    "<div class='q-text editable-text' contenteditable='true'>" + escapeHtml(q.q) + " <span style='font-size:10pt; color:#666;'>(" + q.s + "分)</span></div>" +
                     optsHTML + answerSpace;
 
                 let numBox = qItem.querySelector('.q-num-box');
@@ -1144,7 +1155,7 @@
                 if (Array.isArray(q.a)) ans = q.a.map(x=>String.fromCharCode(65+x)).join('');
                 else if (typeof q.a === 'number') ans = String.fromCharCode(65+q.a);
                 else ans = q.a || '(略)';
-                keyItem.innerHTML = "<b>"+(idx+1)+".</b> <span style='color:red; font-weight:bold; margin-right:10px;'>"+ans+"</span> <span style='font-size:10pt; color:#666;'>"+(q.e||'')+"</span>";
+                keyItem.innerHTML = "<b>"+(idx+1)+".</b> <span style='color:red; font-weight:bold; margin-right:10px;'>"+escapeHtml(ans)+"</span> <span style='font-size:10pt; color:#666;'>"+escapeHtml(q.e||'')+"</span>";
             }
         }
 
@@ -1248,9 +1259,9 @@
                 let headerHTML = "";
                 if (pageNum === 1) {
                     headerHTML = "<div class='paper-header' contenteditable='true'>" +
-                        "<h2>"+title+"</h2>" +
+                        "<h2>"+escapeHtml(title)+"</h2>" +
                         "<div class='paper-info'>" +
-                        "<span>"+sub+"</span><span>班級：＿＿＿＿＿ 姓名：＿＿＿＿＿ 座號：＿＿＿＿＿</span></div></div>";
+                        "<span>"+escapeHtml(sub)+"</span><span>班級：＿＿＿＿＿ 姓名：＿＿＿＿＿ 座號：＿＿＿＿＿</span></div></div>";
                 } else {
                     headerHTML = "<div style='height: 30pt;'></div>";
                 }
@@ -1263,7 +1274,7 @@
                         optsHTML += "<div class='q-opts'>";
                         q.o.forEach((o, oi) => {
                             let label = String.fromCharCode(65+oi);
-                            optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+o+"</div>";
+                            optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+escapeHtml(o)+"</div>";
                         });
                         optsHTML += "</div>";
                     }
@@ -1275,7 +1286,7 @@
                        "<div class='q-num-box'>" + prefix + "</div>" +
                        "<div class='q-content-box'>" +
                            regenBtnHTML(qIdx) +
-                           "<div class='q-text editable-text' contenteditable='true'>" + q.q + " <span style='font-size:10pt; color:#666;'>(" + q.s + "分)</span></div>" +
+                           "<div class='q-text editable-text' contenteditable='true'>" + escapeHtml(q.q) + " <span style='font-size:10pt; color:#666;'>(" + q.s + "分)</span></div>" +
                            optsHTML +
                            answerSpace +
                        "</div></div>";
@@ -1296,7 +1307,7 @@
                 if(Array.isArray(q.a)) ans = q.a.map(x=>String.fromCharCode(65+x)).join('');
                 else if(typeof q.a==='number') ans = String.fromCharCode(65+q.a);
                 else ans = q.a || '(略)';
-                kHtml += "<div class='key-item' data-idx='" + i + "' style='margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;'><b>"+(i+1)+".</b> <span style='color:red; font-weight:bold; margin-right:10px;'>"+ans+"</span> <span style='font-size:10pt; color:#666;'>"+(q.e||'')+"</span></div>";
+                kHtml += "<div class='key-item' data-idx='" + i + "' style='margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;'><b>"+(i+1)+".</b> <span style='color:red; font-weight:bold; margin-right:10px;'>"+escapeHtml(ans)+"</span> <span style='font-size:10pt; color:#666;'>"+escapeHtml(q.e||'')+"</span></div>";
             });
             kDiv.innerHTML = kHtml;
             container.appendChild(kDiv);
@@ -1370,14 +1381,14 @@
             items.forEach((q, i) => {
                 const letters = getCorrectLetters(q);
                 html += "<div class='bg-white rounded-xl p-4 mb-3 shadow'>";
-                html += "<div class='font-bold mb-2'>" + (i + 1) + ". " + q.q + " <span class='text-xs text-gray-400'>(" + q.s + "分)</span></div>";
+                html += "<div class='font-bold mb-2'>" + (i + 1) + ". " + escapeHtml(q.q) + " <span class='text-xs text-gray-400'>(" + q.s + "分)</span></div>";
                 if (q.o && q.o.length > 0) {
                     const inputType = letters && letters.length > 1 ? 'checkbox' : 'radio';
                     q.o.forEach((o, oi) => {
                         const label = String.fromCharCode(65 + oi);
                         html += "<label class='flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-50 cursor-pointer'>" +
                             "<input type='" + inputType + "' name='ans-" + i + "' value='" + label + "' class='w-4 h-4 flex-shrink-0'>" +
-                            "<span>(" + label + ") " + o + "</span></label>";
+                            "<span>(" + label + ") " + escapeHtml(o) + "</span></label>";
                     });
                 } else {
                     html += "<textarea class='w-full border rounded-lg p-2 mt-1' rows='2' id='ans-text-" + i + "' placeholder='請輸入答案'></textarea>";
