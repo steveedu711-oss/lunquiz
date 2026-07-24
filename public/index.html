@@ -194,6 +194,7 @@
                     <img src="assets/logo-dark.png" alt="鴻綸科技 x Google for Education" class="hl-logo-dark">
                 </div>
                 <p style="font-size:0.875rem;font-weight:700;color:var(--hl-text-secondary);margin-bottom:0.75rem;">Created by Hunglun Technology Steve</p>
+                <p style="font-size:0.8125rem;color:var(--hl-text-secondary);margin-bottom:0.75rem;">有任何問題？請點<a href="https://hunglun-new.pages.dev/" target="_blank" rel="noopener noreferrer" style="color:var(--hl-blue);font-weight:700;text-decoration:underline;">鴻綸科技官方網站</a></p>
                 <div class="hl-contact-bar" style="justify-content:center;">
                     <span class="hl-contact-label">技術支援與回報</span>
                     <div style="width:1px;height:1rem;background:var(--hl-border);"></div>
@@ -353,6 +354,7 @@
                     <li>使用小綸內建額度時，每次出題間隔 30 秒冷卻時間；填入自己的 API Key 則不受此限制。</li>
                     <li>公用電腦請務必使用「清除記憶 / 登出」功能。</li>
                 </ul>
+                <p class="text-center text-sm text-gray-500 mt-4">有任何問題？請點<a href="https://hunglun-new.pages.dev/" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-bold hover:text-blue-800">鴻綸科技官方網站</a></p>
             </div>
         </div>
     </div>
@@ -388,6 +390,7 @@
         </div>
         <div id="paperContainer" class="max-w-5xl mx-auto pt-6"></div>
         <div id="answerModeContainer" class="no-print" style="display:none; background:#f3f4f6; min-height:100vh;"></div>
+        <p class="no-print text-center text-sm text-gray-300 py-6">有任何問題？請點<a href="https://hunglun-new.pages.dev/" target="_blank" rel="noopener noreferrer" class="text-emerald-400 underline font-bold hover:text-emerald-300">鴻綸科技官方網站</a></p>
     </div>
 
     <div id="historyModal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 no-print">
@@ -457,6 +460,14 @@
                 localStorage.setItem('lun_client_id', id);
             }
             return id;
+        }
+
+        // 進度條：同時更新寬度(視覺填滿)與裡面顯示的百分比文字，
+        // 之前的bug是只更新了style.width，文字內容一直停在HTML裡寫死的"0%"
+        function setProgressBar(pct) {
+            const bar = document.getElementById('bar');
+            bar.style.width = pct + "%";
+            bar.textContent = pct + "%";
         }
 
         window.isSharedView = false;
@@ -924,11 +935,11 @@
                     let baseP = Math.round((i/batches)*100);
                     let nextP = Math.round(((i+1)/batches)*100);
                     let simP = baseP;
-                    document.getElementById('bar').style.width = baseP + "%";
+                    setProgressBar(baseP);
                     simTimer = setInterval(() => {
                         if (simP < nextP - 1) {
                             simP++;
-                            document.getElementById('bar').style.width = simP + "%";
+                            setProgressBar(simP);
                         }
                     }, 250);
 
@@ -971,7 +982,7 @@
                     });
 
                     clearInterval(simTimer);
-                    document.getElementById('bar').style.width = nextP + "%";
+                    setProgressBar(nextP);
 
                     if (geminiRes.status === 429) {
                         let cd = await geminiRes.json().catch(() => ({}));
@@ -1006,7 +1017,7 @@
                     } catch(e) { console.error(e); }
                 }
 
-                document.getElementById('bar').style.width = "100%";
+                setProgressBar(100);
                 renderPaperFixed(allItems);
 
                 window.currentItems = allItems;
