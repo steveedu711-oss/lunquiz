@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* 全域設定 */
         body {
@@ -303,6 +305,7 @@
             <div class="flex gap-2 order-1">
                 <button onclick="switchSheet('quiz')" id="btnQuiz" class="bg-emerald-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-emerald-500">題目卷</button>
                 <button onclick="switchSheet('key')" id="btnKey" class="bg-slate-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-slate-500">答案卷</button>
+                <button onclick="switchSheet('answer')" id="btnAnswerMode" class="bg-purple-600 px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base hover:bg-purple-500">📱 線上作答</button>
             </div>
 
             <div class="w-full sm:w-auto sm:flex-1 text-center sm:max-w-md order-3 sm:order-2">
@@ -311,11 +314,19 @@
 
             <div class="flex gap-2 order-2 sm:order-3">
                 <button onclick="location.reload()" class="bg-gray-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-gray-500">🔄 重新出題</button>
-                <button onclick="dlDoc()" class="bg-blue-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-blue-500">⬇️ 下載</button>
+                <div class="relative inline-block" id="downloadMenuWrap">
+                    <button onclick="toggleDownloadMenu()" class="bg-blue-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-blue-500">⬇️ 下載 ▾</button>
+                    <div id="downloadMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-40">
+                        <button onclick="dlDoc(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📄 Word (.doc)</button>
+                        <button onclick="dlPDF(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📕 PDF</button>
+                        <button onclick="dlTxt(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📝 純文字 (.txt)</button>
+                    </div>
+                </div>
                 <button onclick="window.print()" class="bg-emerald-600 px-2 sm:px-3 py-1.5 rounded text-sm sm:text-base hover:bg-emerald-500">🖨️ 列印</button>
             </div>
         </div>
         <div id="paperContainer" class="max-w-5xl mx-auto pt-6"></div>
+        <div id="answerModeContainer" class="no-print" style="display:none; background:#f3f4f6; min-height:100vh;"></div>
     </div>
 
     <div id="historyModal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 no-print">
@@ -846,6 +857,8 @@
 
                 window.currentItems[idx] = newQ;
                 updateQuestionDOM(idx, newQ);
+                let ansContainer = document.getElementById('answerModeContainer');
+                if (ansContainer) ansContainer.dataset.rendered = '';
             } catch(e) {
                 alert("重新出題失敗: " + e.message);
             } finally {
@@ -862,6 +875,10 @@
 
             let container = document.getElementById('paperContainer');
             container.innerHTML = "";
+            container.style.display = 'block';
+
+            let ansContainer = document.getElementById('answerModeContainer');
+            if (ansContainer) { ansContainer.dataset.rendered = ''; ansContainer.style.display = 'none'; }
 
             let title = (document.getElementById('sourceType').value==='1' ? (document.getElementById('grade').value==='Custom'?document.getElementById('c_grade').value:document.getElementById('grade').value)+" "+document.getElementById('subject').value : "測驗") + "試卷";
             let sub = "範圍：" + (document.getElementById('scope').value || "綜合");
@@ -942,18 +959,163 @@
         function switchSheet(t) {
             let qs = document.querySelectorAll('.quiz-page');
             let ks = document.querySelectorAll('.key-page');
+            let ansContainer = document.getElementById('answerModeContainer');
+            let paperContainer = document.getElementById('paperContainer');
             let b1 = document.getElementById('btnQuiz');
             let b2 = document.getElementById('btnKey');
-            if(t==='quiz') {
-                qs.forEach(e => e.style.display='block');
-                ks.forEach(e => e.style.display='none');
-                b1.className = "bg-emerald-600 px-4 py-1.5 rounded font-bold hover:bg-emerald-500";
-                b2.className = "bg-slate-600 px-4 py-1.5 rounded font-bold hover:bg-slate-500";
-            } else {
-                qs.forEach(e => e.style.display='none');
-                ks.forEach(e => e.style.display='block');
-                b1.className = "bg-slate-600 px-4 py-1.5 rounded font-bold hover:bg-slate-500";
-                b2.className = "bg-emerald-600 px-4 py-1.5 rounded font-bold hover:bg-emerald-500";
+            let b3 = document.getElementById('btnAnswerMode');
+
+            qs.forEach(e => e.style.display = (t === 'quiz') ? 'block' : 'none');
+            ks.forEach(e => e.style.display = (t === 'key') ? 'block' : 'none');
+            if (ansContainer) ansContainer.style.display = (t === 'answer') ? 'block' : 'none';
+            if (paperContainer) paperContainer.style.display = (t === 'answer') ? 'none' : 'block';
+
+            const base = "px-3 sm:px-4 py-1.5 rounded font-bold text-sm sm:text-base ";
+            b1.className = base + (t === 'quiz' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-600 hover:bg-slate-500');
+            b2.className = base + (t === 'key' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-600 hover:bg-slate-500');
+            if (b3) b3.className = base + (t === 'answer' ? 'bg-purple-700' : 'bg-purple-600 hover:bg-purple-500');
+
+            if (t === 'answer' && ansContainer && !ansContainer.dataset.rendered) {
+                renderAnswerMode();
+                ansContainer.dataset.rendered = '1';
+            }
+        }
+
+        // --- 手機線上作答＋自動評分 ---
+        function getCorrectLetters(q) {
+            if (!q.o || q.o.length === 0) return null;
+            if (Array.isArray(q.a)) {
+                return q.a.map(x => typeof x === 'number' ? String.fromCharCode(65 + x) : String(x).toUpperCase().trim());
+            } else if (typeof q.a === 'number') {
+                return [String.fromCharCode(65 + q.a)];
+            } else if (typeof q.a === 'string') {
+                return q.a.toUpperCase().replace(/[^A-Z]/g, '').split('');
+            }
+            return [];
+        }
+
+        function renderAnswerMode() {
+            const container = document.getElementById('answerModeContainer');
+            if (!container) return;
+            const items = window.currentItems || [];
+            let html = "<div class='max-w-2xl mx-auto p-4'>";
+            html += "<div class='bg-white rounded-xl p-4 mb-4 text-center shadow'><h2 class='font-bold text-lg mb-1'>📱 線上作答</h2><p class='text-sm text-gray-500'>作答完按下方「送出評分」。選擇/複選題會自動判分；填空/簡答題只能做文字比對，僅供參考，請自行核對。</p></div>";
+            items.forEach((q, i) => {
+                const letters = getCorrectLetters(q);
+                html += "<div class='bg-white rounded-xl p-4 mb-3 shadow'>";
+                html += "<div class='font-bold mb-2'>" + (i + 1) + ". " + q.q + " <span class='text-xs text-gray-400'>(" + q.s + "分)</span></div>";
+                if (q.o && q.o.length > 0) {
+                    const inputType = letters && letters.length > 1 ? 'checkbox' : 'radio';
+                    q.o.forEach((o, oi) => {
+                        const label = String.fromCharCode(65 + oi);
+                        html += "<label class='flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-50 cursor-pointer'>" +
+                            "<input type='" + inputType + "' name='ans-" + i + "' value='" + label + "' class='w-4 h-4 flex-shrink-0'>" +
+                            "<span>(" + label + ") " + o + "</span></label>";
+                    });
+                } else {
+                    html += "<textarea class='w-full border rounded-lg p-2 mt-1' rows='2' id='ans-text-" + i + "' placeholder='請輸入答案'></textarea>";
+                }
+                html += "<div class='ans-feedback mt-2 text-sm hidden' id='ans-feedback-" + i + "'></div>";
+                html += "</div>";
+            });
+            html += "<button onclick='gradeAnswers()' class='w-full py-3 bg-purple-600 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-purple-700'>✅ 送出評分</button>";
+            html += "<div id='scoreResult' class='mt-4'></div>";
+            html += "</div>";
+            container.innerHTML = html;
+        }
+
+        function gradeAnswers() {
+            const items = window.currentItems || [];
+            let totalScore = 0, maxScore = 0, needReview = 0;
+            items.forEach((q, i) => {
+                maxScore += (q.s || 0);
+                const fb = document.getElementById('ans-feedback-' + i);
+                if (!fb) return;
+                const letters = getCorrectLetters(q);
+                if (q.o && q.o.length > 0) {
+                    const checked = Array.from(document.querySelectorAll('input[name="ans-' + i + '"]:checked')).map(el => el.value).sort();
+                    const correct = (letters || []).slice().sort();
+                    const isCorrect = checked.length > 0 && checked.length === correct.length && checked.every((v, idx) => v === correct[idx]);
+                    if (isCorrect) totalScore += (q.s || 0);
+                    fb.className = 'ans-feedback mt-2 text-sm ' + (isCorrect ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold');
+                    fb.innerText = isCorrect ? '✅ 答對了！' : ('❌ 答錯了，正確答案：' + correct.join(''));
+                    fb.classList.remove('hidden');
+                } else {
+                    const inputEl = document.getElementById('ans-text-' + i);
+                    const userAns = ((inputEl && inputEl.value) || '').trim();
+                    const correctAns = String(q.a || '').trim();
+                    const roughMatch = userAns !== '' && userAns.replace(/\s/g, '') === correctAns.replace(/\s/g, '');
+                    if (roughMatch) totalScore += (q.s || 0);
+                    needReview++;
+                    fb.className = 'ans-feedback mt-2 text-sm text-blue-600';
+                    fb.innerText = (roughMatch ? '🤔 文字比對相符(僅供參考)' : '📝 請自行核對') + '，參考答案：' + correctAns + (q.e ? ('｜解析：' + q.e) : '');
+                    fb.classList.remove('hidden');
+                }
+            });
+
+            const pct = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+            let resultHTML = "<div class='bg-white rounded-xl p-5 shadow text-center border-2 border-purple-300'>";
+            resultHTML += "<div class='text-3xl font-bold text-purple-700 mb-1'>" + totalScore + " / " + maxScore + " 分</div>";
+            resultHTML += "<div class='text-sm text-gray-500'>約 " + pct + " 分" + (needReview > 0 ? "（含填空/簡答題的文字比對估算，建議自行核對）" : "（選擇/複選題自動判分）") + "</div>";
+            resultHTML += "</div>";
+            const scoreEl = document.getElementById('scoreResult');
+            scoreEl.innerHTML = resultHTML;
+            scoreEl.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- 下載選單（多格式）---
+        function toggleDownloadMenu() {
+            document.getElementById('downloadMenu').classList.toggle('hidden');
+        }
+        function closeDownloadMenu() {
+            document.getElementById('downloadMenu').classList.add('hidden');
+        }
+        document.addEventListener('click', function(e) {
+            const wrap = document.getElementById('downloadMenuWrap');
+            if (wrap && !wrap.contains(e.target)) closeDownloadMenu();
+        });
+
+        function dlTxt() {
+            let content = "";
+            document.querySelectorAll('#paperContainer > .quiz-page').forEach(page => {
+                if (page.style.display === 'none') return;
+                content += page.innerText.trim() + "\n\n";
+            });
+            document.querySelectorAll('.key-page').forEach(p => {
+                if (p.style.display !== 'none') content += p.innerText.trim() + "\n";
+            });
+            if (!content.trim()) { alert('沒有可匯出的內容'); return; }
+            let blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            let fileName = (window.docName || "試卷") + ".txt";
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
+        }
+
+        async function dlPDF() {
+            if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+                alert('PDF 元件載入失敗，請檢查網路連線後重新整理再試一次');
+                return;
+            }
+            let pages = Array.from(document.querySelectorAll('#paperContainer > .a4-page')).filter(p => p.style.display !== 'none');
+            if (pages.length === 0) { alert('沒有可匯出的內容'); return; }
+
+            const noPrintEls = document.querySelectorAll('#paperContainer .no-print');
+            noPrintEls.forEach(el => el.style.visibility = 'hidden');
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                for (let i = 0; i < pages.length; i++) {
+                    const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                    if (i > 0) pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                }
+                pdf.save((window.docName || "試卷") + ".pdf");
+            } catch (e) {
+                alert('PDF 匯出失敗: ' + e.message);
+            } finally {
+                noPrintEls.forEach(el => el.style.visibility = '');
             }
         }
 
