@@ -1612,7 +1612,11 @@
             if (!container) return;
             const items = window.currentItems || [];
             let html = "<div class='max-w-2xl mx-auto p-4'>";
-            html += "<div class='lq-card p-5 mb-4 text-center'><h2 class='font-bold text-lg mb-1'>📱 線上作答</h2><p class='text-sm text-gray-500'>選擇/複選題會自動判分；填空/簡答題只能做文字比對，僅供參考，請自行核對。</p></div>";
+
+            // 開始畫面：先填資料+選作答模式，按「開始測驗」確認後才顯示題目本體，
+            // 避免模式選項跟題目混在一起、寫到一半才發現選錯模式
+            html += "<div id='ansStartScreen'>";
+            html += "<div class='lq-card p-6 mb-4 text-center'><h2 class='font-bold text-lg mb-1'>📱 線上作答</h2><p class='text-sm text-gray-500'>選擇/複選題會自動判分；填空/簡答題只能做文字比對，僅供參考，請自行核對。</p></div>";
 
             html += "<div class='lq-card p-4 mb-4'>" +
                 "<div class='text-sm text-gray-500 mb-2'>👤 填寫資料（選填，方便老師/家長核對是誰寫的）</div>" +
@@ -1623,10 +1627,18 @@
                 "<input id='ansStuName' placeholder='姓名' class='lq-input text-sm py-1.5'>" +
                 "</div></div>";
 
-            html += "<div class='lq-card p-3 mb-4 flex items-center justify-center gap-4 sm:gap-6 text-sm flex-wrap'>" +
+            html += "<div class='lq-card p-4 mb-5'>" +
+                "<div class='text-sm text-gray-500 mb-3 text-center font-semibold'>請選擇作答模式</div>" +
+                "<div class='flex items-center justify-center gap-4 sm:gap-6 text-sm flex-wrap'>" +
                 "<label class='flex items-center gap-1.5 cursor-pointer font-semibold'><input type='radio' name='ansGradeMode' value='instant' checked> ⚡ 每題即時看結果</label>" +
                 "<label class='flex items-center gap-1.5 cursor-pointer font-semibold'><input type='radio' name='ansGradeMode' value='batch'> 📋 全部寫完再送出</label>" +
-                "</div>";
+                "</div></div>";
+
+            html += "<button onclick='startAnswerQuiz()' class='lq-btn lq-cta lq-btn-primary w-full py-3 rounded-xl text-lg'>🚀 開始測驗</button>";
+            html += "</div>";
+
+            // 題目本體：預設隱藏，確認模式並按下「開始測驗」後才顯示
+            html += "<div id='ansQuizBody' class='hidden'>";
             items.forEach((q, i) => {
                 const letters = getCorrectLetters(q);
                 html += "<div class='lq-card p-4 mb-3 ans-card' id='ans-card-" + i + "'>";
@@ -1648,7 +1660,21 @@
             html += "<button onclick='gradeAnswers()' class='lq-btn lq-btn-primary w-full py-3 rounded-xl text-lg'>✅ 送出評分</button>";
             html += "<div id='scoreResult' class='mt-4'></div>";
             html += "</div>";
+
+            html += "</div>";
             container.innerHTML = html;
+        }
+
+        // 確認模式+資料後才會呼叫，把題目本體從隱藏切成顯示；學生資料/模式選擇的input
+        // 都還留在DOM裡(只是視覺隱藏)，之後gradeAnswers()/shareResult()一樣讀得到值
+        function startAnswerQuiz() {
+            const startScreen = document.getElementById('ansStartScreen');
+            const quizBody = document.getElementById('ansQuizBody');
+            if (startScreen) startScreen.classList.add('hidden');
+            if (quizBody) {
+                quizBody.classList.remove('hidden');
+                quizBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
 
         // 用DOM節點組回饋文字(而非字串拼innerHTML)，即使q.e/correctAns等內容來自AI也不會有XSS風險，
