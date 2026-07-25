@@ -50,6 +50,7 @@
         .lq-btn:active { transform: scale(0.97); }
         .lq-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(26,115,232,0.35); }
         .lq-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        .lq-icon { font-size: 1.2em; line-height: 1; }
 
         .lq-btn-primary { background: var(--hl-blue); color: #fff; box-shadow: var(--lq-shadow-sm); }
         .lq-btn-primary:hover:not(:disabled) { background: var(--hl-blue-hover); box-shadow: var(--lq-shadow); }
@@ -60,8 +61,8 @@
         .lq-btn-danger { background: #fff; color: var(--hl-red); border-color: #fecaca; }
         .lq-btn-danger:hover:not(:disabled) { background: var(--hl-red); color: #fff; border-color: var(--hl-red); }
 
-        .lq-btn-secondary { background: #fff; color: #475569; border-color: #e2e8f0; }
-        .lq-btn-secondary:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
+        .lq-btn-secondary { background: #fff; color: #475569; border-color: #cbd5e1; }
+        .lq-btn-secondary:hover:not(:disabled) { background: #f8fafc; border-color: #94a3b8; color: #1e293b; box-shadow: var(--lq-shadow-sm); }
 
         .lq-btn-ghost { background: transparent; color: #64748b; border-color: transparent; font-weight: 600; }
         .lq-btn-ghost:hover:not(:disabled) { color: #1e293b; background: rgba(0,0,0,0.04); }
@@ -175,7 +176,13 @@
         [contenteditable="true"]:hover { background-color: #fff9db; cursor: text; }
         [contenteditable="true"]:focus { background-color: #fff; outline: none; }
 
-        .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); transition: width 0.3s ease; text-align: center; color: white; font-size: 10px; line-height: 16px; }
+        .progress-bar {
+            width: 0%; height: 100%;
+            background: linear-gradient(90deg, var(--hl-blue), var(--hl-red), var(--hl-yellow), var(--hl-green));
+            transition: width 0.3s ease;
+            text-align: center; color: white; font-size: 10px; line-height: 16px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
 
         /* --- 線上作答：答對/答錯回饋動畫 --- */
         @keyframes lun-pop { 0%{transform:scale(1);} 35%{transform:scale(1.035);} 65%{transform:scale(0.99);} 100%{transform:scale(1);} }
@@ -268,7 +275,7 @@
 
             <div style="width:100%; max-width:22rem; display:flex; flex-direction:column; gap:1rem;">
                 <button type="button" id="hlEnterBuiltin" class="hl-enter-btn hl-clickable">
-                    <span>直接進入（沒有自己的API Key）</span>
+                    <span>直接進入</span>
                     <span class="material-symbols-outlined" style="font-size:1.75rem;">rocket_launch</span>
                 </button>
                 <button type="button" id="hlEnterOwnKey" class="hl-enter-btn hl-clickable" style="background:#fff; color:var(--hl-blue); border:2px solid var(--hl-blue); box-shadow:none;">
@@ -464,22 +471,22 @@
             </div>
 
             <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3">
-                <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base">🔄 重新出題</button>
-                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base">📱 線上作答預覽</button>
+                <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">refresh</span> 重新出題</button>
+                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">smartphone</span> 直接線上測驗</button>
                 <div class="relative inline-block" id="downloadMenuWrap">
-                    <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base">⬇️ 下載 ▾</button>
-                    <div id="downloadMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-40">
-                        <button onclick="dlDoc(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📄 Word (.doc)</button>
-                        <button onclick="dlPDF(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📕 PDF</button>
-                        <button onclick="dlTxt(); closeDownloadMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">📝 純文字 (.txt)</button>
+                    <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">download</span> 下載 ▾</button>
+                    <div id="downloadMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-44">
+                        <button onclick="dlDoc(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-blue-600">description</span> Word (.doc)</button>
+                        <button onclick="dlPDF(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-red-600">picture_as_pdf</span> PDF</button>
+                        <button onclick="dlTxt(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-slate-500">article</span> 純文字 (.txt)</button>
                     </div>
                 </div>
-                <button onclick="window.print()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base">🖨️ 列印</button>
+                <button onclick="window.print()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">print</span> 列印</button>
                 <div class="relative inline-block" id="shareBtnsWrap">
-                    <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base">📤 分享 ▾</button>
+                    <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">ios_share</span> 分享 ▾</button>
                     <div id="shareMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
-                        <button onclick="shareQuiz('student'); closeShareMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">🧒 學生作答連結</button>
-                        <button onclick="shareQuiz('key'); closeShareMenu()" class="block w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">👨‍👩‍👧 家長答案連結</button>
+                        <button onclick="shareQuiz('student'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-emerald-600">school</span> 學生作答連結</button>
+                        <button onclick="shareQuiz('key'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-orange-500">family_restroom</span> 家長答案連結</button>
                     </div>
                 </div>
             </div>
@@ -525,7 +532,7 @@
                         <li><b>🔁 重新出這題</b>：只有某一題不滿意，不用整份重出</li>
                         <li><b>⬇️ 下載</b>：可選 Word / PDF / 純文字三種格式</li>
                         <li><b>🖨️ 列印</b>：直接印出或存成PDF</li>
-                        <li><b>📱 線上作答預覽</b>：自己先開一個新分頁測試看看學生作答會看到什麼畫面、怎麼自動評分</li>
+                        <li><b>直接線上測驗</b>：自己先開一個新分頁測試看看學生作答會看到什麼畫面、怎麼自動評分</li>
                         <li><b>📤 分享 ▾ 學生作答連結</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
                         <li><b>📤 分享 ▾ 家長答案連結</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
                         <li><b>學生線上作答</b>：可選「⚡每題即時看結果」或「📋全部寫完再送出」，並可選填姓名/年級/班級/座號；送出評分後可再產生「結果連結」分享回給老師/家長核對</li>
@@ -681,43 +688,47 @@
         }
 
         // --- 分享題目(給學生線上作答) / 分享答案(給家長查看) ---
+        // 老師常常一次出好幾份測驗、對每份都各分享學生/家長連結，光看網址完全分不出誰是誰，
+        // 所以複製到剪貼簿的內容前面固定加上「【題目名稱】連結類型」，貼到LINE/Email時對方也看得出這是哪份測驗的連結
         async function shareQuiz(mode) {
             if (!window.currentItems || window.currentItems.length === 0) {
                 alert('目前沒有題目可以分享');
                 return;
             }
-            const btn = event && event.target;
-            const originalText = btn ? btn.innerText : '';
-            if (btn) { btn.disabled = true; btn.innerText = '⏳ 產生連結中...'; }
+            const btn = event && event.target && event.target.closest('button');
+            const originalHTML = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 產生連結中...'; }
             try {
+                const title = window.docName || '測驗';
                 const res = await fetch(API_BASE + "/api/share", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: window.currentItems, title: window.docName || '測驗' })
+                    body: JSON.stringify({ items: window.currentItems, title })
                 });
                 const data = await res.json();
                 if (data.error) throw new Error(data.error.message);
 
                 const url = location.origin + location.pathname + "?share=" + data.id + "&mode=" + mode;
-                const msg = mode === 'student'
-                    ? '✅ 學生作答連結已複製！（30天內有效，貼給學生開啟後可直接線上作答＋自動評分，看不到答案卷）'
-                    : '✅ 答案連結已複製！（30天內有效，貼給家長開啟可查看題目與解析，唯讀不可編輯）';
+                const label = mode === 'student' ? '學生作答連結' : '家長答案連結';
+                const clipboardText = "【" + title + "】" + label + "\n" + url;
+                const msg = "✅ 已複製「" + title + "」的" + label + "！（連結前已自動附上題目名稱，方便分辨多份連結。30天內有效，" +
+                    (mode === 'student' ? '貼給學生開啟後可直接線上作答＋自動評分，看不到答案卷' : '貼給家長開啟可查看題目與解析，唯讀不可編輯') + "）";
 
                 let copied = false;
                 try {
-                    await navigator.clipboard.writeText(url);
+                    await navigator.clipboard.writeText(clipboardText);
                     copied = true;
                 } catch (e) {}
 
                 if (copied) {
                     alert(msg);
                 } else {
-                    prompt(msg + '\n複製失敗，請手動複製以下連結：', url);
+                    prompt(msg + '\n複製失敗，請手動複製以下內容：', clipboardText);
                 }
             } catch (e) {
                 alert('產生分享連結失敗: ' + e.message);
             } finally {
-                if (btn) { btn.disabled = false; btn.innerText = originalText; }
+                if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
             }
         }
 
@@ -1711,10 +1722,13 @@
                 if (data.error) throw new Error(data.error.message);
 
                 const url = location.origin + location.pathname + "?result=" + data.id;
+                const title = window.docName || '測驗';
+                const whoLabel = studentInfo.name || [studentInfo.grade, studentInfo.className, studentInfo.seat ? ('座號' + studentInfo.seat) : ''].filter(Boolean).join(' ') || '(未填寫姓名)';
+                const clipboardText = "【" + title + "】" + whoLabel + " 的作答結果\n" + url;
                 let copied = false;
-                try { await navigator.clipboard.writeText(url); copied = true; } catch (e) {}
-                if (msgEl) msgEl.textContent = copied ? '✅ 結果連結已複製！可貼給家長/老師查看(30天內有效，唯讀)' : ('連結：' + url);
-                if (!copied) prompt('複製失敗，請手動複製以下連結：', url);
+                try { await navigator.clipboard.writeText(clipboardText); copied = true; } catch (e) {}
+                if (msgEl) msgEl.textContent = copied ? ('✅ 已複製「' + title + '」' + whoLabel + ' 的結果連結！可貼給家長/老師查看(30天內有效，唯讀)') : ('連結：' + url);
+                if (!copied) prompt('複製失敗，請手動複製以下內容：', clipboardText);
             } catch (e) {
                 if (msgEl) msgEl.textContent = '❌ 產生連結失敗：' + e.message;
             } finally {
