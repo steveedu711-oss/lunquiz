@@ -71,10 +71,41 @@
         .lq-btn-ghost { background: transparent; color: #64748b; border-color: transparent; font-weight: 600; }
         .lq-btn-ghost:hover:not(:disabled) { color: #1e293b; background: rgba(0,0,0,0.04); transform: none; }
 
+        /* 工具列按鈕（例：儲存/清除/複製設定連結）：左側圓形色塊icon + hover時色塊灌滿實色，
+           取代原本純文字+細邊框的樸素樣式，質感層次更明顯 */
+        .lq-icon-chip {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 1.7em; height: 1.7em; border-radius: 9999px; font-size: 1rem; flex-shrink: 0;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        .lq-btn-tool { background: #fff; color: #334155; border-color: #e2e8f0; box-shadow: var(--lq-shadow-sm); }
+        .lq-btn-tool .lq-icon-chip { background: rgba(26,115,232,0.1); color: var(--hl-blue); }
+        .lq-btn-tool:hover:not(:disabled) { background: #eff6ff; border-color: #bfdbfe; color: #1e3a5f; box-shadow: var(--lq-shadow); }
+        .lq-btn-tool:hover:not(:disabled) .lq-icon-chip { background: var(--hl-blue); color: #fff; }
+
+        .lq-btn-tool-danger { border-color: #fecaca; }
+        .lq-btn-tool-danger .lq-icon-chip { background: rgba(217,48,37,0.1); color: var(--hl-red); }
+        .lq-btn-tool-danger:hover:not(:disabled) { background: #fef2f2; border-color: #fca5a5; color: #7f1d1d; }
+        .lq-btn-tool-danger:hover:not(:disabled) .lq-icon-chip { background: var(--hl-red); color: #fff; }
+
+        .lq-btn-tool-share .lq-icon-chip { background: rgba(52,168,83,0.12); color: var(--hl-green); }
+        .lq-btn-tool-share:hover:not(:disabled) { background: #f0fdf4; border-color: #bbf7d0; color: #14532d; }
+        .lq-btn-tool-share:hover:not(:disabled) .lq-icon-chip { background: var(--hl-green); color: #fff; }
+
         /* 深色版：sticky header 用（背景是深色，白按鈕反而刺眼，改用半透明白疊層） */
-        .lq-btn-dark { background: rgba(255,255,255,0.08); color: #e2e8f0; border-color: rgba(255,255,255,0.12); }
-        .lq-btn-dark:hover:not(:disabled) { background: rgba(255,255,255,0.16); color: #fff; }
-        .lq-btn-dark.is-active { background: var(--hl-blue); color: #fff; border-color: var(--hl-blue); }
+        .lq-btn-dark { background: rgba(255,255,255,0.07); color: #e2e8f0; border-color: rgba(255,255,255,0.1); }
+        .lq-btn-dark:hover:not(:disabled) { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.2); box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
+        .lq-btn-dark.is-active { background: var(--hl-blue); color: #fff; border-color: var(--hl-blue); box-shadow: 0 4px 14px rgba(26,115,232,0.4); }
+
+        /* sticky header 質感升級：深色漸層取代平板單色 + 底部品牌四色細線呼應進度條/CTA光暈，
+           是全站少數幾處刻意使用品牌色的地方 */
+        .sticky-header { position: relative; background: linear-gradient(135deg, #0f172a, #1e293b 55%, #0f172a); }
+        .sticky-header::after {
+            content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+            background: linear-gradient(90deg, var(--hl-blue), var(--hl-red), var(--hl-yellow), var(--hl-green));
+            opacity: 0.65;
+        }
+        .lq-header-divider { width: 1px; align-self: stretch; min-height: 1.75rem; background: rgba(255,255,255,0.12); }
 
         /* 主要出題CTA：呼應進場頁徽章的品牌四色光暈，是全頁唯一使用這個signature動效的地方 */
         .lq-cta { position: relative; isolation: isolate; }
@@ -202,9 +233,11 @@
 
         /* --- 列印專用設定 (終極修復) --- */
         @media print {
-            /* 強制清除瀏覽器邊界 */
+            /* 邊界改交給 @page，讓每一張「實體紙」都統一套用邊界——
+               包含題目過多時瀏覽器自動分頁出的續頁(這種續頁不是獨立的.a4-page元素，
+               先前靠.a4-page自己的padding只對每個容器頂部有效，續頁會完全貼齊紙張邊緣) */
             @page {
-                margin: 0;
+                margin: 10mm 12.5mm;
                 size: A4;
             }
 
@@ -220,12 +253,10 @@
             .a4-page {
                 margin: 0 !important;
                 box-shadow: none;
-                /* ★ 使用相同的 padding 模擬邊界，確保位置與預覽重疊 */
-                padding: 10mm 12.5mm !important;
+                /* 邊界已由 @page 統一提供，這裡不再重複加padding，避免每頁邊界疊加兩次 */
+                padding: 0 !important;
                 page-break-after: always;
-                /* ★ 寬度設為 100% 以填滿 @page 定義的 A4 區域，避免像素換算誤差 */
                 width: 100% !important;
-                max-width: 210mm; /* 雙重保險 */
                 min-height: auto;
                 height: auto;
                 background-color: white !important;
@@ -443,9 +474,9 @@
 
             <button onclick="startGen()" id="btnGo" class="lq-btn lq-cta lq-btn-primary w-full py-4 rounded-xl text-xl">🚀 小綸開始出題</button>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
-                <button onclick="saveDefaultSettings()" class="lq-btn lq-btn-secondary w-full py-2 text-sm sm:text-base">💾 儲存設定條件</button>
-                <button onclick="clearAllSettings()" class="lq-btn lq-btn-danger w-full py-2 text-sm sm:text-base">🗑️ 清除所有條件</button>
-                <button onclick="copySettingsLink()" class="lq-btn lq-btn-secondary w-full py-2 text-sm sm:text-base">🔗 複製設定連結</button>
+                <button onclick="saveDefaultSettings()" class="lq-btn lq-btn-tool w-full py-2.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon-chip">save</span> 儲存設定條件</button>
+                <button onclick="clearAllSettings()" class="lq-btn lq-btn-tool lq-btn-tool-danger w-full py-2.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon-chip">delete_sweep</span> 清除所有條件</button>
+                <button onclick="copySettingsLink()" class="lq-btn lq-btn-tool lq-btn-tool-share w-full py-2.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon-chip">link</span> 複製設定連結</button>
             </div>
             <div id="barBox" class="hidden mt-4 h-3 w-full bg-gray-200 rounded-full overflow-hidden"><div id="bar" class="progress-bar">0%</div></div>
             <p id="status" class="text-center text-sm mt-2 text-blue-700 font-bold animate-pulse"></p>
@@ -464,15 +495,19 @@
     </div>
 
     <div id="resultSection" class="hidden w-full min-h-screen bg-gray-600 pb-20">
-        <div class="sticky-header sticky top-0 bg-slate-900 text-white p-2 sm:p-3 shadow-lg z-50 flex flex-wrap justify-center items-center gap-2 sm:gap-6">
-            <div class="flex gap-1 order-1 bg-white/5 p-1 rounded-xl">
+        <div class="sticky-header sticky top-0 text-white p-2 sm:p-3 shadow-lg z-50 flex flex-wrap justify-center items-center gap-2 sm:gap-4">
+            <div class="flex gap-1 order-1 bg-black/25 p-1 rounded-xl shadow-inner">
                 <button onclick="switchSheet('quiz')" id="btnQuiz" class="lq-btn lq-btn-dark is-active px-3 sm:px-4 py-1.5 text-sm sm:text-base">題目卷</button>
                 <button onclick="switchSheet('key')" id="btnKey" class="lq-btn lq-btn-dark px-3 sm:px-4 py-1.5 text-sm sm:text-base">答案卷</button>
             </div>
 
+            <div class="lq-header-divider hidden sm:block order-1"></div>
+
             <div class="w-full sm:w-auto sm:flex-1 text-center sm:max-w-md order-3 sm:order-2">
                 <span class="text-yellow-400 text-xs sm:text-sm font-bold animate-pulse">💡 點擊試卷即可修改內容</span>
             </div>
+
+            <div class="lq-header-divider hidden sm:block order-3"></div>
 
             <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3">
                 <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">refresh</span> 重新出題</button>
@@ -486,6 +521,7 @@
                     </div>
                 </div>
                 <button onclick="window.print()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">print</span> 列印</button>
+                <div class="lq-header-divider hidden sm:block"></div>
                 <div class="relative inline-block" id="shareBtnsWrap">
                     <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">ios_share</span> 分享 ▾</button>
                     <div id="shareMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
