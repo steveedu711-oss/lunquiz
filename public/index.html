@@ -1602,9 +1602,16 @@
             return el ? el.value : 'instant';
         }
 
-        function onAnswerChanged(i) {
-            if (getGradeMode() !== 'instant') return;
+        // 即時模式下按「確認這題」才算送出(不是選了就馬上判定，避免誤按選項就被當成作答完畢)。
+        // 判定後鎖住該題選項+隱藏確認按鈕，避免同一題重複送出
+        function confirmAnswer(i) {
+            const inputs = document.querySelectorAll('input[name="ans-' + i + '"]');
+            const hasSelection = Array.from(inputs).some(el => el.checked);
+            if (!hasSelection) { alert('請先選擇答案再確認'); return; }
             gradeOneQuestion(i);
+            inputs.forEach(el => el.disabled = true);
+            const btn = document.getElementById('ans-confirm-' + i);
+            if (btn) btn.style.display = 'none';
         }
 
         function renderAnswerMode() {
@@ -1648,9 +1655,14 @@
                     q.o.forEach((o, oi) => {
                         const label = String.fromCharCode(65 + oi);
                         html += "<label class='flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 cursor-pointer'>" +
-                            "<input type='" + inputType + "' name='ans-" + i + "' value='" + label + "' class='w-4 h-4 flex-shrink-0 accent-[color:var(--hl-blue)]' onchange='onAnswerChanged(" + i + ")'>" +
+                            "<input type='" + inputType + "' name='ans-" + i + "' value='" + label + "'" +
+                            " class='w-4 h-4 flex-shrink-0 accent-[color:var(--hl-blue)]'>" +
                             "<span>(" + label + ") " + escapeHtml(o) + "</span></label>";
                     });
+                    // 只有選擇/複選題才需要「確認這題」按鈕(即時模式用)：原本一點選項就馬上判定，
+                    // 誤按到旁邊的選項也會被當成已送出，Steve反映要有明確的送出動作才不會誤按。
+                    // 是否顯示由startAnswerQuiz()依選定的模式決定(批次模式不需要,只用最下面的送出評分)
+                    html += "<button type='button' onclick='confirmAnswer(" + i + ")' id='ans-confirm-" + i + "' class='ans-confirm-btn lq-btn lq-btn-primary text-sm px-3 py-1.5 mt-2' style='display:none;'>✅ 確認這題</button>";
                 } else {
                     html += "<textarea class='lq-input mt-1' rows='2' id='ans-text-" + i + "' placeholder='請輸入答案'></textarea>";
                 }
@@ -1675,6 +1687,11 @@
                 quizBody.classList.remove('hidden');
                 quizBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+            // 即時模式才顯示每題的「確認這題」按鈕；批次模式全程不判分，只靠最下面的送出評分
+            const showConfirmBtns = getGradeMode() === 'instant';
+            document.querySelectorAll('.ans-confirm-btn').forEach(btn => {
+                btn.style.display = showConfirmBtns ? 'inline-flex' : 'none';
+            });
         }
 
         // 用DOM節點組回饋文字(而非字串拼innerHTML)，即使q.e/correctAns等內容來自AI也不會有XSS風險，
