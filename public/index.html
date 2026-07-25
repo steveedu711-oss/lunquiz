@@ -532,6 +532,7 @@
                     <div id="shareMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
                         <button onclick="shareQuiz('student'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-graduation-cap lq-icon text-emerald-600"></span> 學生作答連結</button>
                         <button onclick="shareQuiz('key'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-users-four lq-icon text-orange-500"></span> 家長答案連結</button>
+                        <button onclick="shareLiveDashboardLink(); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-chart-line lq-icon text-blue-600"></span> 即時進度儀表板</button>
                     </div>
                 </div>
             </div>
@@ -624,6 +625,17 @@
             return id;
         }
 
+        // 即時進度用的學生ID：故意用sessionStorage不是localStorage，換分頁/裝置視為新的一位，
+        // 但同一分頁重整不會被當成重複加入
+        function getLiveStudentId() {
+            let id = sessionStorage.getItem('lun_live_student_id');
+            if (!id) {
+                id = (crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2)));
+                sessionStorage.setItem('lun_live_student_id', id);
+            }
+            return id;
+        }
+
         // 進度條：同時更新寬度(視覺填滿)與裡面顯示的百分比文字，
         // 之前的bug是只更新了style.width，文字內容一直停在HTML裡寫死的"0%"
         function setProgressBar(pct) {
@@ -634,6 +646,7 @@
 
         window.isSharedView = false;
         window.sharedMode = null;
+        window.liveShareId = null;
 
         window.onload = async function() {
             let k = localStorage.getItem('lun_key');
@@ -643,6 +656,12 @@
                 .then(r => r.json())
                 .then(d => { document.getElementById('visitCount').textContent = d.count; })
                 .catch(() => {});
+
+            const liveViewed = await loadLiveViewIfAny();
+            if (liveViewed) {
+                document.getElementById('hlSplash').style.display = 'none';
+                return;
+            }
 
             const resultViewed = await loadResultViewIfAny();
             if (resultViewed) {
@@ -732,6 +751,26 @@
             }
         }
 
+        // 同一份題目(window.currentItems)重複分享(學生連結/家長連結/即時進度儀表板)要共用同一個shareId，
+        // 這樣即時進度儀表板才能跟真正分享給學生的那個連結對上號。用currentItems的參考位址判斷是不是同一份，
+        // 換題目(重新出題)後currentItems會變成新陣列，快取自然失效，下次分享會產生新的shareId
+        async function getOrCreateShareId() {
+            if (window.lastShareId && window.lastShareItemsRef === window.currentItems) {
+                return window.lastShareId;
+            }
+            const title = window.docName || '測驗';
+            const res = await fetch(API_BASE + "/api/share", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: window.currentItems, title })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error.message);
+            window.lastShareId = data.id;
+            window.lastShareItemsRef = window.currentItems;
+            return data.id;
+        }
+
         // --- 分享題目(給學生線上作答) / 分享答案(給家長查看) ---
         // 老師常常一次出好幾份測驗、對每份都各分享學生/家長連結，光看網址完全分不出誰是誰，
         // 所以複製到剪貼簿的內容前面固定加上「【題目名稱】連結類型」，貼到LINE/Email時對方也看得出這是哪份測驗的連結
@@ -745,15 +784,9 @@
             if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 產生連結中...'; }
             try {
                 const title = window.docName || '測驗';
-                const res = await fetch(API_BASE + "/api/share", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: window.currentItems, title })
-                });
-                const data = await res.json();
-                if (data.error) throw new Error(data.error.message);
+                const shareId = await getOrCreateShareId();
 
-                const url = location.origin + location.pathname + "?share=" + data.id + "&mode=" + mode;
+                const url = location.origin + location.pathname + "?share=" + shareId + "&mode=" + mode;
                 const label = mode === 'student' ? '學生作答連結' : '家長答案連結';
                 const clipboardText = "【" + title + "】" + label + "\n" + url;
                 const msg = "✅ 已複製「" + title + "」的" + label + "！（連結前已自動附上題目名稱，方便分辨多份連結。30天內有效，" +
@@ -777,6 +810,41 @@
             }
         }
 
+        // 老師用：即時進度儀表板連結，跟shareQuiz('student')共用同一個shareId(靠getOrCreateShareId的快取)，
+        // 這樣不管老師先分享學生連結還是先開儀表板，兩邊看到的都是同一批學生的進度
+        async function shareLiveDashboardLink() {
+            if (!window.currentItems || window.currentItems.length === 0) {
+                alert('目前沒有題目可以分享');
+                return;
+            }
+            const btn = event && event.target && event.target.closest('button');
+            const originalHTML = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 產生連結中...'; }
+            try {
+                const title = window.docName || '測驗';
+                const shareId = await getOrCreateShareId();
+                const url = location.origin + location.pathname + "?live=" + shareId;
+                const clipboardText = "【" + title + "】即時進度儀表板(老師用)\n" + url;
+                const msg = "✅ 已複製「" + title + "」的即時進度儀表板連結！開啟後需輸入管理者密碼才能看到全班作答進度（每8-10秒自動更新）。";
+
+                let copied = false;
+                try {
+                    await navigator.clipboard.writeText(clipboardText);
+                    copied = true;
+                } catch (e) {}
+
+                if (copied) {
+                    alert(msg);
+                } else {
+                    prompt(msg + '\n複製失敗，請手動複製以下內容：', clipboardText);
+                }
+            } catch (e) {
+                alert('產生儀表板連結失敗: ' + e.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+            }
+        }
+
         async function loadSharedQuizIfAny() {
             const params = new URLSearchParams(location.search);
             const shareId = params.get('share');
@@ -784,6 +852,7 @@
 
             window.isSharedView = true;
             window.sharedMode = params.get('mode') === 'key' ? 'key' : 'student';
+            window.liveShareId = shareId;
 
             document.getElementById('inputForm').classList.add('hidden');
             document.getElementById('resultSection').classList.remove('hidden');
@@ -829,6 +898,137 @@
             if (btnReload) btnReload.classList.add('hidden');
             if (downloadWrap) downloadWrap.classList.add('hidden');
             if (shareBtnsWrap) shareBtnsWrap.classList.add('hidden');
+        }
+
+        // --- 即時進度：老師班級儀表板 / 家長單人視角(輪詢,不用WebSocket) ---
+        // ?live=shareId(沒有student參數)=老師儀表板(要密碼)；?live=shareId&student=studentId=家長單人視角(不用密碼)
+        window.livePollTimer = null;
+        async function loadLiveViewIfAny() {
+            const params = new URLSearchParams(location.search);
+            const liveShareId = params.get('live');
+            if (!liveShareId) return false;
+
+            document.getElementById('inputForm').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+            const stickyHeader = document.querySelector('.sticky-header');
+            if (stickyHeader) stickyHeader.classList.add('hidden');
+            const ansContainer = document.getElementById('answerModeContainer');
+            if (ansContainer) ansContainer.style.display = 'none';
+            const paperContainer = document.getElementById('paperContainer');
+            paperContainer.style.display = 'block';
+
+            const studentId = params.get('student');
+            if (studentId) {
+                renderLiveParentView(liveShareId, studentId);
+            } else {
+                renderLiveTeacherDashboard(liveShareId);
+            }
+
+            // 分頁切到背景時暫停輪詢，省KV讀取額度，切回來才恢復
+            document.addEventListener('visibilitychange', () => {
+                if (!window.liveViewRefresh) return;
+                if (document.hidden) {
+                    if (window.livePollTimer) { clearInterval(window.livePollTimer); window.livePollTimer = null; }
+                } else if (!window.livePollTimer) {
+                    window.liveViewRefresh();
+                    window.livePollTimer = setInterval(window.liveViewRefresh, window.livePollIntervalMs || 9000);
+                }
+            });
+
+            return true;
+        }
+
+        // 老師儀表板：需要輸入管理者密碼(沿用既有的admin密碼機制)，每8-10秒輪詢一次列出全班進度
+        function renderLiveTeacherDashboard(shareId) {
+            const container = document.getElementById('paperContainer');
+            container.innerHTML = "<div class='max-w-2xl mx-auto p-4'><div class='lq-card p-5 mb-4 text-center'>" +
+                "<h2 class='font-bold text-lg mb-1'>📊 即時進度儀表板</h2>" +
+                "<p class='text-sm text-gray-500'>每 8-10 秒自動更新，需要管理者密碼</p></div>" +
+                "<div id='liveDashboardBody'><div class='text-center text-white py-10'>⏳ 載入中...</div></div></div>";
+
+            window.livePollIntervalMs = 9000;
+            window.liveViewRefresh = async function() {
+                const body = document.getElementById('liveDashboardBody');
+                let adminPass = sessionStorage.getItem('linquiz_admin');
+                if (!adminPass) {
+                    adminPass = prompt('請輸入管理者密碼以查看班級即時進度：') || '';
+                    sessionStorage.setItem('linquiz_admin', adminPass);
+                }
+                try {
+                    const res = await fetch(API_BASE + "/api/live-progress/" + encodeURIComponent(shareId), {
+                        headers: { 'X-Admin-Pass': adminPass }
+                    });
+                    const data = await res.json();
+                    if (data.error) {
+                        if (res.status === 401) sessionStorage.removeItem('linquiz_admin');
+                        body.innerHTML = "<div class='lq-card p-4 text-center text-red-600'>" + escapeHtml(data.error.message) + "</div>";
+                        return;
+                    }
+                    renderLiveDashboardTable(body, data.students || []);
+                } catch (e) {
+                    body.innerHTML = "<div class='lq-card p-4 text-center text-red-600'>載入失敗：" + escapeHtml(e.message) + "</div>";
+                }
+            };
+            window.liveViewRefresh();
+            window.livePollTimer = setInterval(window.liveViewRefresh, window.livePollIntervalMs);
+        }
+
+        function renderLiveDashboardTable(body, students) {
+            if (students.length === 0) {
+                body.innerHTML = "<div class='lq-card p-4 text-center text-gray-500'>還沒有學生開始作答</div>";
+                return;
+            }
+            students.sort((a, b) => (b.answered || 0) - (a.answered || 0));
+            let html = "";
+            students.forEach(s => {
+                const total = Number(s.total) || 0;
+                const answered = Number(s.answered) || 0;
+                const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+                const infoParts = [s.grade, s.className, s.seat ? ('座號' + s.seat) : '', s.name].filter(Boolean);
+                const infoLine = infoParts.length > 0 ? infoParts.map(escapeHtml).join('・') : '(未填寫姓名)';
+                html += "<div class='lq-card p-3 mb-2'>" +
+                    "<div class='flex items-center justify-between mb-1'><span class='font-semibold text-sm'>" + infoLine + "</span>" +
+                    "<span class='text-xs text-gray-400'>" + answered + " / " + total + " 題</span></div>" +
+                    "<div class='h-2 w-full bg-gray-200 rounded-full overflow-hidden'><div class='progress-bar' style='width:" + pct + "%;height:100%;'></div></div>" +
+                    "</div>";
+            });
+            body.innerHTML = html;
+        }
+
+        // 家長單人視角：不用密碼(跟其他分享連結一樣是capability-URL哲學)，每6-8秒輪詢一次
+        function renderLiveParentView(shareId, studentId) {
+            const container = document.getElementById('paperContainer');
+            container.innerHTML = "<div class='max-w-md mx-auto p-4'><div id='liveParentBody'><div class='text-center text-white py-10'>⏳ 載入中...</div></div></div>";
+
+            window.livePollIntervalMs = 7000;
+            window.liveViewRefresh = async function() {
+                const body = document.getElementById('liveParentBody');
+                try {
+                    const res = await fetch(API_BASE + "/api/live-progress/" + encodeURIComponent(shareId) + "/" + encodeURIComponent(studentId));
+                    const data = await res.json();
+                    if (data.error) {
+                        body.innerHTML = "<div class='lq-card p-5 text-center text-gray-500'>" + escapeHtml(data.error.message) + "</div>";
+                        return;
+                    }
+                    const total = Number(data.total) || 0;
+                    const answered = Number(data.answered) || 0;
+                    const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+                    const s = data.studentInfo || {};
+                    const infoParts = [s.grade, s.className, s.seat ? ('座號' + s.seat) : '', s.name].filter(Boolean);
+                    const infoLine = infoParts.length > 0 ? infoParts.map(escapeHtml).join('・') : '(未填寫姓名)';
+                    body.innerHTML = "<div class='lq-card p-6 text-center'>" +
+                        "<div class='text-sm text-gray-500 mb-1'>👀 即時作答進度</div>" +
+                        "<div class='font-bold mb-3'>" + infoLine + "</div>" +
+                        "<div class='text-3xl font-bold mb-2' style='color:var(--hl-blue);'>" + answered + " / " + total + " 題</div>" +
+                        "<div class='h-3 w-full bg-gray-200 rounded-full overflow-hidden mb-2'><div class='progress-bar' style='width:" + pct + "%;height:100%;'></div></div>" +
+                        "<div class='text-xs text-gray-400'>最後更新：" + new Date(data.updatedAt || Date.now()).toLocaleTimeString() + "</div>" +
+                        "</div>";
+                } catch (e) {
+                    body.innerHTML = "<div class='lq-card p-5 text-center text-red-600'>載入失敗：" + escapeHtml(e.message) + "</div>";
+                }
+            };
+            window.liveViewRefresh();
+            window.livePollTimer = setInterval(window.liveViewRefresh, window.livePollIntervalMs);
         }
 
         // --- 作答結果分享連結(給家長/老師看,唯讀,不可重測) ---
@@ -1614,6 +1814,74 @@
             if (btn) btn.style.display = 'none';
         }
 
+        // --- 即時進度：讓老師/家長輪詢看到學生目前答了幾題(輕量版,不用WebSocket) ---
+        // 選了選項/填空欄位失焦時觸發(不是判分!只是紀錄「有動作」)，跟confirmAnswer/gradeAnswers的
+        // 判分邏輯完全分開；只有透過分享連結(?share=)進來的學生會推送，老師自己在表單頁按「開始測驗」預覽不會推送
+        function onAnswerPicked(i) {
+            pushLiveProgress();
+        }
+
+        // 記錄每題上次推送時的文字內容，避免同一題還沒真的變動就重複推送(例如只是focus/blur但沒打字)
+        window.lastPushedTextAnswers = window.lastPushedTextAnswers || {};
+        function onTextAnswerBlur(i) {
+            const el = document.getElementById('ans-text-' + i);
+            const val = (el && el.value || '').trim();
+            if (window.lastPushedTextAnswers[i] === val) return;
+            window.lastPushedTextAnswers[i] = val;
+            pushLiveProgress();
+        }
+
+        // fire-and-forget：失敗不影響作答本身，這只是加值功能。也會被worker端的每日寫入預算擋下
+        // (throttled:true)，這種情況同樣靜默不處理，反正下一題答完還會再推送一次
+        async function pushLiveProgress() {
+            if (!(window.isSharedView && window.sharedMode === 'student' && window.liveShareId)) return;
+            const items = window.currentItems || [];
+            let answered = 0;
+            items.forEach((q, i) => {
+                if (q.o && q.o.length > 0) {
+                    if (document.querySelectorAll('input[name="ans-' + i + '"]:checked').length > 0) answered++;
+                } else {
+                    const el = document.getElementById('ans-text-' + i);
+                    if (el && el.value.trim() !== '') answered++;
+                }
+            });
+            try {
+                await fetch(API_BASE + "/api/live-progress", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shareId: window.liveShareId,
+                        studentId: getLiveStudentId(),
+                        studentInfo: {
+                            grade: (document.getElementById('ansStuGrade') || {}).value || '',
+                            className: (document.getElementById('ansStuClass') || {}).value || '',
+                            seat: (document.getElementById('ansStuSeat') || {}).value || '',
+                            name: (document.getElementById('ansStuName') || {}).value || '',
+                        },
+                        answered, total: items.length
+                    })
+                });
+            } catch (e) {}
+        }
+
+        async function shareLiveProgressLink(btnEl) {
+            const originalHTML = btnEl ? btnEl.innerHTML : '';
+            if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ 產生連結中...'; }
+            try {
+                const title = window.docName || '測驗';
+                const url = location.origin + location.pathname + "?live=" + window.liveShareId + "&student=" + getLiveStudentId();
+                const clipboardText = "【" + title + "】即時作答進度(給家長看)\n" + url;
+                const msg = "✅ 已複製即時進度連結！家長開啟後可以看到你目前答了幾題(不用密碼)。";
+                let copied = false;
+                try { await navigator.clipboard.writeText(clipboardText); copied = true; } catch (e) {}
+                if (copied) { alert(msg); } else { prompt(msg + '\n複製失敗，請手動複製以下內容：', clipboardText); }
+            } catch (e) {
+                alert('產生連結失敗: ' + e.message);
+            } finally {
+                if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = originalHTML; }
+            }
+        }
+
         function renderAnswerMode() {
             const container = document.getElementById('answerModeContainer');
             if (!container) return;
@@ -1656,7 +1924,7 @@
                         const label = String.fromCharCode(65 + oi);
                         html += "<label class='flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 cursor-pointer'>" +
                             "<input type='" + inputType + "' name='ans-" + i + "' value='" + label + "'" +
-                            " class='w-4 h-4 flex-shrink-0 accent-[color:var(--hl-blue)]'>" +
+                            " class='w-4 h-4 flex-shrink-0 accent-[color:var(--hl-blue)]' onchange='onAnswerPicked(" + i + ")'>" +
                             "<span>(" + label + ") " + escapeHtml(o) + "</span></label>";
                     });
                     // 只有選擇/複選題才需要「確認這題」按鈕(即時模式用)：原本一點選項就馬上判定，
@@ -1664,11 +1932,15 @@
                     // 是否顯示由startAnswerQuiz()依選定的模式決定(批次模式不需要,只用最下面的送出評分)
                     html += "<button type='button' onclick='confirmAnswer(" + i + ")' id='ans-confirm-" + i + "' class='ans-confirm-btn lq-btn lq-btn-primary text-sm px-3 py-1.5 mt-2' style='display:none;'>✅ 確認這題</button>";
                 } else {
-                    html += "<textarea class='lq-input mt-1' rows='2' id='ans-text-" + i + "' placeholder='請輸入答案'></textarea>";
+                    html += "<textarea class='lq-input mt-1' rows='2' id='ans-text-" + i + "' placeholder='請輸入答案' onblur='onTextAnswerBlur(" + i + ")'></textarea>";
                 }
                 html += "<div class='ans-feedback mt-2 text-sm hidden' id='ans-feedback-" + i + "'></div>";
                 html += "</div>";
             });
+            // 即時進度分享連結：只有透過分享連結進來作答的學生(有shareId)才需要，老師自己預覽不用
+            if (window.isSharedView && window.sharedMode === 'student' && window.liveShareId) {
+                html += "<button type='button' onclick='shareLiveProgressLink(this)' class='lq-btn lq-btn-share w-full py-2 text-sm mb-3'>📤 分享即時進度連結給家長</button>";
+            }
             html += "<button onclick='gradeAnswers()' class='lq-btn lq-btn-primary w-full py-3 rounded-xl text-lg'>✅ 送出評分</button>";
             html += "<div id='scoreResult' class='mt-4'></div>";
             html += "</div>";

@@ -18,6 +18,9 @@ const SHARE_TTL_SECONDS = 60 * 60 * 24 * 30; // 分享連結30天後過期
 const SHARE_MAX_BYTES = 500 * 1024; // 單份分享內容上限500KB,避免濫用KV空間
 const RESULT_TTL_SECONDS = 60 * 60 * 24 * 30; // 作答結果連結30天後過期
 const RESULT_MAX_BYTES = 300 * 1024; // 單份結果內容上限300KB
+const LIVE_PROGRESS_TTL_SECONDS = 60 * 60 * 8; // 即時進度8小時後自動過期(教室情境用不到這麼久)
+const LIVE_PROGRESS_DAILY_WRITE_CAP = 400; // 這個功能自己保留的每日KV寫入預算,見live-budget:計數key
+const LIVE_BUDGET_TTL_SECONDS = 60 * 60 * 25; // 25小時,每天自動歸零(比24小時多留緩衝)
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -49,6 +52,14 @@ export default {
     }
     if (url.pathname.startsWith("/api/result/")) {
       return handleResultGet(request, env, url.pathname.slice("/api/result/".length));
+    }
+    if (url.pathname === "/api/live-progress" && request.method !== "GET") {
+      return handleLiveProgressPost(request, env);
+    }
+    if (url.pathname.startsWith("/api/live-progress/")) {
+      const rest = url.pathname.slice("/api/live-progress/".length).split("/").filter(Boolean);
+      if (rest.length === 1) return handleLiveProgressList(request, env, rest[0]);
+      return handleLiveProgressGet(request, env, rest[0], rest[1]);
     }
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
@@ -206,6 +217,138 @@ async function handleResultGet(request, env, id) {
   const raw = await env.COOLDOWN_KV.get("result:" + id);
   if (!raw) {
     return new Response(JSON.stringify({ error: { message: "找不到這份作答結果，可能已過期(30天)或連結錯誤" } }), {
+      status: 404,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  return new Response(raw, {
+    status: 200,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
+
+// 即時進度：學生線上作答時，答題狀態每次真的改變(而不是定時)才推送一次進度，
+// 老師可以開儀表板看全班進度、家長可以看自己小孩單人進度。
+// key: live:{shareId}:{studentId}，shareId直接沿用/api/share產生的ID(不用另外設計「批次」)，
+// value存完整進度(給家長單人查看)，metadata存精簡摘要(老師儀表板list()時直接拿，不用逐一get())。
+// 8小時後自動過期。另外用 live-budget:{今天日期} 計數key做每日寫入預算保護——
+// Cloudflare KV免費方案每天只有1000次寫入額度，這個功能跟其他既有功能(冷卻/分享/分享結果/訪客數)
+// 共用同一個COOLDOWN_KV，設一個明顯低於1000的自我上限，超過就靜默停止寫入(不報錯)，
+// 避免這個錦上添花的新功能把其他既有功能的額度也一起吃光。
+async function handleLiveProgressPost(request, env) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+  if (request.method !== "POST") {
+    return new Response(JSON.stringify({ error: { message: "Method Not Allowed" } }), {
+      status: 405,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const body = await request.json();
+    const shareId = String(body.shareId || "").trim();
+    const studentId = String(body.studentId || "").trim();
+    if (!shareId || !studentId) {
+      return new Response(JSON.stringify({ error: { message: "缺少shareId或studentId" } }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const budgetKey = "live-budget:" + today;
+    const budgetUsed = parseInt((await env.COOLDOWN_KV.get(budgetKey)) || "0", 10);
+    if (budgetUsed >= LIVE_PROGRESS_DAILY_WRITE_CAP) {
+      // 靜默停止,不算錯誤:學生作答本身完全不受影響,只是老師/家長那邊這次看不到最新進度
+      return new Response(JSON.stringify({ throttled: true }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    const studentInfo = {
+      grade: String((body.studentInfo && body.studentInfo.grade) || "").slice(0, 50),
+      className: String((body.studentInfo && body.studentInfo.className) || "").slice(0, 50),
+      seat: String((body.studentInfo && body.studentInfo.seat) || "").slice(0, 20),
+      name: String((body.studentInfo && body.studentInfo.name) || "").slice(0, 50),
+    };
+    const answered = Number(body.answered) || 0;
+    const total = Number(body.total) || 0;
+    const updatedAt = Date.now();
+
+    const payload = JSON.stringify({ shareId, studentId, studentInfo, answered, total, updatedAt });
+
+    await env.COOLDOWN_KV.put(budgetKey, String(budgetUsed + 1), { expirationTtl: LIVE_BUDGET_TTL_SECONDS });
+    await env.COOLDOWN_KV.put("live:" + shareId + ":" + studentId, payload, {
+      expirationTtl: LIVE_PROGRESS_TTL_SECONDS,
+      metadata: { ...studentInfo, answered, total, updatedAt },
+    });
+
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: { message: err.message } }), {
+      status: 500,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+}
+
+// 老師儀表板用：列出這個shareId底下所有學生目前進度。會洩漏全班姓名+分數，
+// 敏感度比單人分享連結高，需要管理者密碼(比照handleKeysCheck的驗證寫法)。
+async function handleLiveProgressList(request, env, shareId) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
+  const adminPass = request.headers.get("X-Admin-Pass") || "";
+  const expectedAdminPass = env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
+  if (adminPass === "" || adminPass !== expectedAdminPass) {
+    return new Response(JSON.stringify({ error: { message: "需要管理者密碼" } }), {
+      status: 401,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+  if (!shareId) {
+    return new Response(JSON.stringify({ error: { message: "缺少shareId" } }), {
+      status: 400,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  const list = await env.COOLDOWN_KV.list({ prefix: "live:" + shareId + ":" });
+  const students = list.keys.map((k) => ({
+    studentId: k.name.slice(("live:" + shareId + ":").length),
+    ...(k.metadata || {}),
+  }));
+
+  return new Response(JSON.stringify({ students }), {
+    status: 200,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
+
+// 家長單人視角：跟/api/share、/api/result一樣是capability-URL哲學,知道shareId+studentId
+// 這組組合ID才看得到,不需要額外密碼驗證。
+async function handleLiveProgressGet(request, env, shareId, studentId) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+  if (!shareId || !studentId) {
+    return new Response(JSON.stringify({ error: { message: "缺少shareId或studentId" } }), {
+      status: 400,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  const raw = await env.COOLDOWN_KV.get("live:" + shareId + ":" + studentId);
+  if (!raw) {
+    return new Response(JSON.stringify({ error: { message: "找不到這位學生的即時進度，可能還沒開始作答或已過期(8小時)" } }), {
       status: 404,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
