@@ -47,6 +47,10 @@
             transition: transform 0.12s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
             cursor: pointer;
         }
+        /* hover一律有「上浮」位移，讓所有變體(不管背景色差多大)都有一致、明顯看得出來的滑鼠移入回饋，
+           不要只靠每個變體各自的顏色變化(之前danger整塊變紅很明顯、secondary只是邊框變深很容易被忽略,
+           同一排按鈕看起來像「只有一個有效果」) */
+        .lq-btn:hover:not(:disabled) { transform: translateY(-1.5px); }
         .lq-btn:active { transform: scale(0.97); }
         .lq-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(26,115,232,0.35); }
         .lq-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
@@ -58,14 +62,14 @@
         .lq-btn-share { background: var(--hl-green); color: #fff; box-shadow: var(--lq-shadow-sm); }
         .lq-btn-share:hover:not(:disabled) { background: var(--hl-green-hover); box-shadow: var(--lq-shadow); }
 
-        .lq-btn-danger { background: #fff; color: var(--hl-red); border-color: #fecaca; }
-        .lq-btn-danger:hover:not(:disabled) { background: var(--hl-red); color: #fff; border-color: var(--hl-red); }
+        .lq-btn-danger { background: #fff; color: var(--hl-red); border-color: #fecaca; box-shadow: var(--lq-shadow-sm); }
+        .lq-btn-danger:hover:not(:disabled) { background: var(--hl-red); color: #fff; border-color: var(--hl-red); box-shadow: var(--lq-shadow); }
 
-        .lq-btn-secondary { background: #fff; color: #475569; border-color: #cbd5e1; }
-        .lq-btn-secondary:hover:not(:disabled) { background: #f8fafc; border-color: #94a3b8; color: #1e293b; box-shadow: var(--lq-shadow-sm); }
+        .lq-btn-secondary { background: #fff; color: #475569; border-color: #cbd5e1; box-shadow: var(--lq-shadow-sm); }
+        .lq-btn-secondary:hover:not(:disabled) { background: #f8fafc; border-color: #94a3b8; color: #1e293b; box-shadow: var(--lq-shadow); }
 
         .lq-btn-ghost { background: transparent; color: #64748b; border-color: transparent; font-weight: 600; }
-        .lq-btn-ghost:hover:not(:disabled) { color: #1e293b; background: rgba(0,0,0,0.04); }
+        .lq-btn-ghost:hover:not(:disabled) { color: #1e293b; background: rgba(0,0,0,0.04); transform: none; }
 
         /* 深色版：sticky header 用（背景是深色，白按鈕反而刺眼，改用半透明白疊層） */
         .lq-btn-dark { background: rgba(255,255,255,0.08); color: #e2e8f0; border-color: rgba(255,255,255,0.12); }
