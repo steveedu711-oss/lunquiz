@@ -732,7 +732,7 @@
                 const res = await fetch(API_BASE + "/api/share", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: window.currentItems, title: window.docName || '測驗' })
+                    body: JSON.stringify({ items: window.currentItems, title: window.docTitle || '測驗' })
                 });
                 const data = await res.json();
                 if (data.error) throw new Error(data.error.message);
@@ -758,7 +758,7 @@
             if (window.lastShareId && window.lastShareItemsRef === window.currentItems) {
                 return window.lastShareId;
             }
-            const title = window.docName || '測驗';
+            const title = window.docTitle || '測驗';
             const res = await fetch(API_BASE + "/api/share", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -783,7 +783,7 @@
             const originalHTML = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 產生連結中...'; }
             try {
-                const title = window.docName || '測驗';
+                const title = window.docTitle || '測驗';
                 const shareId = await getOrCreateShareId();
 
                 const url = location.origin + location.pathname + "?share=" + shareId + "&mode=" + mode;
@@ -821,7 +821,7 @@
             const originalHTML = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 產生連結中...'; }
             try {
-                const title = window.docName || '測驗';
+                const title = window.docTitle || '測驗';
                 const shareId = await getOrCreateShareId();
                 const url = location.origin + location.pathname + "?live=" + shareId;
                 const clipboardText = "【" + title + "】即時進度儀表板(老師用)\n" + url;
@@ -1666,6 +1666,11 @@
 
             let title = titleOverride || ((document.getElementById('sourceType').value==='1' ? (document.getElementById('grade').value==='Custom'?document.getElementById('c_grade').value:document.getElementById('grade').value)+" "+document.getElementById('subject').value : "測驗") + "試卷");
             let sub = "範圍：" + (document.getElementById('scope').value || "綜合");
+            // docTitle是乾淨標題(給分享連結/剪貼簿訊息這種要顯示給人看的地方用)；
+            // docName是title+範圍組合(給下載檔名用，例如"XX試卷_範圍：YY.doc")。
+            // 之前分享連結直接把docName當標題傳給/api/share，學生端開啟時renderPaperFixed()
+            // 又會在這個已經含"範圍："的字串後面再接一次範圍，變成"範圍：A_範圍：B"重複(Steve回報)
+            window.docTitle = title.replace(/[<>:"/\\|?*]/g, "");
             window.docName = (title + "_" + sub).replace(/[<>:"/\\|?*]/g, "");
 
             const qTypeVal = document.getElementById('qType').value || "";
@@ -1868,7 +1873,7 @@
             const originalHTML = btnEl ? btnEl.innerHTML : '';
             if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ 產生連結中...'; }
             try {
-                const title = window.docName || '測驗';
+                const title = window.docTitle || '測驗';
                 const url = location.origin + location.pathname + "?live=" + window.liveShareId + "&student=" + getLiveStudentId();
                 const clipboardText = "【" + title + "】即時作答進度(給家長看)\n" + url;
                 const msg = "✅ 已複製即時進度連結！家長開啟後可以看到你目前答了幾題(不用密碼)。";
@@ -2079,7 +2084,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        title: window.docName || '測驗',
+                        title: window.docTitle || '測驗',
                         studentInfo,
                         totalScore: s.totalScore || 0,
                         maxScore: s.maxScore || 0,
@@ -2091,7 +2096,7 @@
                 if (data.error) throw new Error(data.error.message);
 
                 const url = location.origin + location.pathname + "?result=" + data.id;
-                const title = window.docName || '測驗';
+                const title = window.docTitle || '測驗';
                 const whoLabel = studentInfo.name || [studentInfo.grade, studentInfo.className, studentInfo.seat ? ('座號' + studentInfo.seat) : ''].filter(Boolean).join(' ') || '(未填寫姓名)';
                 const clipboardText = "【" + title + "】" + whoLabel + " 的作答結果\n" + url;
                 let copied = false;
