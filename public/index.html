@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/duotone/style.css" />
     <link rel="stylesheet" href="assets/brand.css">
     <style>
         /* 全域設定 */
@@ -316,11 +316,11 @@
             <div style="width:100%; max-width:22rem; display:flex; flex-direction:column; gap:1rem;">
                 <button type="button" id="hlEnterBuiltin" class="hl-enter-btn hl-clickable">
                     <span>直接進入</span>
-                    <span class="material-symbols-outlined" style="font-size:1.75rem;">rocket_launch</span>
+                    <span class="ph-duotone ph-rocket-launch" style="font-size:1.75rem;"></span>
                 </button>
                 <button type="button" id="hlEnterOwnKey" class="hl-enter-btn hl-clickable" style="background:#fff; color:var(--hl-blue); border:2px solid var(--hl-blue); box-shadow:none;">
                     <span>我有自己的 API Key</span>
-                    <span class="material-symbols-outlined" style="font-size:1.75rem;">vpn_key</span>
+                    <span class="ph-duotone ph-key" style="font-size:1.75rem;"></span>
                 </button>
             </div>
 
@@ -335,7 +335,7 @@
                     <span class="hl-contact-label">技術支援與回報</span>
                     <div style="width:1px;height:1rem;background:var(--hl-border);"></div>
                     <a href="https://mail.google.com/mail/?view=cm&fs=1&to=gfeh@hunglun.com" target="_blank" rel="noopener noreferrer" class="hl-contact-btn mail">
-                        <span class="material-symbols-outlined" style="font-size:1rem;">mail</span> 作者信箱
+                        <span class="ph-duotone ph-envelope-simple" style="font-size:1rem;"></span> 作者信箱
                     </a>
                     <a href="https://line.me/R/ti/p/%40gdm6961p" target="_blank" rel="noopener noreferrer" class="hl-contact-btn line">💬 作者 Line</a>
                 </div>
@@ -479,9 +479,9 @@
 
             <button onclick="startGen()" id="btnGo" class="lq-btn lq-cta lq-btn-primary w-full py-4 rounded-xl text-xl">🚀 小綸開始出題</button>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
-                <button onclick="saveDefaultSettings()" class="lq-btn lq-btn-tool w-full py-2.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon-chip">save</span> 儲存設定條件</button>
-                <button onclick="clearAllSettings()" class="lq-btn lq-btn-tool lq-btn-tool-danger w-full py-2.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon-chip">delete_sweep</span> 清除所有條件</button>
-                <button onclick="copySettingsLink()" class="lq-btn lq-btn-tool lq-btn-tool-share w-full py-2.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon-chip">link</span> 複製設定連結</button>
+                <button onclick="saveDefaultSettings()" class="lq-btn lq-btn-tool w-full py-2.5 text-sm sm:text-base"><span class="ph-duotone ph-floppy-disk lq-icon-chip"></span> 儲存設定條件</button>
+                <button onclick="clearAllSettings()" class="lq-btn lq-btn-tool lq-btn-tool-danger w-full py-2.5 text-sm sm:text-base"><span class="ph-duotone ph-trash lq-icon-chip"></span> 清除所有條件</button>
+                <button onclick="copySettingsLink()" class="lq-btn lq-btn-tool lq-btn-tool-share w-full py-2.5 text-sm sm:text-base"><span class="ph-duotone ph-link-simple lq-icon-chip"></span> 複製設定連結</button>
             </div>
             <div id="barBox" class="hidden mt-4 h-3 w-full bg-gray-200 rounded-full overflow-hidden"><div id="bar" class="progress-bar">0%</div></div>
             <p id="status" class="text-center text-sm mt-2 text-blue-700 font-bold animate-pulse"></p>
@@ -515,23 +515,23 @@
             <div class="lq-header-divider hidden sm:block order-3"></div>
 
             <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3">
-                <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon lq-icon-amber">refresh</span> 重新出題</button>
-                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon lq-icon-sky">smartphone</span> 直接線上測驗</button>
+                <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-arrow-clockwise lq-icon lq-icon-amber"></span> 重新出題</button>
+                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-device-mobile lq-icon lq-icon-sky"></span> 直接線上測驗</button>
                 <div class="relative inline-block" id="downloadMenuWrap">
-                    <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon lq-icon-blue">download</span> 下載 ▾</button>
+                    <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-download-simple lq-icon lq-icon-blue"></span> 下載 ▾</button>
                     <div id="downloadMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-44">
-                        <button onclick="dlDoc(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-blue-600">description</span> Word (.doc)</button>
-                        <button onclick="dlPDF(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-red-600">picture_as_pdf</span> PDF</button>
-                        <button onclick="dlTxt(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-slate-500">article</span> 純文字 (.txt)</button>
+                        <button onclick="dlDoc(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-doc lq-icon text-blue-600"></span> Word (.doc)</button>
+                        <button onclick="dlPDF(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-pdf lq-icon text-red-600"></span> PDF</button>
+                        <button onclick="dlTxt(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-text lq-icon text-slate-500"></span> 純文字 (.txt)</button>
                     </div>
                 </div>
-                <button onclick="window.print()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">print</span> 列印</button>
+                <button onclick="window.print()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-printer lq-icon"></span> 列印</button>
                 <div class="lq-header-divider hidden sm:block"></div>
                 <div class="relative inline-block" id="shareBtnsWrap">
-                    <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">ios_share</span> 分享 ▾</button>
+                    <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-share-network lq-icon"></span> 分享 ▾</button>
                     <div id="shareMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
-                        <button onclick="shareQuiz('student'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-emerald-600">school</span> 學生作答連結</button>
-                        <button onclick="shareQuiz('key'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-orange-500">family_restroom</span> 家長答案連結</button>
+                        <button onclick="shareQuiz('student'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-graduation-cap lq-icon text-emerald-600"></span> 學生作答連結</button>
+                        <button onclick="shareQuiz('key'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-users-four lq-icon text-orange-500"></span> 家長答案連結</button>
                     </div>
                 </div>
             </div>
