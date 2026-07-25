@@ -98,15 +98,19 @@
         .lq-btn-dark:hover:not(:disabled) { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.2); box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
         .lq-btn-dark.is-active { background: var(--hl-blue); color: #fff; border-color: var(--hl-blue); box-shadow: 0 4px 14px rgba(26,115,232,0.4); }
 
-        /* sticky header 質感升級：深色漸層取代平板單色 + 底部品牌四色細線呼應進度條/CTA光暈，
-           是全站少數幾處刻意使用品牌色的地方 */
-        .sticky-header { position: relative; background: linear-gradient(135deg, #0f172a, #1e293b 55%, #0f172a); }
+        /* sticky header 質感升級：深色漸層取代平板單色 + 底部品牌四色粗線呼應進度條/CTA光暈，
+           是全站少數幾處刻意使用品牌色的地方；分隔線與icon配色刻意加重對比，
+           避免像上一版一樣太細緻反而完全看不出來有改過 */
+        .sticky-header { position: relative; background: linear-gradient(135deg, #0b1120 0%, #1e2b47 50%, #0b1120 100%); }
         .sticky-header::after {
-            content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+            content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 3px;
             background: linear-gradient(90deg, var(--hl-blue), var(--hl-red), var(--hl-yellow), var(--hl-green));
-            opacity: 0.65;
+            opacity: 0.9;
         }
-        .lq-header-divider { width: 1px; align-self: stretch; min-height: 1.75rem; background: rgba(255,255,255,0.12); }
+        .lq-header-divider { width: 1px; align-self: stretch; min-height: 1.75rem; background: rgba(255,255,255,0.22); }
+        .lq-icon-amber { color: #fbbf24; }
+        .lq-icon-sky { color: #38bdf8; }
+        .lq-icon-blue { color: #60a5fa; }
 
         /* 主要出題CTA：呼應進場頁徽章的品牌四色光暈，是全頁唯一使用這個signature動效的地方 */
         .lq-cta { position: relative; isolation: isolate; }
@@ -511,10 +515,10 @@
             <div class="lq-header-divider hidden sm:block order-3"></div>
 
             <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3">
-                <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">refresh</span> 重新出題</button>
-                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">smartphone</span> 直接線上測驗</button>
+                <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon lq-icon-amber">refresh</span> 重新出題</button>
+                <button onclick="openAnswerModeNewTab(this)" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon lq-icon-sky">smartphone</span> 直接線上測驗</button>
                 <div class="relative inline-block" id="downloadMenuWrap">
-                    <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon">download</span> 下載 ▾</button>
+                    <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="material-symbols-outlined lq-icon lq-icon-blue">download</span> 下載 ▾</button>
                     <div id="downloadMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-44">
                         <button onclick="dlDoc(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-blue-600">description</span> Word (.doc)</button>
                         <button onclick="dlPDF(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="material-symbols-outlined lq-icon text-red-600">picture_as_pdf</span> PDF</button>
@@ -1202,6 +1206,7 @@
             let batches = Math.ceil(total / batchSize);
             let scorePerQ = Math.floor(100 / total);
             let allItems = [];
+            let parseFailBatches = [];
             let simTimer = null;
 
             uploadItems.filter(item => item.type === 'docx').forEach(item => { contentText += "\n[附件 " + item.name + "]:\n" + item.content; });
@@ -1295,10 +1300,18 @@
                         let parsed = JSON.parse(cleanJSON);
                         if (!Array.isArray(parsed)) parsed = [parsed];
                         allItems = allItems.concat(parsed);
-                    } catch(e) { console.error(e); }
+                    } catch(e) { console.error(e); parseFailBatches.push(i + 1); }
                 }
 
                 setProgressBar(100);
+
+                if (allItems.length === 0) {
+                    throw new Error("AI回傳的內容無法解析成題目格式，請重新嘗試出題一次（通常是暫時性問題）");
+                }
+                if (parseFailBatches.length > 0) {
+                    alert("⚠️ 第 " + parseFailBatches.join("、") + " 批題目AI回傳格式異常已略過，其餘題目正常產生。若題數不足可以「重新出題」再試一次");
+                }
+
                 renderPaperFixed(allItems);
 
                 window.currentItems = allItems;
