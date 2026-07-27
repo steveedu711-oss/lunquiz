@@ -527,7 +527,7 @@
                         <button onclick="dlTxt(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-text lq-icon text-slate-500"></span> 純文字 (.txt)</button>
                     </div>
                 </div>
-                <button onclick="dlPDF()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-printer lq-icon"></span> 列印(下載PDF)</button>
+                <button onclick="printPDF()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-printer lq-icon"></span> 下載並列印</button>
                 <div class="lq-header-divider hidden sm:block"></div>
                 <div class="relative inline-block" id="shareBtnsWrap">
                     <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-share-network lq-icon"></span> 分享 ▾</button>
@@ -579,7 +579,7 @@
                         <li><b>編輯內容</b>：直接點試卷上的文字修改，跟打字一樣</li>
                         <li><b>🔁 重新出這題</b>：只有某一題不滿意，不用整份重出</li>
                         <li><b>⬇️ 下載</b>：可選 Word / PDF / 純文字三種格式</li>
-                        <li><b>🖨️ 列印(下載PDF)</b>：直接下載成PDF檔，打開後用PDF閱讀器本身的列印功能印出，畫面乾淨不會有瀏覽器多餘的日期/網址/頁碼</li>
+                        <li><b>🖨️ 下載並列印</b>：自動把PDF開在新分頁並叫出列印視窗，印的是PDF本身，不會有瀏覽器多餘的日期/網址/頁碼；若被瀏覽器擋下彈出視窗，改用「⬇️下載 ▾ → PDF」下載後自行開啟列印</li>
                         <li><b>直接線上測驗</b>：自己先開一個新分頁測試看看學生作答會看到什麼畫面、怎麼自動評分</li>
                         <li><b>📤 分享 ▾ 學生作答連結</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
                         <li><b>📤 分享 ▾ 家長答案連結</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
@@ -2166,13 +2166,14 @@
             a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
         }
 
-        async function dlPDF() {
+        // 把「產生PDF」共用邏輯抽出來,dlPDF()(下載存檔)跟printPDF()(開新分頁直接列印)共用,
+        // 避免同一段html2canvas截圖邏輯維護兩份
+        async function buildPdfDoc() {
             if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-                alert('PDF 元件載入失敗，請檢查網路連線後重新整理再試一次');
-                return;
+                throw new Error('PDF 元件載入失敗，請檢查網路連線後重新整理再試一次');
             }
             let pages = Array.from(document.querySelectorAll('#paperContainer > .a4-page')).filter(p => p.style.display !== 'none');
-            if (pages.length === 0) { alert('沒有可匯出的內容'); return; }
+            if (pages.length === 0) throw new Error('沒有可匯出的內容');
 
             const noPrintEls = document.querySelectorAll('#paperContainer .no-print');
             noPrintEls.forEach(el => el.style.visibility = 'hidden');
@@ -2187,11 +2188,38 @@
                     if (i > 0) pdf.addPage();
                     pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
                 }
+                return pdf;
+            } finally {
+                noPrintEls.forEach(el => el.style.visibility = '');
+            }
+        }
+
+        async function dlPDF() {
+            try {
+                const pdf = await buildPdfDoc();
                 pdf.save((window.docName || "試卷") + ".pdf");
             } catch (e) {
                 alert('PDF 匯出失敗: ' + e.message);
-            } finally {
-                noPrintEls.forEach(el => el.style.visibility = '');
+            }
+        }
+
+        // 「列印」按鈕：直接把PDF開在新分頁+自動叫出瀏覽器列印視窗。
+        // 印的是PDF本身(不是網頁列印)，瀏覽器不會再加日期/網址/頁碼這些東西。
+        // window.open('', '_blank')要在await之前同步呼叫，等PDF產生完才開的話會被彈出視窗攔截擋掉
+        // (跟openAnswerModeNewTab()同樣的坑)
+        async function printPDF() {
+            const win = window.open('', '_blank');
+            try {
+                const pdf = await buildPdfDoc();
+                if (!win) {
+                    alert('瀏覽器擋下了開新分頁，請改用「下載 ▾ → PDF」下載後自行開啟列印');
+                    return;
+                }
+                win.location.href = pdf.output('bloburl');
+                setTimeout(() => { try { win.print(); } catch (e) {} }, 800);
+            } catch (e) {
+                if (win) win.close();
+                alert('PDF 匯出失敗: ' + e.message);
             }
         }
 
