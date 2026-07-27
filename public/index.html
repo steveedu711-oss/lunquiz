@@ -2347,8 +2347,8 @@
             const roleLabel = { student: '學生', parent: '家長', teacher: '老師', superadmin: '超級管理員' };
             if (window.currentUser) {
                 statusEl.textContent = window.currentUser.displayName + '（' + (roleLabel[window.currentUser.role] || window.currentUser.role) + '）';
-                btnEl.innerHTML = '🚪 登出';
-                btnEl.onclick = doLogout;
+                btnEl.innerHTML = '👤 我的帳號';
+                btnEl.onclick = openAccountModal;
             } else {
                 statusEl.textContent = '';
                 btnEl.innerHTML = '👤 登入/註冊';

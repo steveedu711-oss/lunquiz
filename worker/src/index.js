@@ -733,7 +733,7 @@ async function handleAuthRegister(request, env) {
     }
 
     const token = await signToken({ uid: userId, role, exp: now + SESSION_TTL_SECONDS * 1000 }, env.SESSION_SECRET || "");
-    return json({ token, user: { id: userId, username, role, displayName, classId } });
+    return json({ token, user: { id: userId, username, role, displayName, classId, className: role === "teacher" ? className : null } });
   } catch (err) {
     return json({ error: { message: err.message } }, 500);
   }
@@ -758,9 +758,14 @@ async function handleAuthLogin(request, env) {
 
     const now = Date.now();
     const token = await signToken({ uid: user.id, role: user.role, exp: now + SESSION_TTL_SECONDS * 1000 }, env.SESSION_SECRET || "");
+    let className = null;
+    if (user.class_id) {
+      const cls = await env.DB.prepare("SELECT name FROM classes WHERE id = ?").bind(user.class_id).first();
+      className = cls ? cls.name : null;
+    }
     return json({
       token,
-      user: { id: user.id, username: user.username, role: user.role, displayName: user.display_name, classId: user.class_id },
+      user: { id: user.id, username: user.username, role: user.role, displayName: user.display_name, classId: user.class_id, className },
     });
   } catch (err) {
     return json({ error: { message: err.message } }, 500);
