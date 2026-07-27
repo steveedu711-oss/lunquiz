@@ -1502,7 +1502,22 @@
                         let parsed = JSON.parse(cleanJSON);
                         if (!Array.isArray(parsed)) parsed = [parsed];
                         allItems = allItems.concat(parsed);
-                    } catch(e) { console.error(e); parseFailBatches.push(i + 1); }
+                    } catch(e) {
+                        // 常見成因：AI輸出被maxOutputTokens截斷，陣列最後一題寫到一半就斷了，
+                        // 導致整段JSON.parse失敗。退而求其次：把已經完整的{"q":...,"s":N}物件
+                        // 一個個挖出來，搶救這一批裡有順利產生完整的題目，而不是整批直接放棄
+                        let recovered = [];
+                        (cleanJSON.match(/\{"q":.*?"s":\s*\d+\}/g) || []).forEach(m => {
+                            try { recovered.push(JSON.parse(m)); } catch(e2) {}
+                        });
+                        if (recovered.length > 0) {
+                            allItems = allItems.concat(recovered);
+                            console.warn("第 " + (i + 1) + " 批JSON解析失敗，但搶救回 " + recovered.length + " 題（可能是AI輸出被截斷）", e);
+                        } else {
+                            console.error(e);
+                            parseFailBatches.push(i + 1);
+                        }
+                    }
                 }
 
                 setProgressBar(100);

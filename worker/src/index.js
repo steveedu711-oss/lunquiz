@@ -491,7 +491,9 @@ async function handleGenerate(request, env) {
       contents: payload.contents,
       generationConfig: payload.generationConfig || {
         responseMimeType: "application/json",
-        maxOutputTokens: 8192,
+        // 原本8192太容易被題數多/計算解析題較長的輸出截斷,導致JSON陣列沒收尾解析失敗
+        // (Steve回報「AI回傳的內容無法解析成題目格式」常出現),提高上限降低截斷機率
+        maxOutputTokens: 32768,
       },
     });
 
