@@ -2181,11 +2181,34 @@
                 await document.fonts.ready;
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
+                const PAGE_W_MM = 210, PAGE_H_MM = 297;
+                let firstSlice = true;
                 for (let i = 0; i < pages.length; i++) {
-                    const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-                    const imgData = canvas.toDataURL('image/jpeg', 0.92);
-                    if (i > 0) pdf.addPage();
-                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                    const pageEl = pages[i];
+                    // 正常情況一個.a4-page的內容剛好是一張A4，scale:2畫質足夠。
+                    // 但若「重新出這題」換到異常長的題目(常見於理化計算題)，這一頁實際高度會遠超297mm，
+                    // 若還硬用scale:2，截圖高度(scrollHeight*scale)可能超過瀏覽器canvas高度上限(約16384px)，
+                    // html2canvas會靜默把超出的內容截掉、不報錯，肉眼看起來就像內容憑空消失/跑版。
+                    // 這裡動態降低scale避免撞到上限，確保整頁內容都真的被截圖進去。
+                    const scale = Math.min(2, 14000 / pageEl.scrollHeight);
+                    const canvas = await html2canvas(pageEl, { scale, useCORS: true, backgroundColor: '#ffffff' });
+                    const pxPerMm = canvas.width / PAGE_W_MM;
+                    const sliceHeightPx = Math.round(PAGE_H_MM * pxPerMm);
+
+                    // 這一頁的實際內容若超過297mm(同上述異常過長的情況)，不再硬塞成一張PDF頁面
+                    // (那樣只會把內容擠壓變形)，改成依297mm高度切成好幾張PDF頁，內容才不會不見
+                    let offsetPx = 0;
+                    while (offsetPx < canvas.height) {
+                        if (!firstSlice) pdf.addPage();
+                        firstSlice = false;
+                        const thisSlicePx = Math.min(sliceHeightPx, canvas.height - offsetPx);
+                        const sliceCanvas = document.createElement('canvas');
+                        sliceCanvas.width = canvas.width;
+                        sliceCanvas.height = thisSlicePx;
+                        sliceCanvas.getContext('2d').drawImage(canvas, 0, offsetPx, canvas.width, thisSlicePx, 0, 0, canvas.width, thisSlicePx);
+                        pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, PAGE_W_MM, thisSlicePx / pxPerMm);
+                        offsetPx += thisSlicePx;
+                    }
                 }
                 pdf.save((window.docName || "試卷") + ".pdf");
             } catch (e) {
