@@ -2406,6 +2406,7 @@
             html += "<input id='authUsername' class='lq-input' placeholder='帳號'>";
             html += "<input id='authPassword' type='password' class='lq-input' placeholder='密碼（至少6碼）'>";
             if (!isLogin) {
+                html += "<input id='authPasswordConfirm' type='password' class='lq-input' placeholder='再輸入一次密碼'>";
                 html += "<input id='authDisplayName' class='lq-input' placeholder='顯示名稱（例如：王小明）'>";
                 html += "<select id='authRole' class='lq-input' onchange='onAuthRoleChange()'>" +
                     "<option value=''>請選擇角色...</option>" +
@@ -2413,8 +2414,8 @@
                     "<option value='student'>學生</option>" +
                     "<option value='parent'>家長</option>" +
                     "</select>";
-                html += "<input id='authClassName' class='lq-input hidden' placeholder='幫班級取個名字（例如：六年一班）'>";
-                html += "<input id='authClassId' class='lq-input hidden' placeholder='老師給你的班級ID'>";
+                html += "<input id='authClassName' class='lq-input hidden' placeholder='幫班級取個名字（例如：六年1班，全站需唯一，重複會被擋下）'>";
+                html += "<input id='authClassCode' class='lq-input hidden' placeholder='老師的班級名稱（選填，之後也可以在帳號頁面補填）'>";
             }
             html += "<div id='authErrorMsg' class='text-sm text-red-600 hidden'></div>";
             html += "<button onclick=\"" + (isLogin ? 'doLogin()' : 'doRegister()') + "\" class='lq-btn lq-btn-primary w-full py-2'>" + (isLogin ? '登入' : '註冊') + "</button>";
@@ -2427,7 +2428,7 @@
         function onAuthRoleChange() {
             const role = document.getElementById('authRole').value;
             document.getElementById('authClassName').classList.toggle('hidden', role !== 'teacher');
-            document.getElementById('authClassId').classList.toggle('hidden', role !== 'student');
+            document.getElementById('authClassCode').classList.toggle('hidden', role !== 'student');
         }
 
         function showAuthError(msg) {
@@ -2439,14 +2440,16 @@
         async function doRegister() {
             const username = document.getElementById('authUsername').value.trim();
             const password = document.getElementById('authPassword').value;
+            const passwordConfirm = (document.getElementById('authPasswordConfirm') || {}).value || '';
+            if (password !== passwordConfirm) { showAuthError('兩次密碼輸入不一致'); return; }
             const displayName = document.getElementById('authDisplayName').value.trim();
             const role = document.getElementById('authRole').value;
             const className = (document.getElementById('authClassName') || {}).value || '';
-            const classId = (document.getElementById('authClassId') || {}).value || '';
+            const classCode = (document.getElementById('authClassCode') || {}).value || '';
             try {
                 const res = await fetch(API_BASE + "/api/auth/register", {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, displayName, role, className, classId })
+                    body: JSON.stringify({ username, password, displayName, role, className, classCode })
                 });
                 const data = await res.json();
                 if (data.error) { showAuthError(data.error.message); return; }
@@ -2480,10 +2483,17 @@
             let html = "<div class='space-y-3'>";
             html += "<div class='lq-card p-3 text-sm'><b>" + escapeHtml(u.displayName) + "</b>（" + escapeHtml(u.username) + "）</div>";
             if (u.role === 'teacher') {
-                html += "<div class='text-sm text-gray-500'>班級：" + escapeHtml(u.className || '') + "（班級ID：" + u.classId + "，給學生註冊用）</div>";
+                html += "<div class='text-sm text-gray-500'>班級代碼（給學生註冊/加入用）：<b>" + escapeHtml(u.className || '') + "</b></div>";
                 html += "<button onclick=\"closeAccountModal(); openClassHistory();\" class='lq-btn lq-btn-secondary w-full py-2'>📚 查看班級歷史</button>";
             } else if (u.role === 'student') {
                 html += "<div class='text-sm text-gray-500'>你的帳號名稱（給家長連結用）：<b>" + escapeHtml(u.username) + "</b></div>";
+                if (u.classId) {
+                    html += "<div class='text-sm text-gray-500'>班級：" + escapeHtml(u.className || '') + "</div>";
+                } else {
+                    html += "<div class='text-sm text-gray-500'>尚未加入班級（選填，不影響作答/家長監看）</div>";
+                    html += "<div class='flex gap-2'><input id='joinClassCode' class='lq-input' placeholder='老師的班級名稱（例如：六年1班）'>" +
+                        "<button onclick='doJoinClass()' class='lq-btn lq-btn-primary px-4'>加入</button></div>";
+                }
             } else if (u.role === 'parent') {
                 html += "<div id='parentChildrenBox'></div>";
                 html += "<div class='flex gap-2'><input id='linkChildUsername' class='lq-input' placeholder='孩子的帳號名稱'>" +
@@ -2493,6 +2503,24 @@
             html += "</div>";
             document.getElementById('accountModalBody').innerHTML = html;
             if (u.role === 'parent') loadMyChildren();
+        }
+
+        async function doJoinClass() {
+            const classCode = document.getElementById('joinClassCode').value.trim();
+            if (!classCode) return;
+            const token = localStorage.getItem('lun_session_token') || '';
+            try {
+                const res = await fetch(API_BASE + "/api/auth/join-class", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+                    body: JSON.stringify({ classCode })
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                window.currentUser.classId = data.classId;
+                window.currentUser.className = data.className;
+                renderAccountLoggedInBody();
+            } catch (e) { alert('加入班級失敗：' + e.message); }
         }
 
         async function doLinkChild() {

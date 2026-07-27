@@ -79,6 +79,9 @@ export default {
     if (url.pathname === "/api/auth/me") {
       return handleAuthMe(request, env);
     }
+    if (url.pathname === "/api/auth/join-class") {
+      return handleAuthJoinClass(request, env);
+    }
     if (url.pathname === "/api/history" && request.method === "GET") {
       return handleHistoryList(request, env);
     }
@@ -679,7 +682,8 @@ async function verifySession(request, env) {
 
 // 自由註冊：任何人都能選學生/家長/老師其中一種角色註冊(超級管理員不開放自助註冊，
 // 避免任何人自封管理員；superadmin帳號由Steve用wrangler d1 execute手動塞一筆)。
-// 老師註冊時一併建立自己的班級；學生註冊時要填入老師給的班級ID才能加入。
+// 老師註冊時一併建立自己的班級(班級名稱如「六年1班」全站唯一，同時當作學生加入用的班級代碼，
+// 不是給老師看的內部數字ID)；學生註冊時可選填班級代碼加入，沒填之後也能在帳號頁面補填。
 async function handleAuthRegister(request, env) {
   if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   if (request.method !== "POST") return json({ error: { message: "Method Not Allowed" } }, 405);
@@ -708,11 +712,14 @@ async function handleAuthRegister(request, env) {
     if (role === "teacher") {
       className = String(body.className || "").trim().slice(0, 50);
       if (!className) return json({ error: { message: "老師註冊請填寫班級名稱" } }, 400);
-    } else if (role === "student") {
-      const classIdInput = parseInt(body.classId, 10);
-      if (!classIdInput) return json({ error: { message: "學生註冊請填寫老師給的班級ID" } }, 400);
-      const cls = await env.DB.prepare("SELECT id FROM classes WHERE id = ?").bind(classIdInput).first();
-      if (!cls) return json({ error: { message: "找不到這個班級ID，請跟老師確認" } }, 400);
+      // 班級名稱本身就是學生加入班級用的代碼(如「六年1班」)，必須全站唯一才能拿來查找
+      const existingClass = await env.DB.prepare("SELECT id FROM classes WHERE name = ?").bind(className).first();
+      if (existingClass) return json({ error: { message: "這個班級名稱已經被使用，請換一個更完整的名稱（例如加上學校或年度）" } }, 400);
+    } else if (role === "student" && body.classCode) {
+      // 班級代碼(選填)：學生可以先註冊，之後再透過 /api/auth/join-class 補填
+      const classCode = String(body.classCode || "").trim().slice(0, 50);
+      const cls = await env.DB.prepare("SELECT id FROM classes WHERE name = ?").bind(classCode).first();
+      if (!cls) return json({ error: { message: "找不到這個班級代碼，請跟老師確認名稱是否正確" } }, 400);
       classId = cls.id;
     }
 
@@ -799,6 +806,29 @@ async function handleAuthMe(request, env) {
       className,
     },
   });
+}
+
+// 學生註冊時沒填班級代碼，之後想補填/更換班級用（例如轉班、註冊時還沒問到老師）
+async function handleAuthJoinClass(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (request.method !== "POST") return json({ error: { message: "Method Not Allowed" } }, 405);
+
+  const session = await verifySession(request, env);
+  if (!session) return json({ error: { message: "未登入或登入已過期" } }, 401);
+  if (session.role !== "student") return json({ error: { message: "只有學生帳號可以加入班級" } }, 403);
+
+  try {
+    const body = await request.json();
+    const classCode = String(body.classCode || "").trim().slice(0, 50);
+    if (!classCode) return json({ error: { message: "請輸入班級代碼" } }, 400);
+    const cls = await env.DB.prepare("SELECT id, name FROM classes WHERE name = ?").bind(classCode).first();
+    if (!cls) return json({ error: { message: "找不到這個班級代碼，請跟老師確認名稱是否正確" } }, 400);
+
+    await env.DB.prepare("UPDATE users SET class_id = ? WHERE id = ?").bind(cls.id, session.uid).run();
+    return json({ classId: cls.id, className: cls.name });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
 }
 
 // ==================== 班級出題歷史 (老師登入後專用，每班上限50份) ====================
