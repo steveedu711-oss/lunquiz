@@ -1089,7 +1089,6 @@
                 html += "</div>";
             });
 
-            html += "<div class='text-center text-xs text-gray-400 mt-6'>有任何問題？請點<a href='https://hunglun-new.pages.dev/' target='_blank' class='underline text-emerald-400'>鴻綸科技官方網站</a></div>";
             html += "</div>";
             container.innerHTML = html;
         }
@@ -2162,6 +2161,7 @@
             noPrintEls.forEach(el => el.style.visibility = 'hidden');
 
             try {
+                await document.fonts.ready;
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 for (let i = 0; i < pages.length; i++) {
