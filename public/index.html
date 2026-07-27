@@ -1959,6 +1959,12 @@
             html += "<div id='ansStartScreen'>";
             html += "<div class='lq-card p-6 mb-4 text-center'><h2 class='font-bold text-lg mb-1'>📱 線上作答</h2><p class='text-sm text-gray-500'>選擇/複選題會自動判分；填空/簡答題只能做文字比對，僅供參考，請自行核對。</p></div>";
 
+            // 登入狀態區塊：只有透過分享連結進來作答的學生需要(家長監看要靠學生帳號)，
+            // 老師自己預覽/家長答案檢視模式都不用看到
+            if (window.isSharedView && window.sharedMode === 'student') {
+                html += "<div id='ansLoginBox' class='mb-4'>" + buildAnswerLoginBoxHtml() + "</div>";
+            }
+
             html += "<div class='lq-card p-4 mb-4'>" +
                 "<div class='text-sm text-gray-500 mb-2'>👤 填寫資料（選填，方便老師/家長核對是誰寫的）</div>" +
                 "<div class='grid grid-cols-2 sm:grid-cols-4 gap-2'>" +
@@ -2356,6 +2362,28 @@
             }
             const saveBtn = document.getElementById('btnSaveHistory');
             if (saveBtn) saveBtn.classList.toggle('hidden', !(window.currentUser && window.currentUser.role === 'teacher'));
+            refreshAnswerLoginBox();
+        }
+
+        // 作答頁登入狀態區塊：學生用分享連結進來時，提示登入學生帳號才能讓家長即時監看
+        function buildAnswerLoginBoxHtml() {
+            const u = window.currentUser;
+            if (u && u.role === 'student') {
+                return "<div class='lq-card p-3 text-sm flex items-center justify-between gap-2 flex-wrap' style='border-color:var(--hl-green);'>" +
+                    "<span>✅ 已登入：" + escapeHtml(u.displayName) + "（帳號：" + escapeHtml(u.username) + "），家長可用這組帳號連結監看你的作答</span>" +
+                    "<button onclick='doLogout()' class='lq-btn lq-btn-ghost text-xs px-2 py-1'>登出</button></div>";
+            }
+            if (u) {
+                return "<div class='lq-card p-3 text-sm text-gray-500 flex items-center justify-between gap-2 flex-wrap'>" +
+                    "<span>目前登入身分為「" + escapeHtml(u.displayName) + "」，家長即時監看需要用學生帳號登入</span>" +
+                    "<button onclick='doLogout()' class='lq-btn lq-btn-ghost text-xs px-2 py-1'>登出</button></div>";
+            }
+            return "<div class='lq-card p-3 text-sm text-center'>" +
+                "<button onclick='openAccountModal()' class='lq-btn lq-btn-secondary text-sm px-3 py-1.5'>🔑 登入學生帳號以啟用家長即時監看</button></div>";
+        }
+        function refreshAnswerLoginBox() {
+            const box = document.getElementById('ansLoginBox');
+            if (box) box.innerHTML = buildAnswerLoginBoxHtml();
         }
 
         function doLogout() {
