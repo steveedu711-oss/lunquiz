@@ -357,7 +357,9 @@
         <div class="lq-card p-6 sm:p-8">
             <div class="mb-6 flex justify-between items-center flex-wrap gap-2">
                 <button onclick="openUsageGuide()" id="usageGuideBtn" class="lq-btn lq-btn-secondary text-xs px-3 py-1.5 rounded-full">❓ 使用說明</button>
-                <div class="flex gap-4">
+                <div class="flex gap-4 items-center">
+                    <span id="accountStatus" class="text-xs text-gray-500"></span>
+                    <button onclick="openAccountModal()" id="accountBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">👤 登入/註冊</button>
                     <button onclick="openHistory()" id="historyBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">📜 出題紀錄</button>
                     <button onclick="unlockAdmin()" id="adminBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">🔓 管理者解除限制</button>
                 </div>
@@ -528,6 +530,7 @@
                         <div class="px-4 py-2 text-xs text-gray-400 border-t">🖨️ 要列印請先下載PDF，開啟後用PDF閱讀器本身的列印功能</div>
                     </div>
                 </div>
+                <button onclick="saveToClassHistory()" id="btnSaveHistory" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base hidden"><span class="ph-duotone ph-floppy-disk lq-icon"></span> 存入班級歷史</button>
                 <div class="lq-header-divider hidden sm:block"></div>
                 <div class="relative inline-block" id="shareBtnsWrap">
                     <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-share-network lq-icon"></span> 分享 ▾</button>
@@ -598,6 +601,39 @@
         </div>
     </div>
 
+    <!-- 帳號登入/註冊彈窗 -->
+    <div id="accountModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-md w-full max-h-[85vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg" id="accountModalTitle">👤 帳號</h3>
+                <button onclick="closeAccountModal()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
+            </div>
+            <div id="accountModalBody"></div>
+        </div>
+    </div>
+
+    <!-- 班級歷史列表(老師登入後專用) -->
+    <div id="classHistoryModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-lg w-full max-h-[80vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">📚 班級歷史（最多50份）</h3>
+                <button onclick="closeClassHistory()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
+            </div>
+            <div id="classHistoryList"></div>
+        </div>
+    </div>
+
+    <!-- 監考式即時監看詳情(老師/家長共用) -->
+    <div id="proctorModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-lg w-full max-h-[85vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">🔍 監考式即時監看</h3>
+                <button onclick="closeProctorModal()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
+            </div>
+            <div id="proctorModalBody"><div class="text-center text-gray-500 py-8">⏳ 載入中...</div></div>
+        </div>
+    </div>
+
     <script>
         // 部署後端 Worker 後，請把這裡換成實際的 Worker 網址
         // 例：https://linquiz-api.<你的subdomain>.workers.dev
@@ -653,6 +689,8 @@
         window.onload = async function() {
             let k = localStorage.getItem('lun_key');
             if (k) document.getElementById('userKey').value = k;
+
+            initAuthUI();
 
             fetch(API_BASE + "/api/visit")
                 .then(r => r.json())
@@ -966,7 +1004,7 @@
                         body.innerHTML = "<div class='lq-card p-4 text-center text-red-600'>" + escapeHtml(data.error.message) + "</div>";
                         return;
                     }
-                    renderLiveDashboardTable(body, data.students || []);
+                    renderLiveDashboardTable(body, data.students || [], shareId);
                 } catch (e) {
                     body.innerHTML = "<div class='lq-card p-4 text-center text-red-600'>載入失敗：" + escapeHtml(e.message) + "</div>";
                 }
@@ -975,7 +1013,7 @@
             window.livePollTimer = setInterval(window.liveViewRefresh, window.livePollIntervalMs);
         }
 
-        function renderLiveDashboardTable(body, students) {
+        function renderLiveDashboardTable(body, students, shareId) {
             if (students.length === 0) {
                 body.innerHTML = "<div class='lq-card p-4 text-center text-gray-500'>還沒有學生開始作答</div>";
                 return;
@@ -990,7 +1028,8 @@
                 const infoLine = infoParts.length > 0 ? infoParts.map(escapeHtml).join('・') : '(未填寫姓名)';
                 html += "<div class='lq-card p-3 mb-2'>" +
                     "<div class='flex items-center justify-between mb-1'><span class='font-semibold text-sm'>" + infoLine + "</span>" +
-                    "<span class='text-xs text-gray-400'>" + answered + " / " + total + " 題</span></div>" +
+                    "<button onclick=\"openProctorDetailTeacher('" + escapeHtml(shareId) + "','" + escapeHtml(s.studentId) + "')\" class='lq-btn lq-btn-secondary text-xs px-2 py-1'>🔍 查看詳情</button></div>" +
+                    "<div class='flex items-center justify-between mb-1'><span class='text-xs text-gray-400'>" + answered + " / " + total + " 題</span></div>" +
                     "<div class='h-2 w-full bg-gray-200 rounded-full overflow-hidden'><div class='progress-bar' style='width:" + pct + "%;height:100%;'></div></div>" +
                     "</div>";
             });
@@ -1858,12 +1897,16 @@
             if (!(window.isSharedView && window.sharedMode === 'student' && window.liveShareId)) return;
             const items = window.currentItems || [];
             let answered = 0;
+            // 監考式即時監看用：每題目前實際選的選項字母(單選/複選)或填的文字，不只是「有沒有作答」的數字
+            const answers = [];
             items.forEach((q, i) => {
                 if (q.o && q.o.length > 0) {
-                    if (document.querySelectorAll('input[name="ans-' + i + '"]:checked').length > 0) answered++;
+                    const checked = Array.from(document.querySelectorAll('input[name="ans-' + i + '"]:checked')).map(el => el.value);
+                    if (checked.length > 0) { answered++; answers.push({ i, selected: checked.join('') }); }
                 } else {
                     const el = document.getElementById('ans-text-' + i);
-                    if (el && el.value.trim() !== '') answered++;
+                    const val = (el && el.value || '').trim();
+                    if (val !== '') { answered++; answers.push({ i, selected: val }); }
                 }
             });
             try {
@@ -1879,7 +1922,9 @@
                             seat: (document.getElementById('ansStuSeat') || {}).value || '',
                             name: (document.getElementById('ansStuName') || {}).value || '',
                         },
-                        answered, total: items.length
+                        answered, total: items.length, answers,
+                        // 若學生剛好有登入帳號(非必要)，順便標記username，讓已連結的家長能直接透過帳號找到這份即時進度
+                        studentUsername: (window.currentUser && window.currentUser.role === 'student') ? window.currentUser.username : ''
                     })
                 });
             } catch (e) {}
@@ -2277,6 +2322,336 @@
             }
             let a = document.createElement('a');
             a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
+        }
+
+        // ==================== 帳號系統：登入/註冊/班級歷史/監考式即時監看 ====================
+        // session token存在localStorage.lun_session_token，每次要驗證身分的請求帶X-Session-Token header。
+        // 登入非必要：學生/家長不登入一樣能用既有分享連結作答/查看，登入是額外功能(存班級歷史/監考監看)。
+        window.currentUser = null;
+
+        async function initAuthUI() {
+            const token = localStorage.getItem('lun_session_token');
+            if (!token) { updateAccountUI(); return; }
+            try {
+                const res = await fetch(API_BASE + "/api/auth/me", { headers: { 'X-Session-Token': token } });
+                const data = await res.json();
+                if (data.error) { localStorage.removeItem('lun_session_token'); window.currentUser = null; }
+                else window.currentUser = data.user;
+            } catch (e) { window.currentUser = null; }
+            updateAccountUI();
+        }
+
+        function updateAccountUI() {
+            const statusEl = document.getElementById('accountStatus');
+            const btnEl = document.getElementById('accountBtn');
+            const roleLabel = { student: '學生', parent: '家長', teacher: '老師', superadmin: '超級管理員' };
+            if (window.currentUser) {
+                statusEl.textContent = window.currentUser.displayName + '（' + (roleLabel[window.currentUser.role] || window.currentUser.role) + '）';
+                btnEl.innerHTML = '🚪 登出';
+                btnEl.onclick = doLogout;
+            } else {
+                statusEl.textContent = '';
+                btnEl.innerHTML = '👤 登入/註冊';
+                btnEl.onclick = openAccountModal;
+            }
+            const saveBtn = document.getElementById('btnSaveHistory');
+            if (saveBtn) saveBtn.classList.toggle('hidden', !(window.currentUser && window.currentUser.role === 'teacher'));
+        }
+
+        function doLogout() {
+            localStorage.removeItem('lun_session_token');
+            window.currentUser = null;
+            updateAccountUI();
+        }
+
+        function openAccountModal() {
+            document.getElementById('accountModal').classList.remove('hidden');
+            if (window.currentUser) renderAccountLoggedInBody();
+            else renderAccountAuthForm('login');
+        }
+        function closeAccountModal() { document.getElementById('accountModal').classList.add('hidden'); }
+
+        function renderAccountAuthForm(mode) {
+            document.getElementById('accountModalTitle').textContent = mode === 'login' ? '👤 登入' : '👤 註冊';
+            const isLogin = mode === 'login';
+            let html = "<div class='space-y-3'>";
+            html += "<input id='authUsername' class='lq-input' placeholder='帳號'>";
+            html += "<input id='authPassword' type='password' class='lq-input' placeholder='密碼（至少6碼）'>";
+            if (!isLogin) {
+                html += "<input id='authDisplayName' class='lq-input' placeholder='顯示名稱（例如：王小明）'>";
+                html += "<select id='authRole' class='lq-input' onchange='onAuthRoleChange()'>" +
+                    "<option value=''>請選擇角色...</option>" +
+                    "<option value='teacher'>老師</option>" +
+                    "<option value='student'>學生</option>" +
+                    "<option value='parent'>家長</option>" +
+                    "</select>";
+                html += "<input id='authClassName' class='lq-input hidden' placeholder='幫班級取個名字（例如：六年一班）'>";
+                html += "<input id='authClassId' class='lq-input hidden' placeholder='老師給你的班級ID'>";
+            }
+            html += "<div id='authErrorMsg' class='text-sm text-red-600 hidden'></div>";
+            html += "<button onclick=\"" + (isLogin ? 'doLogin()' : 'doRegister()') + "\" class='lq-btn lq-btn-primary w-full py-2'>" + (isLogin ? '登入' : '註冊') + "</button>";
+            html += "<button onclick=\"renderAccountAuthForm('" + (isLogin ? 'register' : 'login') + "')\" class='lq-btn lq-btn-ghost w-full text-sm'>" +
+                (isLogin ? '還沒有帳號？點此註冊' : '已經有帳號？點此登入') + "</button>";
+            html += "</div>";
+            document.getElementById('accountModalBody').innerHTML = html;
+        }
+
+        function onAuthRoleChange() {
+            const role = document.getElementById('authRole').value;
+            document.getElementById('authClassName').classList.toggle('hidden', role !== 'teacher');
+            document.getElementById('authClassId').classList.toggle('hidden', role !== 'student');
+        }
+
+        function showAuthError(msg) {
+            const el = document.getElementById('authErrorMsg');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        async function doRegister() {
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const displayName = document.getElementById('authDisplayName').value.trim();
+            const role = document.getElementById('authRole').value;
+            const className = (document.getElementById('authClassName') || {}).value || '';
+            const classId = (document.getElementById('authClassId') || {}).value || '';
+            try {
+                const res = await fetch(API_BASE + "/api/auth/register", {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, displayName, role, className, classId })
+                });
+                const data = await res.json();
+                if (data.error) { showAuthError(data.error.message); return; }
+                localStorage.setItem('lun_session_token', data.token);
+                window.currentUser = data.user;
+                updateAccountUI();
+                renderAccountLoggedInBody();
+            } catch (e) { showAuthError('註冊失敗：' + e.message); }
+        }
+
+        async function doLogin() {
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value;
+            try {
+                const res = await fetch(API_BASE + "/api/auth/login", {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.error) { showAuthError(data.error.message); return; }
+                localStorage.setItem('lun_session_token', data.token);
+                window.currentUser = data.user;
+                updateAccountUI();
+                renderAccountLoggedInBody();
+            } catch (e) { showAuthError('登入失敗：' + e.message); }
+        }
+
+        async function renderAccountLoggedInBody() {
+            const u = window.currentUser;
+            document.getElementById('accountModalTitle').textContent = '👤 我的帳號';
+            let html = "<div class='space-y-3'>";
+            html += "<div class='lq-card p-3 text-sm'><b>" + escapeHtml(u.displayName) + "</b>（" + escapeHtml(u.username) + "）</div>";
+            if (u.role === 'teacher') {
+                html += "<div class='text-sm text-gray-500'>班級：" + escapeHtml(u.className || '') + "（班級ID：" + u.classId + "，給學生註冊用）</div>";
+                html += "<button onclick=\"closeAccountModal(); openClassHistory();\" class='lq-btn lq-btn-secondary w-full py-2'>📚 查看班級歷史</button>";
+            } else if (u.role === 'student') {
+                html += "<div class='text-sm text-gray-500'>你的帳號名稱（給家長連結用）：<b>" + escapeHtml(u.username) + "</b></div>";
+            } else if (u.role === 'parent') {
+                html += "<div id='parentChildrenBox'></div>";
+                html += "<div class='flex gap-2'><input id='linkChildUsername' class='lq-input' placeholder='孩子的帳號名稱'>" +
+                    "<button onclick='doLinkChild()' class='lq-btn lq-btn-primary px-4'>連結</button></div>";
+            }
+            html += "<button onclick='doLogout(); closeAccountModal();' class='lq-btn lq-btn-danger w-full py-2'>登出</button>";
+            html += "</div>";
+            document.getElementById('accountModalBody').innerHTML = html;
+            if (u.role === 'parent') loadMyChildren();
+        }
+
+        async function doLinkChild() {
+            const studentUsername = document.getElementById('linkChildUsername').value.trim();
+            if (!studentUsername) return;
+            const token = localStorage.getItem('lun_session_token') || '';
+            try {
+                const res = await fetch(API_BASE + "/api/parent/link-child", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+                    body: JSON.stringify({ studentUsername })
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                document.getElementById('linkChildUsername').value = '';
+                loadMyChildren();
+            } catch (e) { alert('連結失敗：' + e.message); }
+        }
+
+        async function loadMyChildren() {
+            const token = localStorage.getItem('lun_session_token') || '';
+            const box = document.getElementById('parentChildrenBox');
+            if (!box) return;
+            try {
+                const res = await fetch(API_BASE + "/api/parent/children", { headers: { 'X-Session-Token': token } });
+                const data = await res.json();
+                const children = data.children || [];
+                if (children.length === 0) { box.innerHTML = "<div class='text-sm text-gray-400 mb-2'>還沒有連結任何孩子帳號</div>"; return; }
+                box.innerHTML = children.map(c =>
+                    "<div class='flex justify-between items-center bg-gray-50 p-2 rounded-lg mb-2'>" +
+                    "<span class='text-sm font-semibold'>" + escapeHtml(c.displayName) + "（" + escapeHtml(c.username) + "）</span>" +
+                    "<button onclick=\"openProctorDetailParent('" + escapeHtml(c.username) + "')\" class='lq-btn lq-btn-primary text-xs px-3 py-1'>🔍 即時監看</button>" +
+                    "</div>"
+                ).join('');
+            } catch (e) {}
+        }
+
+        // ---- 班級歷史(老師登入後專用，每班上限50份) ----
+        async function saveToClassHistory() {
+            if (!window.currentUser || window.currentUser.role !== 'teacher') return;
+            if (!window.currentItems || window.currentItems.length === 0) { alert('目前沒有題目可以存'); return; }
+            const token = localStorage.getItem('lun_session_token') || '';
+            const title = window.docTitle || '測驗';
+            try {
+                const res = await fetch(API_BASE + "/api/history", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+                    body: JSON.stringify({ title, items: window.currentItems })
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                alert('✅ 已存入班級歷史「' + title + '」');
+            } catch (e) { alert('存入失敗：' + e.message); }
+        }
+
+        async function openClassHistory() {
+            const token = localStorage.getItem('lun_session_token') || '';
+            const list = document.getElementById('classHistoryList');
+            list.innerHTML = "<div class='text-center text-gray-500 py-8'>⏳ 載入中...</div>";
+            document.getElementById('classHistoryModal').classList.remove('hidden');
+            try {
+                const res = await fetch(API_BASE + "/api/history", { headers: { 'X-Session-Token': token } });
+                const data = await res.json();
+                if (data.error) { list.innerHTML = "<p class='text-red-600 text-center py-8'>" + escapeHtml(data.error.message) + "</p>"; return; }
+                const history = data.history || [];
+                window.__classHistoryCache = history;
+                if (history.length === 0) {
+                    list.innerHTML = "<p class='text-gray-500 text-center py-8'>班級還沒有出題歷史</p>";
+                    return;
+                }
+                list.innerHTML = history.map((h, i) =>
+                    "<div class='flex justify-between items-center bg-gray-50 p-3 rounded-xl mb-2 border border-gray-100'>" +
+                    "<div class='truncate mr-2'><div class='font-bold truncate'>" + escapeHtml(h.title) + "</div><div class='text-xs text-gray-500'>" + new Date(h.createdAt).toLocaleString() + "・" + h.items.length + "題</div></div>" +
+                    "<div class='flex gap-2 flex-shrink-0'>" +
+                    "<button onclick='loadClassHistoryItem(" + i + ")' class='lq-btn lq-btn-primary px-3 py-1 text-sm'>開啟</button>" +
+                    "<button onclick=\"deleteClassHistoryItem(" + h.id + ")\" class='lq-btn lq-btn-danger px-3 py-1 text-sm'>刪除</button>" +
+                    "</div></div>"
+                ).join('');
+            } catch (e) { list.innerHTML = "<p class='text-red-600 text-center py-8'>載入失敗：" + escapeHtml(e.message) + "</p>"; }
+        }
+        function closeClassHistory() { document.getElementById('classHistoryModal').classList.add('hidden'); }
+
+        function loadClassHistoryItem(i) {
+            const h = (window.__classHistoryCache || [])[i];
+            if (!h) return;
+            window.currentItems = h.items;
+            closeClassHistory();
+            renderPaperFixed(h.items, h.title);
+        }
+
+        async function deleteClassHistoryItem(id) {
+            if (!confirm('確定刪除這筆班級歷史記錄？')) return;
+            const token = localStorage.getItem('lun_session_token') || '';
+            try {
+                const res = await fetch(API_BASE + "/api/history/" + id, {
+                    method: 'DELETE', headers: { 'X-Session-Token': token }
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                openClassHistory();
+            } catch (e) { alert('刪除失敗：' + e.message); }
+        }
+
+        // ---- 監考式即時監看：老師從班級儀表板點學生詳情 / 家長從已連結孩子點監看 ----
+        // 兩邊都需要拿到該份題目的實際內容(才知道學生選的字母對應哪個選項)，
+        // shareId對應/api/share，是公開的capability-URL端點，直接fetch即可
+        async function fetchShareItems(shareId) {
+            if (window.__shareItemsCache && window.__shareItemsCache.id === shareId) return window.__shareItemsCache.items;
+            const res = await fetch(API_BASE + "/api/share/" + encodeURIComponent(shareId));
+            const data = await res.json();
+            if (data.error) throw new Error(data.error.message);
+            window.__shareItemsCache = { id: shareId, items: data.items };
+            return data.items;
+        }
+
+        function renderProctorAnswersHtml(items, answers) {
+            const map = {};
+            (answers || []).forEach(a => { map[a.i] = a.selected; });
+            let html = "";
+            items.forEach((q, i) => {
+                const sel = map[i];
+                let selDisplay = '';
+                if (sel) {
+                    if (q.o && q.o.length > 0) {
+                        selDisplay = sel.split('').map(l => {
+                            const idx = l.charCodeAt(0) - 65;
+                            return q.o[idx] ? ('(' + l + ') ' + q.o[idx]) : l;
+                        }).join('、');
+                    } else {
+                        selDisplay = sel;
+                    }
+                }
+                html += "<div class='lq-card p-3 mb-2'>" +
+                    "<div class='font-semibold text-sm mb-1'>" + (i + 1) + ". " + escapeHtml(q.q) + "</div>" +
+                    (selDisplay
+                        ? "<div class='text-sm' style='color:var(--hl-blue);'>✍️ " + escapeHtml(selDisplay) + "</div>"
+                        : "<div class='text-xs text-gray-400'>尚未作答</div>") +
+                    "</div>";
+            });
+            return html;
+        }
+
+        window.proctorPollTimer = null;
+        function closeProctorModal() {
+            document.getElementById('proctorModal').classList.add('hidden');
+            if (window.proctorPollTimer) { clearInterval(window.proctorPollTimer); window.proctorPollTimer = null; }
+        }
+
+        async function openProctorDetailTeacher(shareId, studentId) {
+            document.getElementById('proctorModal').classList.remove('hidden');
+            const refresh = async () => {
+                const bodyEl = document.getElementById('proctorModalBody');
+                try {
+                    const items = await fetchShareItems(shareId);
+                    const res = await fetch(API_BASE + "/api/live-progress/" + encodeURIComponent(shareId) + "/" + encodeURIComponent(studentId));
+                    const data = await res.json();
+                    if (data.error) { bodyEl.innerHTML = "<div class='text-center text-gray-500 py-8'>" + escapeHtml(data.error.message) + "</div>"; return; }
+                    bodyEl.innerHTML = renderProctorAnswersHtml(items, data.answers || []);
+                } catch (e) {
+                    bodyEl.innerHTML = "<div class='text-center text-red-600 py-8'>載入失敗：" + escapeHtml(e.message) + "</div>";
+                }
+            };
+            await refresh();
+            if (window.proctorPollTimer) clearInterval(window.proctorPollTimer);
+            window.proctorPollTimer = setInterval(refresh, 5000);
+        }
+
+        async function openProctorDetailParent(studentUsername) {
+            document.getElementById('proctorModal').classList.remove('hidden');
+            const token = localStorage.getItem('lun_session_token') || '';
+            const refresh = async () => {
+                const bodyEl = document.getElementById('proctorModalBody');
+                try {
+                    const liveRes = await fetch(API_BASE + "/api/parent/child-live/" + encodeURIComponent(studentUsername), {
+                        headers: { 'X-Session-Token': token }
+                    });
+                    const data = await liveRes.json();
+                    if (data.error) { bodyEl.innerHTML = "<div class='text-center text-gray-500 py-8'>" + escapeHtml(data.error.message) + "</div>"; return; }
+                    const items = await fetchShareItems(data.shareId);
+                    bodyEl.innerHTML = renderProctorAnswersHtml(items, data.answers || []);
+                } catch (e) {
+                    bodyEl.innerHTML = "<div class='text-center text-red-600 py-8'>載入失敗：" + escapeHtml(e.message) + "</div>";
+                }
+            };
+            await refresh();
+            if (window.proctorPollTimer) clearInterval(window.proctorPollTimer);
+            window.proctorPollTimer = setInterval(refresh, 5000);
         }
     </script>
 </body>

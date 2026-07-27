@@ -21,12 +21,21 @@ const RESULT_MAX_BYTES = 300 * 1024; // 單份結果內容上限300KB
 const LIVE_PROGRESS_TTL_SECONDS = 60 * 60 * 8; // 即時進度8小時後自動過期(教室情境用不到這麼久)
 const LIVE_PROGRESS_DAILY_WRITE_CAP = 400; // 這個功能自己保留的每日KV寫入預算,見live-budget:計數key
 const LIVE_BUDGET_TTL_SECONDS = 60 * 60 * 25; // 25小時,每天自動歸零(比24小時多留緩衝)
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 登入session 30天後需要重新登入
+const HISTORY_MAX_PER_CLASS = 50; // 每個班級最多存50份出題歷史,超過自動刪最舊的
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key, X-Client-Id",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key, X-Client-Id, X-Session-Token",
 };
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
 
 export default {
   async fetch(request, env) {
@@ -60,6 +69,33 @@ export default {
       const rest = url.pathname.slice("/api/live-progress/".length).split("/").filter(Boolean);
       if (rest.length === 1) return handleLiveProgressList(request, env, rest[0]);
       return handleLiveProgressGet(request, env, rest[0], rest[1]);
+    }
+    if (url.pathname === "/api/auth/register") {
+      return handleAuthRegister(request, env);
+    }
+    if (url.pathname === "/api/auth/login") {
+      return handleAuthLogin(request, env);
+    }
+    if (url.pathname === "/api/auth/me") {
+      return handleAuthMe(request, env);
+    }
+    if (url.pathname === "/api/history" && request.method === "GET") {
+      return handleHistoryList(request, env);
+    }
+    if (url.pathname === "/api/history") {
+      return handleHistoryCreate(request, env);
+    }
+    if (url.pathname.startsWith("/api/history/")) {
+      return handleHistoryDelete(request, env, url.pathname.slice("/api/history/".length));
+    }
+    if (url.pathname === "/api/parent/link-child") {
+      return handleParentLinkChild(request, env);
+    }
+    if (url.pathname === "/api/parent/children") {
+      return handleParentChildren(request, env);
+    }
+    if (url.pathname.startsWith("/api/parent/child-live/")) {
+      return handleParentChildLive(request, env, decodeURIComponent(url.pathname.slice("/api/parent/child-live/".length)));
     }
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
@@ -278,14 +314,34 @@ async function handleLiveProgressPost(request, env) {
     const answered = Number(body.answered) || 0;
     const total = Number(body.total) || 0;
     const updatedAt = Date.now();
+    // 監考式即時監看用：每題目前實際選的選項/填的文字(不只是「是否已答」的數字)，
+    // 只放進完整value(單人get()時才回傳)，不放進metadata(老師總覽list()用，維持輕量避免超過1KB上限)
+    const answers = Array.isArray(body.answers)
+      ? body.answers.slice(0, 200).map((a) => ({
+          i: Number(a && a.i) || 0,
+          selected: String((a && a.selected) || "").slice(0, 500),
+        }))
+      : [];
 
-    const payload = JSON.stringify({ shareId, studentId, studentInfo, answered, total, updatedAt });
+    const payload = JSON.stringify({ shareId, studentId, studentInfo, answered, total, answers, updatedAt });
 
     await env.COOLDOWN_KV.put(budgetKey, String(budgetUsed + 1), { expirationTtl: LIVE_BUDGET_TTL_SECONDS });
     await env.COOLDOWN_KV.put("live:" + shareId + ":" + studentId, payload, {
       expirationTtl: LIVE_PROGRESS_TTL_SECONDS,
       metadata: { ...studentInfo, answered, total, updatedAt },
     });
+
+    // 若學生剛好有登入帳號(非必要,登入非強制)，額外記一筆「目前正在寫哪一份」的指標，
+    // 讓已連結的家長帳號能直接透過孩子的username找到現在該看哪個shareId+studentId，
+    // 不用另外拿到分享連結才能監看
+    const studentUsername = String(body.studentUsername || "").trim();
+    if (studentUsername) {
+      await env.COOLDOWN_KV.put(
+        "student-active:" + studentUsername,
+        JSON.stringify({ shareId, studentId, updatedAt }),
+        { expirationTtl: LIVE_PROGRESS_TTL_SECONDS }
+      );
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
@@ -544,4 +600,375 @@ async function handleGenerate(request, env) {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   }
+}
+
+// ==================== 帳號系統 (學生/家長/老師/超級管理員) ====================
+// 密碼用PBKDF2雜湊(Workers runtime原生crypto.subtle支援,不需額外套件)，
+// session token是HMAC-SHA256簽章的{uid,role,exp}，存在前端localStorage，
+// 每次請求帶X-Session-Token header驗證(跟現有X-Admin-Pass同樣是header-based,不用cookie，
+// 避免要重新設定CORS credentials)。帳號/班級/歷史資料存D1(binding DB)，關聯式查詢跟
+// 50筆上限裁剪這種需要交易語意的操作，KV做不好。
+
+function bytesToBase64(bytes) {
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin);
+}
+
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function hashPassword(password, existingSaltB64) {
+  const enc = new TextEncoder();
+  const salt = existingSaltB64 ? base64ToBytes(existingSaltB64) : crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    256
+  );
+  return { hash: bytesToBase64(new Uint8Array(bits)), salt: bytesToBase64(salt) };
+}
+
+async function verifyPassword(password, saltB64, expectedHashB64) {
+  const { hash } = await hashPassword(password, saltB64);
+  return hash === expectedHashB64;
+}
+
+async function hmacSign(data, secret) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+  return bytesToBase64(new Uint8Array(sig));
+}
+
+async function signToken(payloadObj, secret) {
+  const payload = bytesToBase64(new TextEncoder().encode(JSON.stringify(payloadObj)));
+  const sig = await hmacSign(payload, secret);
+  return payload + "." + sig;
+}
+
+// 解出並驗證前端帶來的X-Session-Token，回傳{uid,role,exp}或null(沒登入/簽章不符/過期)
+async function verifySession(request, env) {
+  const token = request.headers.get("X-Session-Token") || "";
+  if (!token) return null;
+  const dotIdx = token.lastIndexOf(".");
+  if (dotIdx === -1) return null;
+  const payloadB64 = token.slice(0, dotIdx);
+  const sig = token.slice(dotIdx + 1);
+  const expectedSig = await hmacSign(payloadB64, env.SESSION_SECRET || "");
+  if (sig !== expectedSig) return null;
+  let data;
+  try {
+    data = JSON.parse(new TextDecoder().decode(base64ToBytes(payloadB64)));
+  } catch (e) {
+    return null;
+  }
+  if (!data || !data.exp || Date.now() > data.exp) return null;
+  return data;
+}
+
+// 自由註冊：任何人都能選學生/家長/老師其中一種角色註冊(超級管理員不開放自助註冊，
+// 避免任何人自封管理員；superadmin帳號由Steve用wrangler d1 execute手動塞一筆)。
+// 老師註冊時一併建立自己的班級；學生註冊時要填入老師給的班級ID才能加入。
+async function handleAuthRegister(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (request.method !== "POST") return json({ error: { message: "Method Not Allowed" } }, 405);
+
+  try {
+    const body = await request.json();
+    const username = String(body.username || "").trim().slice(0, 50);
+    const password = String(body.password || "");
+    const role = String(body.role || "");
+    const displayName = String(body.displayName || username).slice(0, 50);
+
+    if (!username || !password || !["student", "parent", "teacher"].includes(role)) {
+      return json({ error: { message: "請填寫帳號、密碼，並選擇學生/家長/老師其中一種角色" } }, 400);
+    }
+    if (password.length < 6) {
+      return json({ error: { message: "密碼至少需要6碼" } }, 400);
+    }
+
+    const existing = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(username).first();
+    if (existing) {
+      return json({ error: { message: "這個帳號名稱已經被使用" } }, 400);
+    }
+
+    let classId = null;
+    let className = "";
+    if (role === "teacher") {
+      className = String(body.className || "").trim().slice(0, 50);
+      if (!className) return json({ error: { message: "老師註冊請填寫班級名稱" } }, 400);
+    } else if (role === "student") {
+      const classIdInput = parseInt(body.classId, 10);
+      if (!classIdInput) return json({ error: { message: "學生註冊請填寫老師給的班級ID" } }, 400);
+      const cls = await env.DB.prepare("SELECT id FROM classes WHERE id = ?").bind(classIdInput).first();
+      if (!cls) return json({ error: { message: "找不到這個班級ID，請跟老師確認" } }, 400);
+      classId = cls.id;
+    }
+
+    const { hash, salt } = await hashPassword(password);
+    const now = Date.now();
+
+    const insertUser = await env.DB.prepare(
+      "INSERT INTO users (username, password_hash, salt, role, display_name, class_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).bind(username, hash, salt, role, displayName, classId, now).run();
+    const userId = insertUser.meta.last_row_id;
+
+    if (role === "teacher") {
+      const clsInsert = await env.DB.prepare(
+        "INSERT INTO classes (name, teacher_id, created_at) VALUES (?, ?, ?)"
+      ).bind(className, userId, now).run();
+      classId = clsInsert.meta.last_row_id;
+      await env.DB.prepare("UPDATE users SET class_id = ? WHERE id = ?").bind(classId, userId).run();
+    }
+
+    const token = await signToken({ uid: userId, role, exp: now + SESSION_TTL_SECONDS * 1000 }, env.SESSION_SECRET || "");
+    return json({ token, user: { id: userId, username, role, displayName, classId } });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+async function handleAuthLogin(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (request.method !== "POST") return json({ error: { message: "Method Not Allowed" } }, 405);
+
+  try {
+    const body = await request.json();
+    const username = String(body.username || "").trim().slice(0, 50);
+    const password = String(body.password || "");
+
+    const user = await env.DB.prepare(
+      "SELECT id, username, password_hash, salt, role, display_name, class_id FROM users WHERE username = ?"
+    ).bind(username).first();
+
+    if (!user || !(await verifyPassword(password, user.salt, user.password_hash))) {
+      return json({ error: { message: "帳號或密碼錯誤" } }, 401);
+    }
+
+    const now = Date.now();
+    const token = await signToken({ uid: user.id, role: user.role, exp: now + SESSION_TTL_SECONDS * 1000 }, env.SESSION_SECRET || "");
+    return json({
+      token,
+      user: { id: user.id, username: user.username, role: user.role, displayName: user.display_name, classId: user.class_id },
+    });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+async function handleAuthMe(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+
+  const session = await verifySession(request, env);
+  if (!session) return json({ error: { message: "未登入或登入已過期" } }, 401);
+
+  const user = await env.DB.prepare(
+    "SELECT id, username, role, display_name, class_id FROM users WHERE id = ?"
+  ).bind(session.uid).first();
+  if (!user) return json({ error: { message: "帳號不存在" } }, 401);
+
+  let className = null;
+  if (user.class_id) {
+    const cls = await env.DB.prepare("SELECT name FROM classes WHERE id = ?").bind(user.class_id).first();
+    className = cls ? cls.name : null;
+  }
+
+  return json({
+    user: {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      displayName: user.display_name,
+      classId: user.class_id,
+      className,
+    },
+  });
+}
+
+// ==================== 班級出題歷史 (老師登入後專用，每班上限50份) ====================
+
+async function handleHistoryCreate(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (request.method !== "POST") return json({ error: { message: "Method Not Allowed" } }, 405);
+
+  const session = await verifySession(request, env);
+  if (!session || session.role !== "teacher") {
+    return json({ error: { message: "只有登入的老師可以存班級歷史" } }, 401);
+  }
+
+  try {
+    const body = await request.json();
+    const title = String(body.title || "測驗").slice(0, 200);
+    const items = body.items;
+    if (!Array.isArray(items) || items.length === 0) {
+      return json({ error: { message: "沒有題目內容可以存" } }, 400);
+    }
+
+    const user = await env.DB.prepare("SELECT class_id FROM users WHERE id = ?").bind(session.uid).first();
+    if (!user || !user.class_id) {
+      return json({ error: { message: "找不到你的班級" } }, 400);
+    }
+    const classId = user.class_id;
+    const itemsJson = JSON.stringify(items);
+    const now = Date.now();
+
+    await env.DB.prepare(
+      "INSERT INTO quiz_history (class_id, title, items_json, created_by, created_at) VALUES (?, ?, ?, ?, ?)"
+    ).bind(classId, title, itemsJson, session.uid, now).run();
+
+    // 超過50筆自動刪最舊的,保持每班上限50份
+    const countRow = await env.DB.prepare("SELECT COUNT(*) as c FROM quiz_history WHERE class_id = ?").bind(classId).first();
+    if (countRow.c > HISTORY_MAX_PER_CLASS) {
+      const toDelete = countRow.c - HISTORY_MAX_PER_CLASS;
+      const oldest = await env.DB.prepare(
+        "SELECT id FROM quiz_history WHERE class_id = ? ORDER BY created_at ASC LIMIT ?"
+      ).bind(classId, toDelete).all();
+      for (const row of oldest.results) {
+        await env.DB.prepare("DELETE FROM quiz_history WHERE id = ?").bind(row.id).run();
+      }
+    }
+
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+async function handleHistoryList(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+
+  const session = await verifySession(request, env);
+  if (!session || session.role !== "teacher") {
+    return json({ error: { message: "只有登入的老師可以查看班級歷史" } }, 401);
+  }
+
+  const user = await env.DB.prepare("SELECT class_id FROM users WHERE id = ?").bind(session.uid).first();
+  if (!user || !user.class_id) return json({ history: [] });
+
+  const rows = await env.DB.prepare(
+    "SELECT id, title, items_json, created_at FROM quiz_history WHERE class_id = ? ORDER BY created_at DESC"
+  ).bind(user.class_id).all();
+
+  const history = rows.results.map((r) => ({
+    id: r.id,
+    title: r.title,
+    items: JSON.parse(r.items_json),
+    createdAt: r.created_at,
+  }));
+
+  return json({ history });
+}
+
+async function handleHistoryDelete(request, env, idStr) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (request.method !== "DELETE") return json({ error: { message: "Method Not Allowed" } }, 405);
+
+  const session = await verifySession(request, env);
+  if (!session || session.role !== "teacher") {
+    return json({ error: { message: "只有登入的老師可以刪除班級歷史" } }, 401);
+  }
+
+  const id = Number(idStr);
+  const user = await env.DB.prepare("SELECT class_id FROM users WHERE id = ?").bind(session.uid).first();
+  const row = await env.DB.prepare("SELECT class_id FROM quiz_history WHERE id = ?").bind(id).first();
+  if (!row || !user || row.class_id !== user.class_id) {
+    return json({ error: { message: "找不到這筆歷史記錄，或不屬於你的班級" } }, 404);
+  }
+
+  await env.DB.prepare("DELETE FROM quiz_history WHERE id = ?").bind(id).run();
+  return json({ ok: true });
+}
+
+// ==================== 家長連結孩子帳號 ====================
+// 家長輸入孩子的username即可建立連結(不需孩子核准，家庭情境從簡)，
+// 之後可以在即時監看頁面選擇要看哪個孩子的作答狀況。
+
+async function handleParentLinkChild(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (request.method !== "POST") return json({ error: { message: "Method Not Allowed" } }, 405);
+
+  const session = await verifySession(request, env);
+  if (!session || session.role !== "parent") {
+    return json({ error: { message: "只有登入的家長可以連結孩子帳號" } }, 401);
+  }
+
+  try {
+    const body = await request.json();
+    const studentUsername = String(body.studentUsername || "").trim().slice(0, 50);
+    if (!studentUsername) return json({ error: { message: "請輸入孩子的帳號名稱" } }, 400);
+
+    const student = await env.DB.prepare("SELECT id, role FROM users WHERE username = ?").bind(studentUsername).first();
+    if (!student || student.role !== "student") {
+      return json({ error: { message: "找不到這個學生帳號" } }, 404);
+    }
+
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO parent_child_links (parent_id, student_id) VALUES (?, ?)"
+    ).bind(session.uid, student.id).run();
+
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+async function handleParentChildren(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+
+  const session = await verifySession(request, env);
+  if (!session || session.role !== "parent") {
+    return json({ error: { message: "只有登入的家長可以查看" } }, 401);
+  }
+
+  const rows = await env.DB.prepare(
+    "SELECT u.id, u.username, u.display_name FROM parent_child_links l JOIN users u ON u.id = l.student_id WHERE l.parent_id = ?"
+  ).bind(session.uid).all();
+
+  return json({ children: rows.results.map((r) => ({ id: r.id, username: r.username, displayName: r.display_name })) });
+}
+
+// 家長監考式即時監看：透過已連結孩子的username找到孩子「目前正在寫哪一份」(student-active:指標，
+// 由pushLiveProgress()在學生有登入時順便寫入)，再直接讀那份的即時進度(含每題實際作答內容)回傳，
+// 格式跟handleLiveProgressGet一樣，前端可以共用同一套渲染函式。
+async function handleParentChildLive(request, env, studentUsername) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+
+  const session = await verifySession(request, env);
+  if (!session || session.role !== "parent") {
+    return json({ error: { message: "只有登入的家長可以查看" } }, 401);
+  }
+  if (!studentUsername) {
+    return json({ error: { message: "缺少學生帳號" } }, 400);
+  }
+
+  const link = await env.DB.prepare(
+    "SELECT 1 FROM parent_child_links l JOIN users u ON u.id = l.student_id WHERE l.parent_id = ? AND u.username = ?"
+  ).bind(session.uid, studentUsername).first();
+  if (!link) {
+    return json({ error: { message: "尚未連結這個學生帳號" } }, 403);
+  }
+
+  const activeRaw = await env.COOLDOWN_KV.get("student-active:" + studentUsername);
+  if (!activeRaw) {
+    return json({ error: { message: "孩子目前沒有正在作答中的測驗" } }, 404);
+  }
+  const active = JSON.parse(activeRaw);
+
+  const raw = await env.COOLDOWN_KV.get("live:" + active.shareId + ":" + active.studentId);
+  if (!raw) {
+    return json({ error: { message: "找不到即時進度，可能已過期(8小時)" } }, 404);
+  }
+
+  return new Response(raw, { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
 }
