@@ -527,7 +527,7 @@
                         <button onclick="dlTxt(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-text lq-icon text-slate-500"></span> 純文字 (.txt)</button>
                     </div>
                 </div>
-                <button onclick="window.print()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-printer lq-icon"></span> 列印</button>
+                <button onclick="dlPDF()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-printer lq-icon"></span> 列印(下載PDF)</button>
                 <div class="lq-header-divider hidden sm:block"></div>
                 <div class="relative inline-block" id="shareBtnsWrap">
                     <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-share-network lq-icon"></span> 分享 ▾</button>
@@ -579,7 +579,7 @@
                         <li><b>編輯內容</b>：直接點試卷上的文字修改，跟打字一樣</li>
                         <li><b>🔁 重新出這題</b>：只有某一題不滿意，不用整份重出</li>
                         <li><b>⬇️ 下載</b>：可選 Word / PDF / 純文字三種格式</li>
-                        <li><b>🖨️ 列印</b>：直接印出或存成PDF</li>
+                        <li><b>🖨️ 列印(下載PDF)</b>：直接下載成PDF檔，打開後用PDF閱讀器本身的列印功能印出，畫面乾淨不會有瀏覽器多餘的日期/網址/頁碼</li>
                         <li><b>直接線上測驗</b>：自己先開一個新分頁測試看看學生作答會看到什麼畫面、怎麼自動評分</li>
                         <li><b>📤 分享 ▾ 學生作答連結</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
                         <li><b>📤 分享 ▾ 家長答案連結</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
@@ -593,7 +593,6 @@
                 <div>
                     <p class="font-bold text-emerald-700 mb-1">⚠️ 提醒</p>
                     <p>AI生成的題目請務必自行審核校對；分享連結30天後會過期；填空/簡答題的線上作答評分只是文字比對僅供參考，還是要老師/家長自行核對。</p>
-                    <p class="mt-2"><b>🖨️ 列印小提醒</b>：若印出來上方出現日期、網址、頁碼等多餘文字，這是瀏覽器內建的「頁首和頁尾」設定，在列印視窗展開「更多設定」把「頁首和頁尾」關掉即可印得乾淨。</p>
                 </div>
             </div>
         </div>
