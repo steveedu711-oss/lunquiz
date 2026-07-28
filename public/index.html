@@ -131,6 +131,25 @@
         .lq-input:hover { border-color: #cbd5e1; }
         .lq-input:focus { outline: none; border-color: var(--hl-blue); box-shadow: 0 0 0 3px rgba(26,115,232,0.14); }
 
+        /* 進場頁身分選擇：快速使用(不登入) / 學生 / 家長 / 老師 / 管理員，
+           選了非快速使用的身分要先登入/註冊帳號密碼，才會進到「API Key選擇」那一步 */
+        .hl-identity-step { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .hl-identity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.85rem; width: 100%; max-width: 22rem; }
+        .hl-identity-btn {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem;
+            padding: 1.1rem 0.5rem; border-radius: 1.25rem; border: 2px solid var(--hl-border);
+            background: #fff; font-weight: 800; font-size: 0.95rem; color: var(--hl-text);
+            cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+        .hl-identity-btn .hl-identity-icon { font-size: 1.75rem; }
+        .hl-identity-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--hl-blue); }
+        .hl-identity-hint { font-size: 0.8125rem; color: var(--hl-text-secondary); margin: 0; }
+        .hl-back-link {
+            align-self: flex-start; background: none; border: none; color: var(--hl-text-secondary);
+            font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 0.25rem 0;
+        }
+        .hl-back-link:hover { color: var(--hl-blue); }
+
         @media (prefers-reduced-motion: reduce) {
             .lq-cta::before, .hl-spin-slow, .hl-spin-slow-reverse,
             .ans-card.ans-correct, .ans-card.ans-wrong, .ans-badge, .ans-score-pop { animation: none !important; }
@@ -315,15 +334,45 @@
             <h1 class="hl-splash-title">小綸出題小幫手</h1>
             <h2 class="hl-splash-subtitle">AI 智慧出題系統</h2>
 
-            <div style="width:100%; max-width:22rem; display:flex; flex-direction:column; gap:1rem;">
-                <button type="button" id="hlEnterBuiltin" class="hl-enter-btn hl-clickable">
-                    <span>直接進入</span>
+            <div id="hlStepIdentity" class="hl-identity-step">
+                <button type="button" class="hl-enter-btn hl-clickable" style="max-width:22rem;" onclick="splashSelectIdentity('guest')">
+                    <span>快速使用（不登入）</span>
                     <span class="ph-duotone ph-rocket-launch" style="font-size:1.75rem;"></span>
                 </button>
-                <button type="button" id="hlEnterOwnKey" class="hl-enter-btn hl-clickable" style="background:#fff; color:var(--hl-blue); border:2px solid var(--hl-blue); box-shadow:none;">
-                    <span>我有自己的 API Key</span>
-                    <span class="ph-duotone ph-key" style="font-size:1.75rem;"></span>
-                </button>
+                <div class="hl-identity-grid">
+                    <button type="button" class="hl-identity-btn" onclick="splashSelectIdentity('student')">
+                        <span class="hl-identity-icon ph-duotone ph-student"></span><span>學生</span>
+                    </button>
+                    <button type="button" class="hl-identity-btn" onclick="splashSelectIdentity('parent')">
+                        <span class="hl-identity-icon ph-duotone ph-users-three"></span><span>家長</span>
+                    </button>
+                    <button type="button" class="hl-identity-btn" onclick="splashSelectIdentity('teacher')">
+                        <span class="hl-identity-icon ph-duotone ph-chalkboard-teacher"></span><span>老師</span>
+                    </button>
+                    <button type="button" class="hl-identity-btn" onclick="splashSelectIdentity('admin')">
+                        <span class="hl-identity-icon ph-duotone ph-shield-check"></span><span>管理員</span>
+                    </button>
+                </div>
+                <p class="hl-identity-hint">學生／家長／老師／管理員需要帳號密碼登入</p>
+            </div>
+
+            <div id="hlStepAuth" class="hl-identity-step hidden">
+                <button type="button" class="hl-back-link" onclick="splashBackToIdentity()">← 返回身分選擇</button>
+                <div id="hlAuthFormBody" style="width:100%; max-width:22rem;"></div>
+            </div>
+
+            <div id="hlStepApiKey" class="hl-identity-step hidden">
+                <button type="button" class="hl-back-link" onclick="splashBackToIdentity()">← 返回身分選擇</button>
+                <div style="width:100%; max-width:22rem; display:flex; flex-direction:column; gap:1rem;">
+                    <button type="button" id="hlEnterBuiltin" class="hl-enter-btn hl-clickable">
+                        <span>直接進入</span>
+                        <span class="ph-duotone ph-rocket-launch" style="font-size:1.75rem;"></span>
+                    </button>
+                    <button type="button" id="hlEnterOwnKey" class="hl-enter-btn hl-clickable" style="background:#fff; color:var(--hl-blue); border:2px solid var(--hl-blue); box-shadow:none;">
+                        <span>我有自己的 API Key</span>
+                        <span class="ph-duotone ph-key" style="font-size:1.75rem;"></span>
+                    </button>
+                </div>
             </div>
 
             <div style="margin-top:3rem;padding-top:2rem;border-top:1px solid var(--hl-border);width:100%;max-width:40rem;">
@@ -359,6 +408,7 @@
                 <button onclick="openUsageGuide()" id="usageGuideBtn" class="lq-btn lq-btn-secondary text-xs px-3 py-1.5 rounded-full">❓ 使用說明</button>
                 <div class="flex gap-4 items-center">
                     <span id="accountStatus" class="text-xs text-gray-500"></span>
+                    <button onclick="openSuperadminPanel()" id="superadminBtn" class="hidden lq-btn lq-btn-primary text-xs px-2 py-1">🛡️ 管理後台</button>
                     <button onclick="openAccountModal()" id="accountBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">👤 登入/註冊</button>
                     <button onclick="openHistory()" id="historyBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">📜 出題紀錄</button>
                     <button onclick="unlockAdmin()" id="adminBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">🔓 管理者解除限制</button>
@@ -595,11 +645,12 @@
                 </div>
                 <div>
                     <p class="font-bold text-emerald-700 mb-1">👤 帳號登入（選用，不登入也能用全部出題/作答/分享功能）</p>
-                    <p class="mb-1">點右上角「👤 登入/註冊」，選學生/家長/老師其中一種角色。登入後多的功能：</p>
+                    <p class="mb-1">進場頁可以先選「快速使用（不登入）」，或選學生/家長/老師/管理員其中一種身分，登入或註冊帳號後才進入下一步（是否使用自己的API Key）。登入後多的功能：</p>
                     <ul class="list-disc list-inside space-y-1">
                         <li><b>老師</b>：註冊時幫班級取名字（如「六年1班」，全站需唯一，這就是學生加入用的班級代碼）；出題後多「💾 存入班級歷史」（全班共用，最多50份）；即時進度儀表板可點學生卡片「🔍 查看詳情」看監考式畫面（每題實際選了什麼/寫了什麼，不只是進度%）</li>
                         <li><b>學生</b>：註冊時班級代碼選填，之後也能在「我的帳號」補填；<b>用分享連結作答時若有登入，家長之後不用等你傳連結就能直接查到進度</b>（作答開始畫面最上方會看到登入狀態）</li>
                         <li><b>家長</b>：登入後在「我的帳號」輸入孩子的帳號名稱連結（不需孩子同意），連結後可直接查即時進度＋監考式詳情；若孩子沒登入純用分享連結作答，仍可請孩子手動分享「即時進度連結」給你查看（僅進度%）</li>
+                        <li><b>管理員</b>：只能登入，不開放自助註冊（帳號由既有管理員手動建立）；登入後右上角會出現「🛡️ 管理後台」，可查看全站所有帳號、搜尋、手動建立帳號、修改角色/重設密碼、刪除帳號（刪除老師會一併刪除其班級與歷史記錄）</li>
                     </ul>
                 </div>
                 <div>
@@ -640,6 +691,43 @@
                 <button onclick="closeProctorModal()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
             </div>
             <div id="proctorModalBody"><div class="text-center text-gray-500 py-8">⏳ 載入中...</div></div>
+        </div>
+    </div>
+
+    <!-- 超級管理員後台：帳號列表/搜尋/刪除 -->
+    <div id="superadminModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-3xl w-full max-h-[85vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">🛡️ 帳號管理後台</h3>
+                <button onclick="closeSuperadminPanel()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
+            </div>
+            <div class="flex gap-2 mb-4 flex-wrap">
+                <input id="adminSearchInput" class="lq-input" style="flex:1;min-width:12rem;" placeholder="搜尋帳號/顯示名稱" oninput="debounceAdminSearch()">
+                <button onclick="openAdminCreateForm()" class="lq-btn lq-btn-primary px-4 whitespace-nowrap">➕ 建立帳號</button>
+            </div>
+            <div id="adminUsersList"></div>
+        </div>
+    </div>
+
+    <!-- 超級管理員後台：手動建立帳號 -->
+    <div id="adminCreateModal" class="hidden fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">➕ 建立帳號</h3>
+                <button onclick="closeAdminCreateForm()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
+            </div>
+            <div id="adminCreateBody"></div>
+        </div>
+    </div>
+
+    <!-- 超級管理員後台：編輯帳號(改顯示名稱/角色/重設密碼) -->
+    <div id="adminEditModal" class="hidden fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">✏️ 編輯帳號</h3>
+                <button onclick="closeAdminEditForm()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
+            </div>
+            <div id="adminEditBody"></div>
         </div>
     </div>
 
@@ -730,7 +818,106 @@
             }
         };
 
-        // --- 品牌進場頁：直接進入 / 我有自己的API Key ---
+        // --- 品牌進場頁：身分選擇(快速使用/學生/家長/老師/管理員) → 登入或註冊(快速使用略過) → API Key選擇 ---
+        let splashKind = null; // 'guest' | 'student' | 'parent' | 'teacher' | 'admin'
+        const SPLASH_ROLE_LABEL = { student: '學生', parent: '家長', teacher: '老師', admin: '管理員' };
+        const SPLASH_ROLE_TO_API = { student: 'student', parent: 'parent', teacher: 'teacher', admin: 'superadmin' };
+
+        function splashSelectIdentity(kind) {
+            splashKind = kind;
+            document.getElementById('hlStepIdentity').classList.add('hidden');
+            if (kind === 'guest') {
+                document.getElementById('hlStepApiKey').classList.remove('hidden');
+            } else {
+                document.getElementById('hlStepAuth').classList.remove('hidden');
+                renderSplashAuthForm('login');
+            }
+        }
+
+        function splashBackToIdentity() {
+            document.getElementById('hlStepAuth').classList.add('hidden');
+            document.getElementById('hlStepApiKey').classList.add('hidden');
+            document.getElementById('hlStepIdentity').classList.remove('hidden');
+            splashKind = null;
+        }
+
+        function renderSplashAuthForm(mode) {
+            const kind = splashKind;
+            const label = SPLASH_ROLE_LABEL[kind] || '';
+            // 管理員不開放自助註冊(避免任何人自封管理員)，一律只顯示登入表單
+            const isLogin = mode === 'login' || kind === 'admin';
+            let html = "<h3 style='font-weight:900;font-size:1.1rem;margin-bottom:0.75rem;color:var(--hl-text);'>" +
+                (kind === 'admin' ? '🛡️ 管理員登入' : (isLogin ? ('🔑 ' + label + '登入') : ('📝 ' + label + '註冊'))) + "</h3>";
+            html += "<div class='space-y-3'>";
+            html += "<input id='splashUsername' class='lq-input' placeholder='帳號'>";
+            html += "<input id='splashPassword' type='password' class='lq-input' placeholder='密碼（至少6碼）'>";
+            if (!isLogin) {
+                html += "<input id='splashPasswordConfirm' type='password' class='lq-input' placeholder='再輸入一次密碼'>";
+                html += "<input id='splashDisplayName' class='lq-input' placeholder='顯示名稱（例如：王小明）'>";
+                if (kind === 'teacher') {
+                    html += "<input id='splashClassName' class='lq-input' placeholder='幫班級取個名字（例如：六年1班，全站需唯一，重複會被擋下）'>";
+                } else if (kind === 'student') {
+                    html += "<input id='splashClassCode' class='lq-input' placeholder='老師的班級名稱（選填，之後也可以在帳號頁面補填）'>";
+                }
+            }
+            html += "<div id='splashAuthError' class='text-sm text-red-600 hidden'></div>";
+            html += "<button onclick=\"" + (isLogin ? 'doSplashLogin()' : 'doSplashRegister()') + "\" class='lq-btn lq-btn-primary w-full py-2'>" + (isLogin ? '登入' : '註冊') + "</button>";
+            if (kind !== 'admin') {
+                html += "<button onclick=\"renderSplashAuthForm('" + (isLogin ? 'register' : 'login') + "')\" class='lq-btn lq-btn-ghost w-full text-sm'>" +
+                    (isLogin ? '還沒有帳號？點此註冊' : '已經有帳號？點此登入') + "</button>";
+            }
+            html += "</div>";
+            document.getElementById('hlAuthFormBody').innerHTML = html;
+        }
+
+        function showSplashAuthError(msg) {
+            const el = document.getElementById('splashAuthError');
+            if (el) { el.textContent = msg; el.classList.remove('hidden'); }
+        }
+
+        function splashLoginSuccess(data) {
+            localStorage.setItem('lun_session_token', data.token);
+            window.currentUser = data.user;
+            updateAccountUI();
+            document.getElementById('hlStepAuth').classList.add('hidden');
+            document.getElementById('hlStepApiKey').classList.remove('hidden');
+        }
+
+        async function doSplashLogin() {
+            const username = document.getElementById('splashUsername').value.trim();
+            const password = document.getElementById('splashPassword').value;
+            try {
+                const res = await fetch(API_BASE + "/api/auth/login", {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.error) { showSplashAuthError(data.error.message); return; }
+                splashLoginSuccess(data);
+            } catch (e) { showSplashAuthError('登入失敗：' + e.message); }
+        }
+
+        async function doSplashRegister() {
+            const kind = splashKind;
+            const username = document.getElementById('splashUsername').value.trim();
+            const password = document.getElementById('splashPassword').value;
+            const passwordConfirm = document.getElementById('splashPasswordConfirm').value;
+            if (password !== passwordConfirm) { showSplashAuthError('兩次密碼輸入不一致'); return; }
+            const displayName = document.getElementById('splashDisplayName').value.trim();
+            const role = SPLASH_ROLE_TO_API[kind];
+            const className = (document.getElementById('splashClassName') || {}).value || '';
+            const classCode = (document.getElementById('splashClassCode') || {}).value || '';
+            try {
+                const res = await fetch(API_BASE + "/api/auth/register", {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, displayName, role, className, classCode })
+                });
+                const data = await res.json();
+                if (data.error) { showSplashAuthError(data.error.message); return; }
+                splashLoginSuccess(data);
+            } catch (e) { showSplashAuthError('註冊失敗：' + e.message); }
+        }
+
         function showApiKeyBox() {
             const keyBox = document.getElementById('apiKeyBox');
             const showLink = document.getElementById('showKeyBoxLink');
@@ -2371,6 +2558,8 @@
             }
             const saveBtn = document.getElementById('btnSaveHistory');
             if (saveBtn) saveBtn.classList.toggle('hidden', !(window.currentUser && window.currentUser.role === 'teacher'));
+            const adminPanelBtn = document.getElementById('superadminBtn');
+            if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', !(window.currentUser && window.currentUser.role === 'superadmin'));
             refreshAnswerLoginBox();
         }
 
@@ -2630,6 +2819,158 @@
                 const data = await res.json();
                 if (data.error) { alert(data.error.message); return; }
                 openClassHistory();
+            } catch (e) { alert('刪除失敗：' + e.message); }
+        }
+
+        // ==================== 超級管理員後台：帳號列表/搜尋/建立/編輯(改角色/重設密碼)/刪除 ====================
+        const ADMIN_ROLE_LABEL = { student: '學生', parent: '家長', teacher: '老師', superadmin: '超級管理員' };
+
+        async function openSuperadminPanel() {
+            document.getElementById('superadminModal').classList.remove('hidden');
+            document.getElementById('adminSearchInput').value = '';
+            await loadAdminUsers();
+        }
+        function closeSuperadminPanel() { document.getElementById('superadminModal').classList.add('hidden'); }
+
+        let adminSearchTimer = null;
+        function debounceAdminSearch() {
+            clearTimeout(adminSearchTimer);
+            adminSearchTimer = setTimeout(loadAdminUsers, 300);
+        }
+
+        async function loadAdminUsers() {
+            const token = localStorage.getItem('lun_session_token') || '';
+            const q = (document.getElementById('adminSearchInput').value || '').trim();
+            const listEl = document.getElementById('adminUsersList');
+            listEl.innerHTML = "<div class='text-center text-gray-500 py-8'>⏳ 載入中...</div>";
+            try {
+                const res = await fetch(API_BASE + "/api/admin/users?q=" + encodeURIComponent(q), { headers: { 'X-Session-Token': token } });
+                const data = await res.json();
+                if (data.error) { listEl.innerHTML = "<p class='text-red-600 text-center py-8'>" + escapeHtml(data.error.message) + "</p>"; return; }
+                window.__adminUsersCache = data.users;
+                if (data.users.length === 0) { listEl.innerHTML = "<p class='text-gray-500 text-center py-8'>沒有符合的帳號</p>"; return; }
+                listEl.innerHTML = "<div class='overflow-x-auto'><table class='w-full text-sm'><thead><tr class='text-left text-gray-500 border-b'>" +
+                    "<th class='py-2 pr-2'>帳號</th><th class='py-2 pr-2'>角色</th><th class='py-2 pr-2'>顯示名稱</th><th class='py-2 pr-2'>班級</th><th class='py-2 pr-2'>建立時間</th><th class='py-2'>操作</th></tr></thead><tbody>" +
+                    data.users.map(function(u) {
+                        return "<tr class='border-b border-gray-100'>" +
+                            "<td class='py-2 pr-2 font-bold'>" + escapeHtml(u.username) + "</td>" +
+                            "<td class='py-2 pr-2'>" + (ADMIN_ROLE_LABEL[u.role] || u.role) + "</td>" +
+                            "<td class='py-2 pr-2'>" + escapeHtml(u.displayName) + "</td>" +
+                            "<td class='py-2 pr-2'>" + escapeHtml(u.className || '-') + "</td>" +
+                            "<td class='py-2 pr-2 text-xs text-gray-500'>" + new Date(u.createdAt).toLocaleDateString() + "</td>" +
+                            "<td class='py-2'><div class='flex gap-1 flex-wrap'>" +
+                            "<button onclick='openAdminEditForm(" + u.id + ")' class='lq-btn lq-btn-secondary text-xs px-2 py-1'>編輯</button>" +
+                            "<button onclick='deleteAdminUser(" + u.id + ", \"" + escapeHtml(u.username).replace(/"/g, '&quot;') + "\")' class='lq-btn lq-btn-danger text-xs px-2 py-1'>刪除</button>" +
+                            "</div></td></tr>";
+                    }).join('') + "</tbody></table></div>";
+            } catch (e) { listEl.innerHTML = "<p class='text-red-600 text-center py-8'>載入失敗：" + escapeHtml(e.message) + "</p>"; }
+        }
+
+        function openAdminCreateForm() {
+            let html = "<div class='space-y-3'>";
+            html += "<input id='adminNewUsername' class='lq-input' placeholder='帳號'>";
+            html += "<input id='adminNewPassword' type='password' class='lq-input' placeholder='密碼（至少6碼）'>";
+            html += "<input id='adminNewDisplayName' class='lq-input' placeholder='顯示名稱'>";
+            html += "<select id='adminNewRole' class='lq-input' onchange='onAdminNewRoleChange()'>" +
+                "<option value=''>請選擇角色...</option>" +
+                "<option value='teacher'>老師</option>" +
+                "<option value='student'>學生</option>" +
+                "<option value='parent'>家長</option>" +
+                "<option value='superadmin'>超級管理員</option>" +
+                "</select>";
+            html += "<input id='adminNewClassName' class='lq-input hidden' placeholder='班級名稱（老師帳號必填，例如：六年1班，全站需唯一）'>";
+            html += "<div id='adminCreateError' class='text-sm text-red-600 hidden'></div>";
+            html += "<button onclick='doAdminCreateUser()' class='lq-btn lq-btn-primary w-full py-2'>建立</button>";
+            html += "</div>";
+            document.getElementById('adminCreateBody').innerHTML = html;
+            document.getElementById('adminCreateModal').classList.remove('hidden');
+        }
+        function closeAdminCreateForm() { document.getElementById('adminCreateModal').classList.add('hidden'); }
+
+        function onAdminNewRoleChange() {
+            const role = document.getElementById('adminNewRole').value;
+            document.getElementById('adminNewClassName').classList.toggle('hidden', role !== 'teacher');
+        }
+
+        function showAdminCreateError(msg) {
+            const el = document.getElementById('adminCreateError');
+            el.textContent = msg; el.classList.remove('hidden');
+        }
+
+        async function doAdminCreateUser() {
+            const token = localStorage.getItem('lun_session_token') || '';
+            const username = document.getElementById('adminNewUsername').value.trim();
+            const password = document.getElementById('adminNewPassword').value;
+            const displayName = document.getElementById('adminNewDisplayName').value.trim();
+            const role = document.getElementById('adminNewRole').value;
+            const className = (document.getElementById('adminNewClassName') || {}).value || '';
+            try {
+                const res = await fetch(API_BASE + "/api/admin/users", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+                    body: JSON.stringify({ username, password, displayName, role, className })
+                });
+                const data = await res.json();
+                if (data.error) { showAdminCreateError(data.error.message); return; }
+                closeAdminCreateForm();
+                loadAdminUsers();
+            } catch (e) { showAdminCreateError('建立失敗：' + e.message); }
+        }
+
+        function openAdminEditForm(id) {
+            const u = (window.__adminUsersCache || []).find(function(x) { return x.id === id; });
+            if (!u) return;
+            let html = "<div class='space-y-3'>";
+            html += "<div class='text-sm text-gray-500'>帳號：<b>" + escapeHtml(u.username) + "</b></div>";
+            html += "<input id='adminEditDisplayName' class='lq-input' placeholder='顯示名稱' value=\"" + escapeHtml(u.displayName).replace(/"/g, '&quot;') + "\">";
+            html += "<select id='adminEditRole' class='lq-input'>" +
+                ["teacher", "student", "parent", "superadmin"].map(function(r) {
+                    return "<option value='" + r + "'" + (r === u.role ? " selected" : "") + ">" + ADMIN_ROLE_LABEL[r] + "</option>";
+                }).join('') + "</select>";
+            html += "<input id='adminEditNewPassword' type='password' class='lq-input' placeholder='重設密碼（留空代表不變更，至少6碼）'>";
+            html += "<div id='adminEditError' class='text-sm text-red-600 hidden'></div>";
+            html += "<button onclick='doAdminUpdateUser(" + id + ")' class='lq-btn lq-btn-primary w-full py-2'>儲存</button>";
+            html += "</div>";
+            document.getElementById('adminEditBody').innerHTML = html;
+            document.getElementById('adminEditModal').classList.remove('hidden');
+        }
+        function closeAdminEditForm() { document.getElementById('adminEditModal').classList.add('hidden'); }
+
+        function showAdminEditError(msg) {
+            const el = document.getElementById('adminEditError');
+            el.textContent = msg; el.classList.remove('hidden');
+        }
+
+        async function doAdminUpdateUser(id) {
+            const token = localStorage.getItem('lun_session_token') || '';
+            const displayName = document.getElementById('adminEditDisplayName').value.trim();
+            const role = document.getElementById('adminEditRole').value;
+            const newPassword = document.getElementById('adminEditNewPassword').value;
+            const body = { displayName, role };
+            if (newPassword) body.newPassword = newPassword;
+            try {
+                const res = await fetch(API_BASE + "/api/admin/users/" + id, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.error) { showAdminEditError(data.error.message); return; }
+                closeAdminEditForm();
+                loadAdminUsers();
+            } catch (e) { showAdminEditError('更新失敗：' + e.message); }
+        }
+
+        async function deleteAdminUser(id, username) {
+            if (!confirm('確定要刪除帳號「' + username + '」？此動作無法復原，若是老師帳號會一併刪除其班級與歷史記錄。')) return;
+            const token = localStorage.getItem('lun_session_token') || '';
+            try {
+                const res = await fetch(API_BASE + "/api/admin/users/" + id, {
+                    method: 'DELETE', headers: { 'X-Session-Token': token }
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                loadAdminUsers();
             } catch (e) { alert('刪除失敗：' + e.message); }
         }
 

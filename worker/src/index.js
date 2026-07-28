@@ -26,7 +26,7 @@ const HISTORY_MAX_PER_CLASS = 50; // 每個班級最多存50份出題歷史,超�
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key, X-Client-Id, X-Session-Token",
 };
 
@@ -99,6 +99,18 @@ export default {
     }
     if (url.pathname.startsWith("/api/parent/child-live/")) {
       return handleParentChildLive(request, env, decodeURIComponent(url.pathname.slice("/api/parent/child-live/".length)));
+    }
+    if (url.pathname === "/api/admin/users" && request.method === "GET") {
+      return handleAdminUsersList(request, env);
+    }
+    if (url.pathname === "/api/admin/users" && request.method === "POST") {
+      return handleAdminUsersCreate(request, env);
+    }
+    if (url.pathname.startsWith("/api/admin/users/")) {
+      const idStr = url.pathname.slice("/api/admin/users/".length);
+      if (request.method === "PATCH") return handleAdminUsersUpdate(request, env, idStr);
+      if (request.method === "DELETE") return handleAdminUsersDelete(request, env, idStr);
+      if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
     }
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
@@ -1006,4 +1018,181 @@ async function handleParentChildLive(request, env, studentUsername) {
   }
 
   return new Response(raw, { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+}
+
+// ==================== 超級管理員後台 ====================
+// 帳號列表/搜尋/手動建立/改角色/重設密碼/刪除。superadmin帳號不開放自助註冊(見handleAuthRegister的白名單)，
+// 只能由既有superadmin帳號用「手動建立帳號」功能生出下一個，或Steve自己用wrangler d1 execute塞第一筆。
+
+async function requireSuperadmin(request, env) {
+  const session = await verifySession(request, env);
+  if (!session || session.role !== "superadmin") return null;
+  return session;
+}
+
+async function handleAdminUsersList(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  const session = await requireSuperadmin(request, env);
+  if (!session) return json({ error: { message: "需要管理員登入" } }, 401);
+
+  const url = new URL(request.url);
+  const q = (url.searchParams.get("q") || "").trim();
+
+  let rows;
+  if (q) {
+    const like = "%" + q + "%";
+    rows = await env.DB.prepare(
+      "SELECT u.id, u.username, u.role, u.display_name, u.class_id, u.created_at, c.name as class_name " +
+      "FROM users u LEFT JOIN classes c ON c.id = u.class_id " +
+      "WHERE u.username LIKE ? OR u.display_name LIKE ? ORDER BY u.created_at DESC"
+    ).bind(like, like).all();
+  } else {
+    rows = await env.DB.prepare(
+      "SELECT u.id, u.username, u.role, u.display_name, u.class_id, u.created_at, c.name as class_name " +
+      "FROM users u LEFT JOIN classes c ON c.id = u.class_id ORDER BY u.created_at DESC"
+    ).all();
+  }
+
+  const users = rows.results.map((r) => ({
+    id: r.id,
+    username: r.username,
+    role: r.role,
+    displayName: r.display_name,
+    classId: r.class_id,
+    className: r.class_name,
+    createdAt: r.created_at,
+  }));
+
+  return json({ users });
+}
+
+// 管理員專用建立管道：跟自助註冊(handleAuthRegister)不同，這裡role可以是superadmin，
+// 也不限制一人一種角色的自然限制(管理員可以幫任何人開任何角色的帳號)。
+async function handleAdminUsersCreate(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  const session = await requireSuperadmin(request, env);
+  if (!session) return json({ error: { message: "需要管理員登入" } }, 401);
+
+  try {
+    const body = await request.json();
+    const username = String(body.username || "").trim().slice(0, 50);
+    const password = String(body.password || "");
+    const role = String(body.role || "");
+    const displayName = String(body.displayName || username).slice(0, 50);
+
+    if (!username || !password || !["student", "parent", "teacher", "superadmin"].includes(role)) {
+      return json({ error: { message: "請填寫帳號、密碼，並選擇正確的角色" } }, 400);
+    }
+    if (password.length < 6) {
+      return json({ error: { message: "密碼至少需要6碼" } }, 400);
+    }
+
+    const existing = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(username).first();
+    if (existing) return json({ error: { message: "這個帳號名稱已經被使用" } }, 400);
+
+    let classId = null;
+    let className = "";
+    if (role === "teacher") {
+      className = String(body.className || "").trim().slice(0, 50);
+      if (!className) return json({ error: { message: "老師帳號請填寫班級名稱" } }, 400);
+      const existingClass = await env.DB.prepare("SELECT id FROM classes WHERE name = ?").bind(className).first();
+      if (existingClass) return json({ error: { message: "這個班級名稱已經被使用，請換一個更完整的名稱" } }, 400);
+    }
+
+    const { hash, salt } = await hashPassword(password);
+    const now = Date.now();
+
+    const insertUser = await env.DB.prepare(
+      "INSERT INTO users (username, password_hash, salt, role, display_name, class_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).bind(username, hash, salt, role, displayName, classId, now).run();
+    const userId = insertUser.meta.last_row_id;
+
+    if (role === "teacher") {
+      const clsInsert = await env.DB.prepare(
+        "INSERT INTO classes (name, teacher_id, created_at) VALUES (?, ?, ?)"
+      ).bind(className, userId, now).run();
+      classId = clsInsert.meta.last_row_id;
+      await env.DB.prepare("UPDATE users SET class_id = ? WHERE id = ?").bind(classId, userId).run();
+    }
+
+    return json({ ok: true, id: userId });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+async function handleAdminUsersUpdate(request, env, idStr) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  const session = await requireSuperadmin(request, env);
+  if (!session) return json({ error: { message: "需要管理員登入" } }, 401);
+
+  const id = Number(idStr);
+  const target = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(id).first();
+  if (!target) return json({ error: { message: "找不到這個帳號" } }, 404);
+
+  try {
+    const body = await request.json();
+    const updates = [];
+    const values = [];
+
+    if (typeof body.displayName === "string" && body.displayName.trim()) {
+      updates.push("display_name = ?");
+      values.push(body.displayName.trim().slice(0, 50));
+    }
+    if (typeof body.role === "string" && ["student", "parent", "teacher", "superadmin"].includes(body.role)) {
+      updates.push("role = ?");
+      values.push(body.role);
+    }
+    if (typeof body.newPassword === "string" && body.newPassword) {
+      if (body.newPassword.length < 6) return json({ error: { message: "新密碼至少需要6碼" } }, 400);
+      const { hash, salt } = await hashPassword(body.newPassword);
+      updates.push("password_hash = ?", "salt = ?");
+      values.push(hash, salt);
+    }
+
+    if (updates.length === 0) return json({ error: { message: "沒有要更新的欄位" } }, 400);
+
+    values.push(id);
+    await env.DB.prepare("UPDATE users SET " + updates.join(", ") + " WHERE id = ?").bind(...values).run();
+
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+// 刪除帳號會連帶清理關聯資料：老師連班級+該班歷史記錄一起刪(該班學生的class_id設回NULL)，
+// 家長/學生則清掉parent_child_links裡對應的連結記錄，避免留下指向已刪除帳號的孤兒資料。
+async function handleAdminUsersDelete(request, env, idStr) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  const session = await requireSuperadmin(request, env);
+  if (!session) return json({ error: { message: "需要管理員登入" } }, 401);
+
+  const id = Number(idStr);
+  if (id === session.uid) {
+    return json({ error: { message: "不能刪除自己目前登入的帳號" } }, 400);
+  }
+
+  const target = await env.DB.prepare("SELECT id, role, class_id FROM users WHERE id = ?").bind(id).first();
+  if (!target) return json({ error: { message: "找不到這個帳號" } }, 404);
+
+  try {
+    if (target.role === "teacher") {
+      const cls = await env.DB.prepare("SELECT id FROM classes WHERE teacher_id = ?").bind(id).first();
+      if (cls) {
+        await env.DB.prepare("DELETE FROM quiz_history WHERE class_id = ?").bind(cls.id).run();
+        await env.DB.prepare("UPDATE users SET class_id = NULL WHERE class_id = ?").bind(cls.id).run();
+        await env.DB.prepare("DELETE FROM classes WHERE id = ?").bind(cls.id).run();
+      }
+    } else if (target.role === "parent") {
+      await env.DB.prepare("DELETE FROM parent_child_links WHERE parent_id = ?").bind(id).run();
+    } else if (target.role === "student") {
+      await env.DB.prepare("DELETE FROM parent_child_links WHERE student_id = ?").bind(id).run();
+    }
+
+    await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(id).run();
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
 }
