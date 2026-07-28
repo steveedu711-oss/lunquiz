@@ -1,0 +1,118 @@
+- generic [active] [ref=f1e1]:
+  - text:   
+  - generic [ref=f1e30]:
+    - generic [ref=f1e31]: 👣 累計造訪人次：27690
+    - img "Lun EduHelper Banner" [ref=f1e34]
+    - generic [ref=f1e35]:
+      - generic [ref=f1e36]:
+        - button "❓ 使用說明" [ref=f1e37] [cursor=pointer]
+        - generic [ref=f1e38]:
+          - generic [ref=f1e39]: 驗證學生（學生）
+          - button "👤 我的帳號" [ref=f1e40] [cursor=pointer]
+          - button "📜 出題紀錄" [ref=f1e41] [cursor=pointer]
+          - button "🔓 管理者解除限制" [ref=f1e42] [cursor=pointer]
+      - generic [ref=f1e43]:
+        - generic [ref=f1e44]: ① 填年級/科目/範圍
+        - generic [ref=f1e45]: →
+        - generic [ref=f1e46]: ② 按「小綸開始出題」
+        - generic [ref=f1e47]: →
+        - generic [ref=f1e48]: ③ 完成後可下載/列印/線上作答/分享
+      - button "🔑 其實我有自己的 API Key，改用這個" [ref=f1e49] [cursor=pointer]
+      - generic [ref=f1e50]:
+        - heading "1. 請選擇出題模式" [level=3] [ref=f1e51]
+        - generic [ref=f1e52]:
+          - generic [ref=f1e53] [cursor=pointer]: 🤖 AI 智慧搜尋
+          - generic [ref=f1e54] [cursor=pointer]: 📂 上傳檔案 / 圖片
+      - heading "2. 詳細設定" [level=3] [ref=f1e55]
+      - generic [ref=f1e56]:
+        - generic [ref=f1e57]:
+          - generic [ref=f1e58]: 年級 *
+          - combobox [ref=f1e59]:
+            - option "請選擇..." [disabled] [selected]
+            - option "✍️ 自定義"
+            - option "國小一年級"
+            - option "國小二年級"
+            - option "國小三年級"
+            - option "國小四年級"
+            - option "國小五年級"
+            - option "國小六年級"
+            - option "國中一年級"
+            - option "國中二年級"
+            - option "國中三年級"
+            - option "高中一年級"
+            - option "高中二年級"
+            - option "高中三年級"
+        - generic [ref=f1e60]:
+          - generic [ref=f1e61]: 科目 *
+          - textbox "例：自然" [ref=f1e62]
+        - generic [ref=f1e63]:
+          - generic [ref=f1e64]: 版本 *
+          - combobox [ref=f1e65]:
+            - option "請選擇..." [disabled] [selected]
+            - option "由小綸自由發揮 (不限版本)"
+            - option "✍️ 依照課本資訊填入"
+        - generic [ref=f1e66]:
+          - generic [ref=f1e67]: 範圍 *
+          - 'textbox "例 : 第一課~第三課" [ref=f1e68]'
+      - generic [ref=f1e69]:
+        - generic [ref=f1e70]:
+          - generic [ref=f1e71]: 題數 *
+          - combobox [ref=f1e72]:
+            - option "請選擇..." [disabled] [selected]
+            - option "✍️ 自定義"
+            - option "5 題"
+            - option "10 題"
+            - option "20 題"
+            - option "25 題"
+            - option "50 題"
+            - option "100 題"
+        - generic [ref=f1e73]:
+          - generic [ref=f1e74]: 題型 *
+          - combobox [ref=f1e75]:
+            - option "請選擇..." [disabled] [selected]
+            - option "✍️ 自定義"
+            - option "全部單選題"
+            - option "全部複選題"
+            - option "混搭 (10單選+10複選)"
+            - option "全部填充題"
+            - option "全部簡答題(計算題)"
+        - generic [ref=f1e76]:
+          - generic [ref=f1e77]: 難度 *
+          - combobox [ref=f1e78]:
+            - option "請選擇..." [disabled] [selected]
+            - option "✍️ 自定義"
+            - option "簡單"
+            - option "適中"
+            - option "困難"
+        - generic [ref=f1e79]:
+          - generic [ref=f1e80]: 輸出語言 *
+          - combobox [ref=f1e81]:
+            - option "繁體中文" [selected]
+            - option "English (英文)"
+      - button "🚀 小綸開始出題" [ref=f1e82] [cursor=pointer]
+      - generic [ref=f1e83]:
+        - button "  儲存設定條件" [ref=f1e84] [cursor=pointer]:
+          - generic [ref=f1e85]:  
+          - text: 儲存設定條件
+        - button "  清除所有條件" [ref=f1e86] [cursor=pointer]:
+          - generic [ref=f1e87]:  
+          - text: 清除所有條件
+        - button "  複製設定連結" [ref=f1e88] [cursor=pointer]:
+          - generic [ref=f1e89]:  
+          - text: 複製設定連結
+      - paragraph
+      - generic [ref=f1e90]:
+        - heading "【免責聲明與使用規範】" [level=4] [ref=f1e91]
+        - list [ref=f1e92]:
+          - listitem [ref=f1e93]:
+            - text: 本系統為輔助工具，試題由 AI 生成，
+            - strong [ref=f1e94]: 務必自行審核、校對並修改
+            - text: 。
+          - listitem [ref=f1e95]: 請確認擁有上傳教材之合法使用權。本工具不儲存使用者檔案，亦不承擔版權責任。
+          - listitem [ref=f1e96]: 使用小綸內建額度時，每次出題間隔 30 秒冷卻時間；填入自己的 API Key 則不受此限制。
+          - listitem [ref=f1e97]: 公用電腦請務必使用「清除記憶 / 登出」功能。
+        - paragraph [ref=f1e98]:
+          - text: 有任何問題？請點
+          - link "鴻綸科技官方網站" [ref=f1e99] [cursor=pointer]:
+            - /url: https://hunglun-new.pages.dev/
+  - text:           

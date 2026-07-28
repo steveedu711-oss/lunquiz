@@ -1,0 +1,711 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e4]:
+    - link [ref=f10e5] [cursor=pointer]:
+      - /url: https://lottiefiles.com/
+      - img "LottieFiles" [ref=f10e7]
+    - navigation "Main" [ref=f10e8]:
+      - list [ref=f10e10]:
+        - listitem [ref=f10e11]:
+          - button "Products" [ref=f10e12]
+        - listitem [ref=f10e15]:
+          - button "Integrations" [ref=f10e16]
+        - listitem [ref=f10e19]:
+          - button "Tools" [ref=f10e20]
+        - listitem [ref=f10e23]:
+          - button "Customers" [ref=f10e24]
+        - listitem [ref=f10e27]:
+          - button "Learn" [ref=f10e28]
+        - listitem [ref=f10e31]:
+          - link "Pricing" [ref=f10e32] [cursor=pointer]:
+            - /url: https://lottiefiles.com/pricing?via=top_nav
+    - generic [ref=f10e33]:
+      - generic [ref=f10e35]:
+        - button "Search animations" [ref=f10e36] [cursor=pointer]
+        - generic:
+          - generic: ⌘
+          - generic: K
+      - button [ref=f10e37]
+      - generic [ref=f10e39]:
+        - button "Log in" [ref=f10e40] [cursor=pointer]
+        - button "Sign up" [ref=f10e41] [cursor=pointer]
+  - main [ref=f10e42]:
+    - generic [ref=f10e43]:
+      - navigation "Breadcrumb" [ref=f10e45]:
+        - list [ref=f10e46]:
+          - listitem [ref=f10e47]:
+            - button "Home" [ref=f10e48] [cursor=pointer]
+          - listitem [ref=f10e50]
+          - listitem [ref=f10e53]:
+            - button "Free Animations" [ref=f10e54] [cursor=pointer]
+          - listitem [ref=f10e56]
+          - listitem [ref=f10e59]:
+            - generic [ref=f10e60]: Loading Book
+      - generic [ref=f10e62]:
+        - heading "Free Loading Book Animations" [level=1] [ref=f10e63]
+        - paragraph [ref=f10e64]: Browse a vast collection of free and premium Loading Book animations on LottieFiles. Download high-quality dotLottie, Lottie JSON, MP4, and GIF formats to effortlessly enhance your web, app, and design projects.
+        - generic [ref=f10e65]:
+          - button "Trigger Search Modal" [ref=f10e66] [cursor=pointer]:
+            - generic [ref=f10e67]:
+              - generic [ref=f10e71]: Loading Book
+              - button "Search Animations" [ref=f10e73]
+          - generic [ref=f10e74]:
+            - generic [ref=f10e75]:
+              - link "interactivity" [ref=f10e76] [cursor=pointer]:
+                - /url: /free-animations/interactivity
+              - link "theming" [ref=f10e77] [cursor=pointer]:
+                - /url: /free-animations/theming
+            - button "Scroll right" [ref=f10e78] [cursor=pointer]
+      - generic [ref=f10e82]:
+        - generic [ref=f10e83]: 335 Free Loading Book Animations
+        - generic [ref=f10e84]:
+          - generic [ref=f10e85]:
+            - generic [ref=f10e86]: Sort by
+            - combobox [ref=f10e87]
+            - combobox [ref=f10e88]
+          - combobox [ref=f10e89]
+          - combobox [ref=f10e90]
+          - button [ref=f10e91] [cursor=pointer]
+      - generic [ref=f10e98]:
+        - generic [ref=f10e100]:
+          - generic [ref=f10e101]:
+            - link [ref=f10e102] [cursor=pointer]:
+              - /url: /free-animation/loading-Ymt2HaA2pc
+            - generic [ref=f10e110]:
+              - link [ref=f10e111] [cursor=pointer]:
+                - /url: /nwuiosky9p
+                - button "JT" [ref=f10e112]
+                - paragraph [ref=f10e114]: Junior Torres
+              - button [ref=f10e117] [cursor=pointer]:
+                - paragraph [ref=f10e121]: 7.9K
+          - generic [ref=f10e122]:
+            - link [ref=f10e123] [cursor=pointer]:
+              - /url: /free-animation/loading-dZoQS8NSiM
+            - generic [ref=f10e131]:
+              - link [ref=f10e132] [cursor=pointer]:
+                - /url: /yunabglqy5
+                - button "JM" [ref=f10e133]
+                - paragraph [ref=f10e135]: Joy M
+              - button [ref=f10e138] [cursor=pointer]:
+                - paragraph [ref=f10e142]: 7.2K
+          - generic [ref=f10e143]:
+            - link [ref=f10e144] [cursor=pointer]:
+              - /url: /free-animation/loading-4V1vDwimvi
+            - generic [ref=f10e152]:
+              - link [ref=f10e153] [cursor=pointer]:
+                - /url: /lottiefilez
+                - button "L" [ref=f10e154]
+                - paragraph [ref=f10e156]: LottieFiles
+              - button [ref=f10e159] [cursor=pointer]:
+                - paragraph [ref=f10e163]: 6.4K
+          - generic [ref=f10e164]:
+            - link [ref=f10e165] [cursor=pointer]:
+              - /url: /free-animation/loading-5FmhBsUR8y
+            - generic [ref=f10e173]:
+              - link [ref=f10e174] [cursor=pointer]:
+                - /url: /nafq6egezalwpfl8
+                - button "SL" [ref=f10e175]
+                - paragraph [ref=f10e177]: Sure Lee
+              - button [ref=f10e180] [cursor=pointer]:
+                - paragraph [ref=f10e184]: 4.2K
+          - generic [ref=f10e185]:
+            - link [ref=f10e186] [cursor=pointer]:
+              - /url: /animation/best-seller-book-loading-animation_9685583
+            - generic [ref=f10e192]:
+              - link [ref=f10e193] [cursor=pointer]:
+                - /url: https://iconscout.com/contributors/edisutanto/lottie-animations?utm_campaign=marketplace&utm_medium=marketplace&utm_source=lottiefiles
+                - button "MES" [ref=f10e194]
+                - paragraph [ref=f10e196]: Muhammad Edi Sutanto
+              - button [ref=f10e199] [cursor=pointer]
+          - generic [ref=f10e203]:
+            - link [ref=f10e204] [cursor=pointer]:
+              - /url: /free-animation/loading-eUxs407ShR
+            - generic [ref=f10e212]:
+              - link [ref=f10e213] [cursor=pointer]:
+                - /url: /panzi
+                - button "P" [ref=f10e214]
+                - paragraph [ref=f10e216]: PanZi
+              - button [ref=f10e219] [cursor=pointer]:
+                - paragraph [ref=f10e223]: 3.1K
+          - generic [ref=f10e224]:
+            - link [ref=f10e225] [cursor=pointer]:
+              - /url: /free-animation/loading-IwThpxjk3t
+            - generic [ref=f10e233]:
+              - link [ref=f10e234] [cursor=pointer]:
+                - /url: /lsgicd7mq6xyynho
+                - button "M" [ref=f10e235]
+                - paragraph [ref=f10e237]: mohsen
+              - button [ref=f10e240] [cursor=pointer]:
+                - paragraph [ref=f10e244]: 3.0K
+          - generic [ref=f10e245]:
+            - link [ref=f10e246] [cursor=pointer]:
+              - /url: /free-animation/loading-5tooyQdO1f
+            - generic [ref=f10e254]:
+              - link [ref=f10e255] [cursor=pointer]:
+                - /url: /b.bfer
+                - button "LFBB" [ref=f10e256]
+                - paragraph [ref=f10e258]: Luisa Fernanda Bolaños Beltrán
+              - button [ref=f10e261] [cursor=pointer]:
+                - paragraph [ref=f10e265]: 2.7K
+          - generic [ref=f10e266]:
+            - link [ref=f10e267] [cursor=pointer]:
+              - /url: /animation/book-loading-animation_7201584
+            - generic [ref=f10e273]:
+              - link [ref=f10e274] [cursor=pointer]:
+                - /url: https://iconscout.com/contributors/edisutanto/lottie-animations?utm_campaign=marketplace&utm_medium=marketplace&utm_source=lottiefiles
+                - button "MES" [ref=f10e275]
+                - paragraph [ref=f10e277]: Muhammad Edi Sutanto
+              - button [ref=f10e280] [cursor=pointer]
+          - generic [ref=f10e284]:
+            - link [ref=f10e285] [cursor=pointer]:
+              - /url: /free-animation/loading-OkRMnK50fl
+            - generic [ref=f10e293]:
+              - link [ref=f10e294] [cursor=pointer]:
+                - /url: /pickyourtrail
+                - button "P" [ref=f10e295]
+                - paragraph [ref=f10e297]: Pickyourtrail
+              - button [ref=f10e300] [cursor=pointer]:
+                - paragraph [ref=f10e304]: 2.6K
+          - generic [ref=f10e305]:
+            - link [ref=f10e306] [cursor=pointer]:
+              - /url: /free-animation/loading-mNNflgdRba
+            - generic [ref=f10e314]:
+              - link [ref=f10e315] [cursor=pointer]:
+                - /url: /lottiefilez
+                - button "L" [ref=f10e316]
+                - paragraph [ref=f10e318]: LottieFiles
+              - button [ref=f10e321] [cursor=pointer]:
+                - paragraph [ref=f10e325]: 2.5K
+          - generic [ref=f10e326]:
+            - link [ref=f10e327] [cursor=pointer]:
+              - /url: /free-animation/loading-nIS4FRaeXq
+            - generic [ref=f10e335]:
+              - link [ref=f10e336] [cursor=pointer]:
+                - /url: /aneeshravi
+                - button "AR" [ref=f10e337]
+                - paragraph [ref=f10e339]: Aneesh Ravi
+              - button [ref=f10e342] [cursor=pointer]:
+                - paragraph [ref=f10e346]: 1.6K
+          - generic [ref=f10e347]:
+            - link [ref=f10e348] [cursor=pointer]:
+              - /url: /free-animation/loading-w3hbUYJRY9
+            - generic [ref=f10e356]:
+              - link [ref=f10e357] [cursor=pointer]:
+                - /url: /qwdj5ks95p9ctxoo
+                - button "HMDR" [ref=f10e358]
+                - paragraph [ref=f10e360]: Henrique Moreira da Rosa
+              - button [ref=f10e363] [cursor=pointer]:
+                - paragraph [ref=f10e367]: 1.4K
+          - generic [ref=f10e368]:
+            - link [ref=f10e369] [cursor=pointer]:
+              - /url: /animation/phone-book-loading-animation_9703699
+            - generic [ref=f10e375]:
+              - link [ref=f10e376] [cursor=pointer]:
+                - /url: https://iconscout.com/contributors/edisutanto/lottie-animations?utm_campaign=marketplace&utm_medium=marketplace&utm_source=lottiefiles
+                - button "MES" [ref=f10e377]
+                - paragraph [ref=f10e379]: Muhammad Edi Sutanto
+              - button [ref=f10e382] [cursor=pointer]
+          - generic [ref=f10e386]:
+            - link [ref=f10e387] [cursor=pointer]:
+              - /url: /free-animation/loading-fHKMl9U5Jk
+            - generic [ref=f10e395]:
+              - link [ref=f10e396] [cursor=pointer]:
+                - /url: /frbkxk1m2p
+                - button "MC" [ref=f10e397]
+                - paragraph [ref=f10e399]: Mj chen
+              - button [ref=f10e402] [cursor=pointer]:
+                - paragraph [ref=f10e406]: 1.1K
+          - generic [ref=f10e407]:
+            - link [ref=f10e408] [cursor=pointer]:
+              - /url: /free-animation/loading-JczaHmMopM
+            - generic [ref=f10e416]:
+              - link [ref=f10e417] [cursor=pointer]:
+                - /url: /lkjing
+                - button "LJ" [ref=f10e418]
+                - paragraph [ref=f10e420]: LK Jing
+              - button [ref=f10e423] [cursor=pointer]:
+                - paragraph [ref=f10e427]: "752"
+          - generic [ref=f10e428]:
+            - link [ref=f10e429] [cursor=pointer]:
+              - /url: /free-animation/loading-cnEl9daToW
+            - generic [ref=f10e437]:
+              - link [ref=f10e438] [cursor=pointer]:
+                - /url: /ovnizazfb5j9feyk
+                - button "ESM" [ref=f10e439]
+                - paragraph [ref=f10e441]: Erick Saravia Marroquín
+              - button [ref=f10e444] [cursor=pointer]:
+                - paragraph [ref=f10e448]: "733"
+          - generic [ref=f10e449]:
+            - link [ref=f10e450] [cursor=pointer]:
+              - /url: /free-animation/loading-4VQR6DdZtE
+            - generic [ref=f10e458]:
+              - link [ref=f10e459] [cursor=pointer]:
+                - /url: /lottiefilez
+                - button "L" [ref=f10e460]
+                - paragraph [ref=f10e462]: LottieFiles
+              - button [ref=f10e465] [cursor=pointer]:
+                - paragraph [ref=f10e469]: "694"
+          - generic [ref=f10e470]:
+            - link [ref=f10e471] [cursor=pointer]:
+              - /url: /animation/favorite-book-loading-animation_9685579
+            - generic [ref=f10e477]:
+              - link [ref=f10e478] [cursor=pointer]:
+                - /url: https://iconscout.com/contributors/edisutanto/lottie-animations?utm_campaign=marketplace&utm_medium=marketplace&utm_source=lottiefiles
+                - button "MES" [ref=f10e479]
+                - paragraph [ref=f10e481]: Muhammad Edi Sutanto
+              - button [ref=f10e484] [cursor=pointer]
+          - generic [ref=f10e488]:
+            - link [ref=f10e489] [cursor=pointer]:
+              - /url: /free-animation/loading-9O28uU7BM3
+            - generic [ref=f10e497]:
+              - link [ref=f10e498] [cursor=pointer]:
+                - /url: /rntssdn4zyw6pd78
+                - button "GC" [ref=f10e499]
+                - paragraph [ref=f10e501]: Gabriel Cota
+              - button [ref=f10e504] [cursor=pointer]:
+                - paragraph [ref=f10e508]: "672"
+          - generic [ref=f10e509]:
+            - link [ref=f10e510] [cursor=pointer]:
+              - /url: /free-animation/loading-WaAAuayiw4
+            - generic [ref=f10e518]:
+              - link [ref=f10e519] [cursor=pointer]:
+                - /url: /hrhgayhzw57kttw0
+                - button "OU" [ref=f10e520]
+                - paragraph [ref=f10e522]: Olivier Umukura
+              - button [ref=f10e525] [cursor=pointer]:
+                - paragraph [ref=f10e529]: "566"
+          - generic [ref=f10e530]:
+            - link [ref=f10e531] [cursor=pointer]:
+              - /url: /free-animation/loading-uN7FcI0IDZ
+            - generic [ref=f10e539]:
+              - link [ref=f10e540] [cursor=pointer]:
+                - /url: /bswsk41ng2
+                - button "MO" [ref=f10e541]
+                - paragraph [ref=f10e543]: Michelle Oui
+              - button [ref=f10e546] [cursor=pointer]:
+                - paragraph [ref=f10e550]: "556"
+          - generic [ref=f10e551]:
+            - link [ref=f10e552] [cursor=pointer]:
+              - /url: /free-animation/1-CPoIEyxnWl
+            - generic [ref=f10e560]:
+              - link [ref=f10e561] [cursor=pointer]:
+                - /url: /lottiefilez
+                - button "L" [ref=f10e562]
+                - paragraph [ref=f10e564]: LottieFiles
+              - button [ref=f10e567] [cursor=pointer]:
+                - paragraph [ref=f10e571]: "545"
+          - generic [ref=f10e572]:
+            - link [ref=f10e573] [cursor=pointer]:
+              - /url: /free-animation/loading-lkAAXZLa5n
+            - generic [ref=f10e581]:
+              - link [ref=f10e582] [cursor=pointer]:
+                - /url: /5zsjk86terasglwq
+                - button "CY" [ref=f10e583]
+                - paragraph [ref=f10e585]: Creeper Yang
+              - button [ref=f10e588] [cursor=pointer]:
+                - paragraph [ref=f10e592]: "441"
+          - generic [ref=f10e593]:
+            - link [ref=f10e594] [cursor=pointer]:
+              - /url: /animation/phone-book-loading-animation_9703696
+            - generic [ref=f10e600]:
+              - link [ref=f10e601] [cursor=pointer]:
+                - /url: https://iconscout.com/contributors/edisutanto/lottie-animations?utm_campaign=marketplace&utm_medium=marketplace&utm_source=lottiefiles
+                - button "MES" [ref=f10e602]
+                - paragraph [ref=f10e604]: Muhammad Edi Sutanto
+              - button [ref=f10e607] [cursor=pointer]
+          - generic [ref=f10e611]:
+            - link [ref=f10e612] [cursor=pointer]:
+              - /url: /free-animation/loading-Qsj65Ozjdx
+            - generic [ref=f10e620]:
+              - link [ref=f10e621] [cursor=pointer]:
+                - /url: /0qbevmr34zyvw2cs
+                - button "LT" [ref=f10e622]
+                - paragraph [ref=f10e624]: Lena Tsybulenko
+              - button [ref=f10e627] [cursor=pointer]:
+                - paragraph [ref=f10e631]: "429"
+          - generic [ref=f10e632]:
+            - link [ref=f10e633] [cursor=pointer]:
+              - /url: /free-animation/loading-LE5PYwU3N7
+            - generic [ref=f10e641]:
+              - link [ref=f10e642] [cursor=pointer]:
+                - /url: /seprjasz0oj9m94j
+                - button "AP" [ref=f10e643]
+                - paragraph [ref=f10e645]: Angga Priyatna
+              - button [ref=f10e648] [cursor=pointer]:
+                - paragraph [ref=f10e652]: "367"
+          - generic [ref=f10e653]:
+            - link [ref=f10e654] [cursor=pointer]:
+              - /url: /free-animation/loading-MRso2b55Ha
+            - generic [ref=f10e662]:
+              - link [ref=f10e663] [cursor=pointer]:
+                - /url: /ca71wu6an0tuva6d
+                - button "ES" [ref=f10e664]
+                - paragraph [ref=f10e666]: ereck santos
+              - button [ref=f10e669] [cursor=pointer]:
+                - paragraph [ref=f10e673]: "360"
+          - generic [ref=f10e674]:
+            - link [ref=f10e675] [cursor=pointer]:
+              - /url: /free-animation/loading-o3IFfbvkQH
+            - generic [ref=f10e683]:
+              - link [ref=f10e684] [cursor=pointer]:
+                - /url: /xu1yiby9skxzi0d3
+                - button "HW" [ref=f10e685]
+                - paragraph [ref=f10e687]: hello world
+              - button [ref=f10e690] [cursor=pointer]:
+                - paragraph [ref=f10e694]: "348"
+          - generic [ref=f10e695]:
+            - link [ref=f10e696] [cursor=pointer]:
+              - /url: /free-animation/loading-2ipCDLYfgS
+            - generic [ref=f10e704]:
+              - link [ref=f10e705] [cursor=pointer]:
+                - /url: /xsrjbuns3z
+                - button "VH" [ref=f10e706]
+                - paragraph [ref=f10e708]: Valentina Horváth
+              - button [ref=f10e711] [cursor=pointer]:
+                - paragraph [ref=f10e715]: "347"
+        - navigation "pagination" [ref=f10e717]:
+          - list [ref=f10e718]:
+            - listitem [ref=f10e719]:
+              - link "Go to previous page" [disabled]:
+                - /url: /free-animations/loading-book
+                - generic: Previous
+            - listitem [ref=f10e720]:
+              - link "1" [ref=f10e721] [cursor=pointer]:
+                - /url: /free-animations/loading-book
+            - listitem [ref=f10e722]:
+              - link "2" [ref=f10e723] [cursor=pointer]:
+                - /url: /free-animations/loading-book?page=2
+            - listitem [ref=f10e724]:
+              - link "3" [ref=f10e725] [cursor=pointer]:
+                - /url: /free-animations/loading-book?page=3
+            - listitem [ref=f10e726]:
+              - link "4" [ref=f10e727] [cursor=pointer]:
+                - /url: /free-animations/loading-book?page=4
+            - listitem [ref=f10e728]:
+              - link "5" [ref=f10e729] [cursor=pointer]:
+                - /url: /free-animations/loading-book?page=5
+            - listitem [ref=f10e730]:
+              - generic [ref=f10e731]: More pages
+            - listitem [ref=f10e737]:
+              - link "12" [ref=f10e738] [cursor=pointer]:
+                - /url: /free-animations/loading-book?page=12
+            - listitem [ref=f10e739]:
+              - link "Go to next page" [ref=f10e740] [cursor=pointer]:
+                - /url: /free-animations/loading-book?page=2
+                - generic [ref=f10e741]: Next
+      - generic [ref=f10e743]:
+        - heading "More Loading Book Animations" [level=2] [ref=f10e746]
+        - generic [ref=f10e747]:
+          - link [ref=f10e749] [cursor=pointer]:
+            - /url: /animation/bookshelf-loader-animation_8273948
+          - link [ref=f10e753] [cursor=pointer]:
+            - /url: /animation/bookshelf-loader-animation_8273949
+          - link [ref=f10e757] [cursor=pointer]:
+            - /url: /animation/phone-book-repeat-animation_9703697
+          - link [ref=f10e761] [cursor=pointer]:
+            - /url: /animation/phone-book-refresh-animation_9703695
+          - link [ref=f10e765] [cursor=pointer]:
+            - /url: /animation/phone-book-repeat-animation_9703698
+          - link [ref=f10e769] [cursor=pointer]:
+            - /url: /animation/phone-book-repeat-animation_9703700
+          - link [ref=f10e773] [cursor=pointer]:
+            - /url: /animation/best-seller-book-refresh-animation_9685578
+          - link [ref=f10e777] [cursor=pointer]:
+            - /url: /animation/refresh-best-seller-book-animation_9685582
+          - link [ref=f10e781] [cursor=pointer]:
+            - /url: /animation/best-seller-book-repeat-animation_9685580
+          - link "View More" [ref=f10e785] [cursor=pointer]:
+            - /url: https://app.lottiefiles.com/search?query=Loading Book&type=premium-animations&utm_medium=web&utm_source=free-animations
+      - generic [ref=f10e796]:
+        - generic [ref=f10e798]:
+          - generic [ref=f10e799]:
+            - heading "Browse by categories" [level=2] [ref=f10e800]
+            - generic [ref=f10e801]: Looking for more creative inspiration? Explore a variety of animation categories beyond your search and find the perfect animations to bring your projects to life.
+          - generic [ref=f10e802]:
+            - button [disabled]
+            - button [ref=f10e803] [cursor=pointer]
+        - generic [ref=f10e804]:
+          - link "Business Inspiring business animations that showcase professionalism and innovation, perfect for driving success." [ref=f10e806] [cursor=pointer]:
+            - /url: /free-animations/business
+            - generic [ref=f10e807]:
+              - generic [ref=f10e808]: Business
+              - generic [ref=f10e811]: Inspiring business animations that showcase professionalism and innovation, perfect for driving success.
+          - link "Festive Vibrant festive animations that capture the joy and spirit of celebration, perfect for any holiday season." [ref=f10e820] [cursor=pointer]:
+            - /url: /free-animations/festive
+            - generic [ref=f10e821]:
+              - generic [ref=f10e822]: Festive
+              - generic [ref=f10e825]: Vibrant festive animations that capture the joy and spirit of celebration, perfect for any holiday season.
+          - link "Health Uplifting health animations that promote balance and the spirit of self-care, perfect for well-being journeys." [ref=f10e834] [cursor=pointer]:
+            - /url: /free-animations/health
+            - generic [ref=f10e835]:
+              - generic [ref=f10e836]: Health
+              - generic [ref=f10e839]: Uplifting health animations that promote balance and the spirit of self-care, perfect for well-being journeys.
+          - link "Finance Engaging finance animations that embody clarity and growth, perfect for building trust and understanding." [ref=f10e848] [cursor=pointer]:
+            - /url: /free-animations/finance
+            - generic [ref=f10e849]:
+              - generic [ref=f10e850]: Finance
+              - generic [ref=f10e853]: Engaging finance animations that embody clarity and growth, perfect for building trust and understanding.
+          - link "Gaming Exciting gaming animations that capture the thrill of adventure and the spirit of competition, perfect for every gamer." [ref=f10e862] [cursor=pointer]:
+            - /url: /free-animations/gaming
+            - generic [ref=f10e863]:
+              - generic [ref=f10e864]: Gaming
+              - generic [ref=f10e867]: Exciting gaming animations that capture the thrill of adventure and the spirit of competition, perfect for every gamer.
+      - generic [ref=f10e876]:
+        - generic [ref=f10e877]:
+          - generic [ref=f10e878]:
+            - heading "Loading Book Lottie Animations Packs" [level=2] [ref=f10e879]
+            - paragraph [ref=f10e880]: Browse a vast collection of free and premium Loading Book animations on LottieFiles. Download high-quality dotLottie, Lottie JSON, MP4, and GIF formats to effortlessly enhance your web, app, and design projects.
+          - link "View all packs" [ref=f10e882] [cursor=pointer]:
+            - /url: https://app.lottiefiles.com/premium-assets?utm_medium=web&utm_source=view-all-packs
+        - generic [ref=f10e883]:
+          - link "Phone Book Loading Lottie Animations Pack 8 Lottie Animations" [ref=f10e884] [cursor=pointer]:
+            - /url: /marketplace/phone-book-loading-animation-pack_275674
+            - generic [ref=f10e887]:
+              - generic [ref=f10e888]: Phone Book Loading Lottie Animations Pack
+              - generic [ref=f10e889]: 8 Lottie Animations
+          - link "Best Seller Book Lottie Animations Pack 8 Lottie Animations" [ref=f10e890] [cursor=pointer]:
+            - /url: /marketplace/best-seller-book-animation-pack_275069
+            - generic [ref=f10e893]:
+              - generic [ref=f10e894]: Best Seller Book Lottie Animations Pack
+              - generic [ref=f10e895]: 8 Lottie Animations
+          - link "Cute Loading Lottie Animations Pack 16 Lottie Animations" [ref=f10e896] [cursor=pointer]:
+            - /url: /marketplace/cute-loading-animation-pack_368660
+            - generic [ref=f10e899]:
+              - generic [ref=f10e900]: Cute Loading Lottie Animations Pack
+              - generic [ref=f10e901]: 16 Lottie Animations
+          - link "Education Research Loading Lottie Animations Pack 8 Lottie Animations" [ref=f10e902] [cursor=pointer]:
+            - /url: /marketplace/education-research-loading-animation-pack_336318
+            - generic [ref=f10e905]:
+              - generic [ref=f10e906]: Education Research Loading Lottie Animations Pack
+              - generic [ref=f10e907]: 8 Lottie Animations
+      - generic [ref=f10e909]:
+        - paragraph [ref=f10e910]: Need something unique? Get custom animations made!
+        - paragraph [ref=f10e911]: Can't find the perfect Lottie animation? Commission an expert from our community to create exactly what your project needs. Start a wonderful collaboration today!
+        - link [ref=f10e913] [cursor=pointer]:
+          - /url: /marketplace/animators
+          - button "Hire top animators" [ref=f10e914]
+  - contentinfo "Site footer" [ref=f10e921]:
+    - generic [ref=f10e922]:
+      - generic [ref=f10e923]:
+        - generic [ref=f10e924]:
+          - paragraph [ref=f10e925]: We believe motion should be accessible
+          - generic [ref=f10e926]:
+            - link [ref=f10e927] [cursor=pointer]:
+              - /url: https://lottiefiles.com/enterprise?via=footer_nav
+              - generic [ref=f10e928]:
+                - paragraph [ref=f10e930]: For enterprise
+                - paragraph [ref=f10e935]: Talk to us
+            - link [ref=f10e936] [cursor=pointer]:
+              - /url: https://lottiefiles.com/certifications?via=footer_nav
+              - generic [ref=f10e937]:
+                - paragraph [ref=f10e939]: For community
+                - paragraph [ref=f10e944]: Get certified
+        - generic [ref=f10e945]:
+          - link [ref=f10e947] [cursor=pointer]:
+            - /url: /visionos
+            - paragraph [ref=f10e948]: LottieFiles for Apple Vision Pro
+            - img "LottieFiles for Apple Vision Pro" [ref=f10e949]
+          - generic [ref=f10e950]:
+            - link [ref=f10e951] [cursor=pointer]:
+              - /url: /ios
+              - img "Download on the App Store" [ref=f10e952]
+            - link [ref=f10e953] [cursor=pointer]:
+              - /url: /android
+              - img "Get it on Google Play" [ref=f10e954]
+            - link [ref=f10e955] [cursor=pointer]:
+              - /url: /desktop
+              - img "Download on the Mac App Store" [ref=f10e956]
+      - generic [ref=f10e957]:
+        - generic [ref=f10e958]:
+          - generic [ref=f10e959]:
+            - paragraph [ref=f10e960]: Products
+            - list "Products links" [ref=f10e961]:
+              - listitem [ref=f10e962]:
+                - link "LottieFiles Platform" [ref=f10e963] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/platform?via=footer_nav
+              - listitem [ref=f10e964]:
+                - link "Lottie Creator" [ref=f10e965] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/lottie-creator?via=footer_nav
+              - listitem [ref=f10e966]:
+                - link "Figma plugin" [ref=f10e967] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/plugins/figma?via=footer_nav
+              - listitem [ref=f10e968]:
+                - link "Adobe After Effects plugin" [ref=f10e969] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/plugins/after-effects?via=footer_nav
+              - listitem [ref=f10e970]:
+                - link "Lottie Editor" [ref=f10e971] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/lottie-editor?via=footer_nav
+              - listitem [ref=f10e972]:
+                - link "LottieFiles Mobile App" [ref=f10e973] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/mobile?via=footer_nav
+              - listitem [ref=f10e974]:
+                - link "Free Animations" [ref=f10e975] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/free-animations?via=footer_nav
+              - listitem [ref=f10e976]:
+                - link "Marketplace" [ref=f10e977] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/marketplace?via=footer_nav
+              - listitem [ref=f10e978]:
+                - link "Hire Lottie Animators" [ref=f10e979] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/marketplace/animators?via=footer_nav
+              - listitem [ref=f10e980]:
+                - link "Explore Animations" [ref=f10e981] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tags?via=footer_nav
+          - generic [ref=f10e982]:
+            - paragraph [ref=f10e983]: Integrations & Tools
+            - list "Integrations & Tools links" [ref=f10e984]:
+              - listitem [ref=f10e985]:
+                - link "Webflow plugin" [ref=f10e986] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/plugins/webflow?via=footer_nav
+              - listitem [ref=f10e987]:
+                - link "Canva" [ref=f10e988] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/plugins/canva?via=footer_nav
+              - listitem [ref=f10e989]:
+                - link "Preview Lottie Animation" [ref=f10e990] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/preview?via=footer_nav
+              - listitem [ref=f10e991]:
+                - link "Web Player" [ref=f10e992] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/web-player?via=footer_nav
+              - listitem [ref=f10e993]:
+                - link "Prompt to Vector" [ref=f10e994] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/prompt-to-vector?via=footer_nav
+              - listitem [ref=f10e995]:
+                - link "Raster to Vector" [ref=f10e996] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/raster-to-vector?via=footer_nav
+              - listitem [ref=f10e997]:
+                - link "SVG to Lottie" [ref=f10e998] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/svg-to-lottie?via=footer_nav
+              - listitem [ref=f10e999]:
+                - link "Lottie to GIF" [ref=f10e1000] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/lottie-to-gif?via=footer_nav
+              - listitem [ref=f10e1001]:
+                - link "Lottie to dotLottie" [ref=f10e1002] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/lottie-to-dotlottie?via=footer_nav
+              - listitem [ref=f10e1003]:
+                - link "JSON Editor" [ref=f10e1004] [cursor=pointer]:
+                  - /url: https://lottiefiles.github.io/lottie-docs/playground/json_editor/
+              - listitem [ref=f10e1005]:
+                - link "Optimize Lottie" [ref=f10e1006] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/lottie-json-to-optimized-lottie-json?via=footer_nav
+              - listitem [ref=f10e1007]:
+                - link "Open Source Libraries" [ref=f10e1008] [cursor=pointer]:
+                  - /url: https://github.com/lottiefiles
+          - generic [ref=f10e1009]:
+            - paragraph [ref=f10e1010]: Customers
+            - list "Customers links" [ref=f10e1011]:
+              - listitem [ref=f10e1012]:
+                - link "Case Studies" [ref=f10e1013] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/case-studies?via=footer_nav
+              - listitem [ref=f10e1014]:
+                - link "Use Cases" [ref=f10e1015] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/use-cases?via=footer_nav
+              - listitem [ref=f10e1016]:
+                - link "Customer Stories" [ref=f10e1017] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/customers?via=footer_nav
+              - listitem [ref=f10e1018]:
+                - link "Built with Lottie" [ref=f10e1019] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/built-with-lottie?via=footer_nav
+              - listitem [ref=f10e1020]:
+                - link "Why Motion?" [ref=f10e1021] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/why-motion?via=footer_nav
+          - generic [ref=f10e1022]:
+            - paragraph [ref=f10e1023]: Resources
+            - list "Resources links" [ref=f10e1024]:
+              - listitem [ref=f10e1025]:
+                - link "Docs" [ref=f10e1026] [cursor=pointer]:
+                  - /url: https://docs.lottiefiles.com
+              - listitem [ref=f10e1027]:
+                - link "Education" [ref=f10e1028] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/education?via=footer_nav
+              - listitem [ref=f10e1029]:
+                - link "Blog" [ref=f10e1030] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/blog?via=footer_nav
+              - listitem [ref=f10e1031]:
+                - link "What is Lottie" [ref=f10e1032] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/what-is-lottie?via=footer_nav
+              - listitem [ref=f10e1033]:
+                - link "Forum" [ref=f10e1034] [cursor=pointer]:
+                  - /url: https://forum.lottiefiles.com/
+              - listitem [ref=f10e1035]:
+                - link "FAQ & Support" [ref=f10e1036] [cursor=pointer]:
+                  - /url: https://help.lottiefiles.com/hc/en-us
+              - listitem [ref=f10e1037]:
+                - link "Lottie Lab" [ref=f10e1038] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/lottie-lab?via=footer_nav
+              - listitem [ref=f10e1039]:
+                - link "Community" [ref=f10e1040] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/community?via=footer_nav
+              - listitem [ref=f10e1041]:
+                - link "State Machines" [ref=f10e1042] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/state-machines?via=footer_nav
+              - listitem [ref=f10e1043]:
+                - link "Supported Features" [ref=f10e1044] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/supported-features?via=footer_nav
+              - listitem [ref=f10e1045]:
+                - link "dotLottie Runtimes" [ref=f10e1046] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/runtimes?via=footer_nav
+              - listitem [ref=f10e1047]:
+                - link "AI features" [ref=f10e1048] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/ai?via=footer_nav
+          - generic [ref=f10e1049]:
+            - paragraph [ref=f10e1050]: Company
+            - list "Company links" [ref=f10e1051]:
+              - listitem [ref=f10e1052]:
+                - link "What is Lottie" [ref=f10e1053] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/what-is-lottie?via=footer_nav
+              - listitem [ref=f10e1054]:
+                - link "Feedback" [ref=f10e1055] [cursor=pointer]:
+                  - /url: https://feedback.lottiefiles.com/web
+              - listitem [ref=f10e1056]:
+                - link "Press" [ref=f10e1057] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/press?via=footer_nav
+              - listitem [ref=f10e1058]:
+                - link "Meet the team" [ref=f10e1059] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/team?via=footer_nav
+              - listitem [ref=f10e1060]:
+                - link "Careers" [ref=f10e1061] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/careers?via=footer_nav
+          - generic [ref=f10e1062]:
+            - paragraph [ref=f10e1063]: Terms and Policies
+            - list "Terms and Policies links" [ref=f10e1064]:
+              - listitem [ref=f10e1065]:
+                - link "Privacy Policy" [ref=f10e1066] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/privacy-policy?via=footer_nav
+              - listitem [ref=f10e1067]:
+                - link "Security" [ref=f10e1068] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/security?via=footer_nav
+              - listitem [ref=f10e1069]:
+                - link "Terms and Conditions" [ref=f10e1070] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/terms-and-conditions?via=footer_nav
+              - listitem [ref=f10e1071]:
+                - link "Terms of Sale" [ref=f10e1072] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/terms-of-sale?via=footer_nav
+              - listitem [ref=f10e1073]:
+                - link "Cookie Policy" [ref=f10e1074] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/cookie-policy?via=footer_nav
+              - listitem [ref=f10e1075]:
+                - link "Community Guidelines" [ref=f10e1076] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/community-guidelines?via=footer_nav
+              - listitem [ref=f10e1077]:
+                - link "Upload Guidelines" [ref=f10e1078] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/upload-guidelines?via=footer_nav
+        - generic [ref=f10e1079]:
+          - generic [ref=f10e1080]:
+            - link [ref=f10e1082] [cursor=pointer]:
+              - /url: https://lottiefiles.com/
+              - img "LottieFiles" [ref=f10e1083]
+            - generic [ref=f10e1084]:
+              - link "Facebook" [ref=f10e1085] [cursor=pointer]:
+                - /url: /facebook
+              - link "Instagram" [ref=f10e1088] [cursor=pointer]:
+                - /url: /instagram
+              - link "X" [ref=f10e1092] [cursor=pointer]:
+                - /url: /twitter
+              - link "Youtube" [ref=f10e1096] [cursor=pointer]:
+                - /url: /youtube
+              - link "Dribbble" [ref=f10e1099] [cursor=pointer]:
+                - /url: /dribbble
+          - generic [ref=f10e1102]:
+            - paragraph [ref=f10e1103]: © 2026 Design Barn Inc.
+            - paragraph [ref=f10e1105]:
+              - generic [ref=f10e1106]: Made with
+              - generic [ref=f10e1109]: from
+              - generic [ref=f10e1110]: Canada

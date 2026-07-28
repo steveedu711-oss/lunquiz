@@ -1,0 +1,97 @@
+- generic [ref=e1]:
+  - text:         
+  - generic [ref=e150]:
+    - generic [ref=e151]:
+      - generic [ref=e152]:
+        - button "題目卷" [ref=e153] [cursor=pointer]
+        - button "答案卷" [ref=e154] [cursor=pointer]
+      - generic [ref=e155]: 💡 點擊試卷即可修改內容
+      - generic [ref=e156]:
+        - button " 重新出題" [ref=e157] [cursor=pointer]:
+          - generic [ref=e158]: 
+          - text: 重新出題
+        - button " 直接線上測驗" [ref=e159] [cursor=pointer]:
+          - generic [ref=e160]: 
+          - text: 直接線上測驗
+        - generic [ref=e161]:
+          - button " 下載 ▾" [ref=e162] [cursor=pointer]:
+            - generic [ref=e163]: 
+            - text: 下載 ▾
+          - text:   
+        - text: 
+        - generic [ref=e164]:
+          - button " 分享 ▾" [active] [ref=e165] [cursor=pointer]:
+            - generic [ref=e166]: 
+            - text: 分享 ▾
+          - generic [ref=e233]:
+            - button " 學生作答連結" [ref=e234] [cursor=pointer]:
+              - generic [ref=e235]: 
+              - text: 學生作答連結
+            - button " 家長答案連結" [ref=e236] [cursor=pointer]:
+              - generic [ref=e237]: 
+              - text: 家長答案連結
+            - button " 即時進度儀表板" [ref=e238] [cursor=pointer]:
+              - generic [ref=e239]: 
+              - text: 即時進度儀表板
+    - generic [ref=e168]:
+      - generic [ref=e169]:
+        - heading "國小五年級 自然試卷" [level=2] [ref=e170]
+        - generic [ref=e171]:
+          - generic [ref=e172]: 範圍：第一課
+          - generic [ref=e173]: 班級：＿＿＿＿＿ 姓名：＿＿＿＿＿ 座號：＿＿＿＿＿
+      - generic [ref=e174]:
+        - generic [ref=e175]:
+          - generic [ref=e176]: 1. ( )
+          - generic [ref=e177]:
+            - button "🔁 重新出這題" [ref=e179] [cursor=pointer]
+            - generic [ref=e180]: 當太陽在東方升起時，物體的影子會朝向哪一個方向？ (20分)
+            - generic [ref=e181]:
+              - generic [ref=e182]: (A) 東方
+              - generic [ref=e183]: (B) 西方
+              - generic [ref=e184]: (C) 南方
+              - generic [ref=e185]: (D) 北方
+        - generic [ref=e186]:
+          - generic [ref=e187]: 2. ( )
+          - generic [ref=e188]:
+            - button "🔁 重新出這題" [ref=e190] [cursor=pointer]
+            - generic [ref=e191]: 在晴朗無雲的一天中，陽光下同一棵大樹的影子，在什麼時候看起來會最短？ (20分)
+            - generic [ref=e192]:
+              - generic [ref=e193]: (A) 早上八點
+              - generic [ref=e194]: (B) 中午十二點左右
+              - generic [ref=e195]: (C) 下午三點
+              - generic [ref=e196]: (D) 傍晚六點
+        - generic [ref=e197]:
+          - generic [ref=e198]: 3. ( )
+          - generic [ref=e199]:
+            - button "🔁 重新出這題" [ref=e201] [cursor=pointer]
+            - generic [ref=e202]: 為了保護眼睛安全，下列哪一種是觀測太陽的正確方法？ (20分)
+            - generic [ref=e203]:
+              - generic [ref=e204]: (A) 用肉眼直接直視太陽
+              - generic [ref=e205]: (B) 戴上一般太陽眼鏡直視太陽
+              - generic [ref=e206]: (C) 利用放大鏡聚焦後看太陽
+              - generic [ref=e207]: (D) 使用專用的太陽濾鏡觀測
+        - generic [ref=e208]:
+          - generic [ref=e209]: 4. ( )
+          - generic [ref=e210]:
+            - button "🔁 重新出這題" [ref=e212] [cursor=pointer]
+            - generic [ref=e213]: 在進行太陽觀測時，若我們發現竿影落在方位盤的「北方」，這代表太陽此時在什麼方位？ (20分)
+            - generic [ref=e214]:
+              - generic [ref=e215]: (A) 東方
+              - generic [ref=e216]: (B) 西方
+              - generic [ref=e217]: (C) 南方
+              - generic [ref=e218]: (D) 北方
+        - generic [ref=e219]:
+          - generic [ref=e220]: 5. ( )
+          - generic [ref=e221]:
+            - button "🔁 重新出這題" [ref=e223] [cursor=pointer]
+            - generic [ref=e224]: 請問在一天當中，太陽在天空中的移動方向通常是如何變化的？ (20分)
+            - generic [ref=e225]:
+              - generic [ref=e226]: (A) 東升西落
+              - generic [ref=e227]: (B) 西升東落
+              - generic [ref=e228]: (C) 南升北落
+              - generic [ref=e229]: (D) 北升南落
+      - generic [ref=e230]: 第 1 頁 / 共 1 頁
+    - paragraph [ref=e231]:
+      - text: 有任何問題？請點
+      - link "鴻綸科技官方網站" [ref=e232] [cursor=pointer]:
+        - /url: https://hunglun-new.pages.dev/

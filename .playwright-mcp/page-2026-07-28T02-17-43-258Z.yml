@@ -1,0 +1,156 @@
+- generic [active] [ref=e1]:
+  - text:        
+  - generic [ref=e58]:
+    - generic [ref=e59]: 👣 累計造訪人次：27690
+    - img "Lun EduHelper Banner" [ref=e62]
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - button "❓ 使用說明" [ref=e65] [cursor=pointer]
+        - generic [ref=e66]:
+          - generic [ref=e67]: 大嬸（超級管理員）
+          - button "🛡️ 管理後台" [ref=e68] [cursor=pointer]
+          - button "👤 我的帳號" [ref=e69] [cursor=pointer]
+          - button "📜 出題紀錄" [ref=e70] [cursor=pointer]
+          - button "🔓 管理者解除限制" [ref=e71] [cursor=pointer]
+      - generic [ref=e72]:
+        - generic [ref=e73]: ① 填年級/科目/範圍
+        - generic [ref=e74]: →
+        - generic [ref=e75]: ② 按「小綸開始出題」
+        - generic [ref=e76]: →
+        - generic [ref=e77]: ③ 完成後可下載/列印/線上作答/分享
+      - button "🔑 其實我有自己的 API Key，改用這個" [ref=e78] [cursor=pointer]
+      - generic [ref=e79]:
+        - heading "1. 請選擇出題模式" [level=3] [ref=e80]
+        - generic [ref=e81]:
+          - generic [ref=e82] [cursor=pointer]: 🤖 AI 智慧搜尋
+          - generic [ref=e83] [cursor=pointer]: 📂 上傳檔案 / 圖片
+      - heading "2. 詳細設定" [level=3] [ref=e84]
+      - generic [ref=e85]:
+        - generic [ref=e86]:
+          - generic [ref=e87]: 年級 *
+          - combobox [ref=e88]:
+            - option "請選擇..." [disabled] [selected]
+            - option "✍️ 自定義"
+            - option "國小一年級"
+            - option "國小二年級"
+            - option "國小三年級"
+            - option "國小四年級"
+            - option "國小五年級"
+            - option "國小六年級"
+            - option "國中一年級"
+            - option "國中二年級"
+            - option "國中三年級"
+            - option "高中一年級"
+            - option "高中二年級"
+            - option "高中三年級"
+        - generic [ref=e89]:
+          - generic [ref=e90]: 科目 *
+          - textbox "例：自然" [ref=e91]
+        - generic [ref=e92]:
+          - generic [ref=e93]: 版本 *
+          - combobox [ref=e94]:
+            - option "請選擇..." [disabled] [selected]
+            - option "由小綸自由發揮 (不限版本)"
+            - option "✍️ 依照課本資訊填入"
+        - generic [ref=e95]:
+          - generic [ref=e96]: 範圍 *
+          - 'textbox "例 : 第一課~第三課" [ref=e97]'
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - generic [ref=e100]: 題數 *
+          - combobox [ref=e101]:
+            - option "請選擇..." [disabled] [selected]
+            - option "✍️ 自定義"
+            - option "5 題"
+            - option "10 題"
+            - option "20 題"
+            - option "25 題"
+            - option "50 題"
+            - option "100 題"
+        - generic [ref=e102]:
+          - generic [ref=e103]: 題型 *
+          - combobox [ref=e104]:
+            - option "請選擇..." [disabled] [selected]
+            - option "✍️ 自定義"
+            - option "全部單選題"
+            - option "全部複選題"
+            - option "混搭 (10單選+10複選)"
+            - option "全部填充題"
+            - option "全部簡答題(計算題)"
+        - generic [ref=e105]:
+          - generic [ref=e106]: 難度 *
+          - combobox [ref=e107]:
+            - option "請選擇..." [disabled] [selected]
+            - option "✍️ 自定義"
+            - option "簡單"
+            - option "適中"
+            - option "困難"
+        - generic [ref=e108]:
+          - generic [ref=e109]: 輸出語言 *
+          - combobox [ref=e110]:
+            - option "繁體中文" [selected]
+            - option "English (英文)"
+      - button "🚀 小綸開始出題" [ref=e111] [cursor=pointer]
+      - generic [ref=e112]:
+        - button "  儲存設定條件" [ref=e113] [cursor=pointer]:
+          - generic [ref=e114]:  
+          - text: 儲存設定條件
+        - button "  清除所有條件" [ref=e115] [cursor=pointer]:
+          - generic [ref=e116]:  
+          - text: 清除所有條件
+        - button "  複製設定連結" [ref=e117] [cursor=pointer]:
+          - generic [ref=e118]:  
+          - text: 複製設定連結
+      - paragraph
+      - generic [ref=e119]:
+        - heading "【免責聲明與使用規範】" [level=4] [ref=e120]
+        - list [ref=e121]:
+          - listitem [ref=e122]:
+            - text: 本系統為輔助工具，試題由 AI 生成，
+            - strong [ref=e123]: 務必自行審核、校對並修改
+            - text: 。
+          - listitem [ref=e124]: 請確認擁有上傳教材之合法使用權。本工具不儲存使用者檔案，亦不承擔版權責任。
+          - listitem [ref=e125]: 使用小綸內建額度時，每次出題間隔 30 秒冷卻時間；填入自己的 API Key 則不受此限制。
+          - listitem [ref=e126]: 公用電腦請務必使用「清除記憶 / 登出」功能。
+        - paragraph [ref=e127]:
+          - text: 有任何問題？請點
+          - link "鴻綸科技官方網站" [ref=e128] [cursor=pointer]:
+            - /url: https://hunglun-new.pages.dev/
+  - text:           
+  - generic [ref=e130]:
+    - generic [ref=e131]:
+      - heading "🛡️ 帳號管理後台" [level=3] [ref=e132]
+      - button "關閉" [ref=e133] [cursor=pointer]: ×
+    - generic [ref=e134]:
+      - textbox "搜尋帳號/顯示名稱" [ref=e135]
+      - button "➕ 建立帳號" [ref=e136] [cursor=pointer]
+    - table [ref=e173]:
+      - rowgroup [ref=e174]:
+        - row [ref=e175]:
+          - columnheader "帳號" [ref=e176]
+          - columnheader "角色" [ref=e177]
+          - columnheader "顯示名稱" [ref=e178]
+          - columnheader "班級" [ref=e179]
+          - columnheader "建立時間" [ref=e180]
+          - columnheader "操作" [ref=e181]
+      - rowgroup [ref=e182]:
+        - row [ref=e183]:
+          - cell "adm_ui_test_20260728" [ref=e184]
+          - cell "老師" [ref=e185]
+          - cell "後台UI測試老師" [ref=e186]
+          - cell "後台建立測試班" [ref=e187]
+          - cell "2026/7/28" [ref=e188]
+          - cell [ref=e189]:
+            - generic [ref=e190]:
+              - button "編輯" [ref=e191] [cursor=pointer]
+              - button "刪除" [ref=e192] [cursor=pointer]
+        - row [ref=e193]:
+          - cell "iamblue0711" [ref=e194]
+          - cell "超級管理員" [ref=e195]
+          - cell "大嬸" [ref=e196]
+          - cell "-" [ref=e197]
+          - cell "2026/7/27" [ref=e198]
+          - cell [ref=e199]:
+            - generic [ref=e200]:
+              - button "編輯" [ref=e201] [cursor=pointer]
+              - button "刪除" [ref=e202] [cursor=pointer]

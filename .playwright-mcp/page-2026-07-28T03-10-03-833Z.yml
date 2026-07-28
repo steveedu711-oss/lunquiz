@@ -1,0 +1,40 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e3]:
+    - img "鴻綸科技 圓形品牌徽章" [ref=f3e7]
+    - heading "小綸出題小幫手" [level=1] [ref=f3e9]
+    - heading "AI 智慧出題系統" [level=2] [ref=f3e10]
+    - generic [ref=f3e11]:
+      - button "快速使用（不登入） " [ref=f3e12] [cursor=pointer]:
+        - generic [ref=f3e13]: 快速使用（不登入）
+        - generic [ref=f3e14]: 
+      - generic [ref=f3e15]:
+        - button " 學生" [ref=f3e16] [cursor=pointer]:
+          - generic [ref=f3e17]: 
+          - generic [ref=f3e18]: 學生
+        - button " 家長" [ref=f3e19] [cursor=pointer]:
+          - generic [ref=f3e20]: 
+          - generic [ref=f3e21]: 家長
+        - button " 老師" [ref=f3e22] [cursor=pointer]:
+          - generic [ref=f3e23]: 
+          - generic [ref=f3e24]: 老師
+        - button " 管理員" [ref=f3e25] [cursor=pointer]:
+          - generic [ref=f3e26]: 
+          - generic [ref=f3e27]: 管理員
+      - paragraph [ref=f3e28]: 學生／家長／老師／管理員需要帳號密碼登入
+    - text:  
+    - generic [ref=f3e29]:
+      - img "鴻綸科技 x Google for Education" [ref=f3e31]
+      - paragraph [ref=f3e32]: Created by Hunglun Technology Steve
+      - paragraph [ref=f3e33]:
+        - text: 有任何問題？請點
+        - link "鴻綸科技官方網站" [ref=f3e34] [cursor=pointer]:
+          - /url: https://hunglun-new.pages.dev/
+      - generic [ref=f3e35]:
+        - generic [ref=f3e36]: 技術支援與回報
+        - link " 作者信箱" [ref=f3e38] [cursor=pointer]:
+          - /url: https://mail.google.com/mail/?view=cm&fs=1&to=gfeh@hunglun.com
+          - generic [ref=f3e39]: 
+          - text: 作者信箱
+        - link "💬 作者 Line" [ref=f3e40] [cursor=pointer]:
+          - /url: https://line.me/R/ti/p/%40gdm6961p
+  - text:                 

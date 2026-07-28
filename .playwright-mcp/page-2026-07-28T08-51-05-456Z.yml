@@ -1,0 +1,351 @@
+- generic [ref=f16e2]:
+  - generic [ref=f16e4]:
+    - link [ref=f16e5] [cursor=pointer]:
+      - /url: https://lottiefiles.com/
+      - img "LottieFiles" [ref=f16e7]
+    - navigation "Main" [ref=f16e8]:
+      - list [ref=f16e10]:
+        - listitem [ref=f16e11]:
+          - button "Products" [ref=f16e12]
+        - listitem [ref=f16e15]:
+          - button "Integrations" [ref=f16e16]
+        - listitem [ref=f16e19]:
+          - button "Tools" [ref=f16e20]
+        - listitem [ref=f16e23]:
+          - button "Customers" [ref=f16e24]
+        - listitem [ref=f16e27]:
+          - button "Learn" [ref=f16e28]
+        - listitem [ref=f16e31]:
+          - link "Pricing" [ref=f16e32] [cursor=pointer]:
+            - /url: https://lottiefiles.com/pricing?via=top_nav
+    - generic [ref=f16e33]:
+      - generic [ref=f16e35]:
+        - button "Search animations" [ref=f16e36] [cursor=pointer]
+        - generic:
+          - generic: ⌘
+          - generic: K
+      - button [ref=f16e37]
+      - generic [ref=f16e39]:
+        - button "Log in" [ref=f16e40] [cursor=pointer]
+        - button "Sign up" [ref=f16e41] [cursor=pointer]
+  - main [ref=f16e42]:
+    - generic [ref=f16e43]:
+      - generic [ref=f16e44]:
+        - navigation "Breadcrumb" [ref=f16e46]:
+          - list [ref=f16e47]:
+            - listitem [ref=f16e48]:
+              - button "Home" [ref=f16e49] [cursor=pointer]
+            - listitem [ref=f16e51]
+            - listitem [ref=f16e54]:
+              - button "Free Animations" [ref=f16e55] [cursor=pointer]
+            - listitem [ref=f16e57]
+            - listitem [ref=f16e60]:
+              - generic [ref=f16e61]: Loading
+        - generic [ref=f16e63]:
+          - link "JT Junior Torres" [ref=f16e66] [cursor=pointer]:
+            - /url: /nwuiosky9p
+            - button "JT" [ref=f16e67]
+            - paragraph [ref=f16e70]:
+              - generic [ref=f16e71]: Junior Torres
+          - generic [ref=f16e72]:
+            - generic [ref=f16e73]:
+              - button [ref=f16e75] [cursor=pointer]
+              - button [ref=f16e77] [cursor=pointer]
+              - button "Edit" [ref=f16e78] [cursor=pointer]
+            - button "Save animation" [ref=f16e80] [cursor=pointer]
+        - generic [ref=f16e81]:
+          - generic [ref=f16e84]:
+            - generic [ref=f16e85]:
+              - img "Loading"
+            - generic [ref=f16e91]:
+              - generic [ref=f16e92]:
+                - button [disabled]
+                - generic [ref=f16e93]:
+                  - generic [ref=f16e94]: 0:00
+                  - generic [ref=f16e97]: 0:00
+                - button "1x" [disabled]
+              - button [disabled]
+              - button [ref=f16e98] [cursor=pointer]
+              - button [ref=f16e99] [cursor=pointer]
+              - button [ref=f16e100] [cursor=pointer]
+          - generic [ref=f16e107]:
+            - tablist [ref=f16e108]:
+              - tab "Details" [selected] [ref=f16e109]
+              - tab "Asset & Embed" [ref=f16e111]
+              - tab "Comments" [ref=f16e113]
+            - tabpanel "Details" [ref=f16e115]:
+              - generic [ref=f16e117]:
+                - generic [ref=f16e118]:
+                  - generic [ref=f16e119]:
+                    - heading "Free Loading Animation" [level=1] [ref=f16e120]
+                    - generic [ref=f16e121]: 1.5 KB
+                  - generic [ref=f16e122]:
+                    - paragraph: Loading
+                    - paragraph [ref=f16e123]: Loading
+                - generic [ref=f16e124]:
+                  - generic [ref=f16e125]:
+                    - heading "Interactions & plugins" [level=2] [ref=f16e126]
+                    - link "View all" [ref=f16e127] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/integrations
+                  - generic [ref=f16e128]:
+                    - link [ref=f16e129] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/plugins/figma
+                      - img "figma" [ref=f16e131]
+                    - link [ref=f16e132] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/plugins/after-effects
+                      - img "after-effects" [ref=f16e134]
+                    - link [ref=f16e135] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/plugins/framer
+                      - img "framer" [ref=f16e137]
+                    - link [ref=f16e138] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/plugins/canva
+                      - img "canva" [ref=f16e140]
+                    - link [ref=f16e141] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/integrations/webflow
+                      - img "webflow" [ref=f16e143]
+                    - link [ref=f16e144] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/integrations/wix
+                      - img "wix" [ref=f16e146]
+                - generic [ref=f16e147]:
+                  - paragraph [ref=f16e148]: Free to use under the Lottie Simple License
+                  - button "Report animation" [ref=f16e152] [cursor=pointer]
+      - generic [ref=f16e156]:
+        - heading "Animation Tags" [level=2] [ref=f16e157]
+        - generic [ref=f16e158]:
+          - link "Loading" [ref=f16e159] [cursor=pointer]:
+            - /url: /free-animations/loading
+            - text: loading
+          - link "Circle" [ref=f16e160] [cursor=pointer]:
+            - /url: /free-animations/circle
+            - text: circle
+          - link "Dots" [ref=f16e161] [cursor=pointer]:
+            - /url: /free-animations/dots
+            - text: dots
+          - link "dots animations" [ref=f16e162] [cursor=pointer]:
+            - /url: /free-animations/dots-animations
+  - contentinfo "Site footer" [ref=f16e163]:
+    - generic [ref=f16e164]:
+      - generic [ref=f16e165]:
+        - generic [ref=f16e166]:
+          - paragraph [ref=f16e167]: We believe motion should be accessible
+          - generic [ref=f16e168]:
+            - link [ref=f16e169] [cursor=pointer]:
+              - /url: https://lottiefiles.com/enterprise?via=footer_nav
+              - generic [ref=f16e170]:
+                - paragraph [ref=f16e172]: For enterprise
+                - paragraph [ref=f16e177]: Talk to us
+            - link [ref=f16e178] [cursor=pointer]:
+              - /url: https://lottiefiles.com/certifications?via=footer_nav
+              - generic [ref=f16e179]:
+                - paragraph [ref=f16e181]: For community
+                - paragraph [ref=f16e186]: Get certified
+        - generic [ref=f16e187]:
+          - link [ref=f16e189] [cursor=pointer]:
+            - /url: /visionos
+            - paragraph [ref=f16e190]: LottieFiles for Apple Vision Pro
+            - img "LottieFiles for Apple Vision Pro" [ref=f16e191]
+          - generic [ref=f16e192]:
+            - link [ref=f16e193] [cursor=pointer]:
+              - /url: /ios
+              - img "Download on the App Store" [ref=f16e194]
+            - link [ref=f16e195] [cursor=pointer]:
+              - /url: /android
+              - img "Get it on Google Play" [ref=f16e196]
+            - link [ref=f16e197] [cursor=pointer]:
+              - /url: /desktop
+              - img "Download on the Mac App Store" [ref=f16e198]
+      - generic [ref=f16e199]:
+        - generic [ref=f16e200]:
+          - generic [ref=f16e201]:
+            - paragraph [ref=f16e202]: Products
+            - list "Products links" [ref=f16e203]:
+              - listitem [ref=f16e204]:
+                - link "LottieFiles Platform" [ref=f16e205] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/platform?via=footer_nav
+              - listitem [ref=f16e206]:
+                - link "Lottie Creator" [ref=f16e207] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/lottie-creator?via=footer_nav
+              - listitem [ref=f16e208]:
+                - link "Figma plugin" [ref=f16e209] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/plugins/figma?via=footer_nav
+              - listitem [ref=f16e210]:
+                - link "Adobe After Effects plugin" [ref=f16e211] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/plugins/after-effects?via=footer_nav
+              - listitem [ref=f16e212]:
+                - link "Lottie Editor" [ref=f16e213] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/lottie-editor?via=footer_nav
+              - listitem [ref=f16e214]:
+                - link "LottieFiles Mobile App" [ref=f16e215] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/mobile?via=footer_nav
+              - listitem [ref=f16e216]:
+                - link "Free Animations" [ref=f16e217] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/free-animations?via=footer_nav
+              - listitem [ref=f16e218]:
+                - link "Marketplace" [ref=f16e219] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/marketplace?via=footer_nav
+              - listitem [ref=f16e220]:
+                - link "Hire Lottie Animators" [ref=f16e221] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/marketplace/animators?via=footer_nav
+              - listitem [ref=f16e222]:
+                - link "Explore Animations" [ref=f16e223] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tags?via=footer_nav
+          - generic [ref=f16e224]:
+            - paragraph [ref=f16e225]: Integrations & Tools
+            - list "Integrations & Tools links" [ref=f16e226]:
+              - listitem [ref=f16e227]:
+                - link "Webflow plugin" [ref=f16e228] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/plugins/webflow?via=footer_nav
+              - listitem [ref=f16e229]:
+                - link "Canva" [ref=f16e230] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/plugins/canva?via=footer_nav
+              - listitem [ref=f16e231]:
+                - link "Preview Lottie Animation" [ref=f16e232] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/preview?via=footer_nav
+              - listitem [ref=f16e233]:
+                - link "Web Player" [ref=f16e234] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/web-player?via=footer_nav
+              - listitem [ref=f16e235]:
+                - link "Prompt to Vector" [ref=f16e236] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/prompt-to-vector?via=footer_nav
+              - listitem [ref=f16e237]:
+                - link "Raster to Vector" [ref=f16e238] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/raster-to-vector?via=footer_nav
+              - listitem [ref=f16e239]:
+                - link "SVG to Lottie" [ref=f16e240] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/svg-to-lottie?via=footer_nav
+              - listitem [ref=f16e241]:
+                - link "Lottie to GIF" [ref=f16e242] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/lottie-to-gif?via=footer_nav
+              - listitem [ref=f16e243]:
+                - link "Lottie to dotLottie" [ref=f16e244] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/lottie-to-dotlottie?via=footer_nav
+              - listitem [ref=f16e245]:
+                - link "JSON Editor" [ref=f16e246] [cursor=pointer]:
+                  - /url: https://lottiefiles.github.io/lottie-docs/playground/json_editor/
+              - listitem [ref=f16e247]:
+                - link "Optimize Lottie" [ref=f16e248] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/tools/lottie-json-to-optimized-lottie-json?via=footer_nav
+              - listitem [ref=f16e249]:
+                - link "Open Source Libraries" [ref=f16e250] [cursor=pointer]:
+                  - /url: https://github.com/lottiefiles
+          - generic [ref=f16e251]:
+            - paragraph [ref=f16e252]: Customers
+            - list "Customers links" [ref=f16e253]:
+              - listitem [ref=f16e254]:
+                - link "Case Studies" [ref=f16e255] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/case-studies?via=footer_nav
+              - listitem [ref=f16e256]:
+                - link "Use Cases" [ref=f16e257] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/use-cases?via=footer_nav
+              - listitem [ref=f16e258]:
+                - link "Customer Stories" [ref=f16e259] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/customers?via=footer_nav
+              - listitem [ref=f16e260]:
+                - link "Built with Lottie" [ref=f16e261] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/built-with-lottie?via=footer_nav
+              - listitem [ref=f16e262]:
+                - link "Why Motion?" [ref=f16e263] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/why-motion?via=footer_nav
+          - generic [ref=f16e264]:
+            - paragraph [ref=f16e265]: Resources
+            - list "Resources links" [ref=f16e266]:
+              - listitem [ref=f16e267]:
+                - link "Docs" [ref=f16e268] [cursor=pointer]:
+                  - /url: https://docs.lottiefiles.com
+              - listitem [ref=f16e269]:
+                - link "Education" [ref=f16e270] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/education?via=footer_nav
+              - listitem [ref=f16e271]:
+                - link "Blog" [ref=f16e272] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/blog?via=footer_nav
+              - listitem [ref=f16e273]:
+                - link "What is Lottie" [ref=f16e274] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/what-is-lottie?via=footer_nav
+              - listitem [ref=f16e275]:
+                - link "Forum" [ref=f16e276] [cursor=pointer]:
+                  - /url: https://forum.lottiefiles.com/
+              - listitem [ref=f16e277]:
+                - link "FAQ & Support" [ref=f16e278] [cursor=pointer]:
+                  - /url: https://help.lottiefiles.com/hc/en-us
+              - listitem [ref=f16e279]:
+                - link "Lottie Lab" [ref=f16e280] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/lottie-lab?via=footer_nav
+              - listitem [ref=f16e281]:
+                - link "Community" [ref=f16e282] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/community?via=footer_nav
+              - listitem [ref=f16e283]:
+                - link "State Machines" [ref=f16e284] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/state-machines?via=footer_nav
+              - listitem [ref=f16e285]:
+                - link "Supported Features" [ref=f16e286] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/supported-features?via=footer_nav
+              - listitem [ref=f16e287]:
+                - link "dotLottie Runtimes" [ref=f16e288] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/runtimes?via=footer_nav
+              - listitem [ref=f16e289]:
+                - link "AI features" [ref=f16e290] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/ai?via=footer_nav
+          - generic [ref=f16e291]:
+            - paragraph [ref=f16e292]: Company
+            - list "Company links" [ref=f16e293]:
+              - listitem [ref=f16e294]:
+                - link "What is Lottie" [ref=f16e295] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/what-is-lottie?via=footer_nav
+              - listitem [ref=f16e296]:
+                - link "Feedback" [ref=f16e297] [cursor=pointer]:
+                  - /url: https://feedback.lottiefiles.com/web
+              - listitem [ref=f16e298]:
+                - link "Press" [ref=f16e299] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/press?via=footer_nav
+              - listitem [ref=f16e300]:
+                - link "Meet the team" [ref=f16e301] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/team?via=footer_nav
+              - listitem [ref=f16e302]:
+                - link "Careers" [ref=f16e303] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/careers?via=footer_nav
+          - generic [ref=f16e304]:
+            - paragraph [ref=f16e305]: Terms and Policies
+            - list "Terms and Policies links" [ref=f16e306]:
+              - listitem [ref=f16e307]:
+                - link "Privacy Policy" [ref=f16e308] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/privacy-policy?via=footer_nav
+              - listitem [ref=f16e309]:
+                - link "Security" [ref=f16e310] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/security?via=footer_nav
+              - listitem [ref=f16e311]:
+                - link "Terms and Conditions" [ref=f16e312] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/terms-and-conditions?via=footer_nav
+              - listitem [ref=f16e313]:
+                - link "Terms of Sale" [ref=f16e314] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/terms-of-sale?via=footer_nav
+              - listitem [ref=f16e315]:
+                - link "Cookie Policy" [ref=f16e316] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/cookie-policy?via=footer_nav
+              - listitem [ref=f16e317]:
+                - link "Community Guidelines" [ref=f16e318] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/community-guidelines?via=footer_nav
+              - listitem [ref=f16e319]:
+                - link "Upload Guidelines" [ref=f16e320] [cursor=pointer]:
+                  - /url: https://lottiefiles.com/page/upload-guidelines?via=footer_nav
+        - generic [ref=f16e321]:
+          - generic [ref=f16e322]:
+            - link [ref=f16e324] [cursor=pointer]:
+              - /url: https://lottiefiles.com/
+              - img "LottieFiles" [ref=f16e325]
+            - generic [ref=f16e326]:
+              - link "Facebook" [ref=f16e327] [cursor=pointer]:
+                - /url: /facebook
+              - link "Instagram" [ref=f16e330] [cursor=pointer]:
+                - /url: /instagram
+              - link "X" [ref=f16e334] [cursor=pointer]:
+                - /url: /twitter
+              - link "Youtube" [ref=f16e338] [cursor=pointer]:
+                - /url: /youtube
+              - link "Dribbble" [ref=f16e341] [cursor=pointer]:
+                - /url: /dribbble
+          - generic [ref=f16e344]:
+            - paragraph [ref=f16e345]: © 2026 Design Barn Inc.
+            - paragraph [ref=f16e347]:
+              - generic [ref=f16e348]: Made with
+              - generic [ref=f16e351]: from
+              - generic [ref=f16e352]: Canada

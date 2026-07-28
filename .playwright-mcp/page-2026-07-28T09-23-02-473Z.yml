@@ -1,0 +1,541 @@
+- generic [active] [ref=f23e1]:
+  - generic [ref=f23e3]:
+    - region "Site notifications" [ref=f23e4]:
+      - generic [ref=f23e8]:
+        - generic [ref=f23e9]: ⚠️
+        - alert [ref=f23e11]:
+          - text: npm tokens that bypass 2FA are being restricted — account changes (Aug 2026) and direct publishing (Jan 2027).
+          - link "Learn how to prepare for the npm bypass 2FA token deprecation" [ref=f23e12] [cursor=pointer]:
+            - /url: https://github.blog/changelog/2026-07-08-npm-install-time-security-and-gat-bypass2fa-deprecation/
+            - text: Learn how to prepare →
+        - button "Close notification" [ref=f23e13] [cursor=pointer]: ×
+    - generic [ref=f23e14]:
+      - banner [ref=f23e15]:
+        - generic [ref=f23e16]:
+          - generic [ref=f23e17]:
+            - text: "skip to:"
+            - link "skip to content" [ref=f23e18] [cursor=pointer]:
+              - /url: "#main"
+              - text: content
+            - link "skip to package search" [ref=f23e19] [cursor=pointer]:
+              - /url: "#search"
+              - text: package search
+            - link "skip to sign in" [ref=f23e20] [cursor=pointer]:
+              - /url: "#signin"
+              - text: sign in
+          - generic [ref=f23e21]:
+            - button "Light mode — click for dark" [ref=f23e22] [cursor=pointer]
+            - navigation "Product Navigation" [ref=f23e25]:
+              - list [ref=f23e26]:
+                - listitem [ref=f23e27]:
+                  - link "Pro" [ref=f23e28] [cursor=pointer]:
+                    - /url: /products/pro
+                - listitem [ref=f23e29]:
+                  - link "Teams" [ref=f23e30] [cursor=pointer]:
+                    - /url: /products/teams
+                - listitem [ref=f23e31]:
+                  - link "Pricing" [ref=f23e32] [cursor=pointer]:
+                    - /url: /products
+                - listitem [ref=f23e33]:
+                  - link "Documentation" [ref=f23e34] [cursor=pointer]:
+                    - /url: https://docs.npmjs.com
+        - generic [ref=f23e36]:
+          - generic [ref=f23e37]: npm
+          - link "Npm" [ref=f23e39] [cursor=pointer]:
+            - /url: /
+          - generic [ref=f23e43]:
+            - combobox "Search packages" [ref=f23e53]
+            - button "Search" [ref=f23e55]
+          - generic [ref=f23e57]:
+            - link "Sign Up" [ref=f23e58] [cursor=pointer]:
+              - /url: /signup
+            - link "Sign In" [ref=f23e59] [cursor=pointer]:
+              - /url: /login
+      - main [ref=f23e60]:
+        - generic [ref=f23e61]:
+          - generic [ref=f23e62]:
+            - heading "@lottiefiles/dotlottie-wc TypeScript icon, indicating that this package has built-in type declarations" [level=1] [ref=f23e63]:
+              - generic [ref=f23e64]: "@lottiefiles/dotlottie-wc"
+              - img "TypeScript icon, indicating that this package has built-in type declarations" [ref=f23e66]
+            - generic [ref=f23e67]: 0.9.24 •
+            - generic [ref=f23e68]: Public
+            - generic [ref=f23e69]:
+              - text: • Published
+              - time [ref=f23e70]: 6 days ago
+          - tablist [ref=f23e71]:
+            - tab [selected] [ref=f23e72] [cursor=pointer]
+            - tab "Code Beta" [ref=f23e76] [cursor=pointer]:
+              - generic [ref=f23e77]:
+                - text: Code
+                - generic [ref=f23e80]: Beta
+            - tab [ref=f23e82] [cursor=pointer]
+            - tab [ref=f23e86] [cursor=pointer]
+            - tab [ref=f23e90] [cursor=pointer]
+          - generic [ref=f23e95]:
+            - tabpanel "Readme" [ref=f23e96]:
+              - article [ref=f23e98]:
+                - generic [ref=f23e99]:
+                  - generic [ref=f23e100]:
+                    - heading "@lottiefiles/dotlottie-wc" [level=1] [ref=f23e101]
+                    - 'link "Permalink: @lottiefiles/dotlottie-wc" [ref=f23e102] [cursor=pointer]':
+                      - /url: "#lottiefilesdotlottie-wc"
+                  - blockquote [ref=f23e103]:
+                    - paragraph [ref=f23e104]:
+                      - text: "[!TIP] Looking for animations to use with this player? Browse"
+                      - strong [ref=f23e105]:
+                        - link "100,000+ free Lottie animations" [ref=f23e106] [cursor=pointer]:
+                          - /url: https://lottiefiles.com/free-animations?utm_source=npm&utm_medium=readme
+                      - text: and grab any of them as
+                      - code [ref=f23e107]: .lottie
+                      - text: or
+                      - code [ref=f23e108]: .json
+                      - text: ", or create your own with"
+                      - link "Lottie Creator" [ref=f23e109] [cursor=pointer]:
+                        - /url: https://lottiefiles.com/lottie-creator?utm_source=npm&utm_medium=readme
+                      - text: .
+                  - paragraph [ref=f23e110]:
+                    - link [ref=f23e111] [cursor=pointer]:
+                      - /url: https://camo.githubusercontent.com/35e8b01a8948ca4dd0885398e35c203ad5ed2868ca92b760b830cb61fa801db2/68747470733a2f2f696d672e736869656c64732e696f2f6e706d2f762f406c6f7474696566696c65732f646f746c6f747469652d7763
+                      - img "npm" [ref=f23e112]
+                    - link [ref=f23e113] [cursor=pointer]:
+                      - /url: https://camo.githubusercontent.com/a6beca135af979e880726aad0241b48f013f2ee1d0725467beb65beeec0544cb/68747470733a2f2f696d672e736869656c64732e696f2f62756e646c6570686f6269612f6d696e7a69702f2534306c6f7474696566696c6573253246646f746c6f747469652d7763
+                      - img "npm bundle size" [ref=f23e114]
+                    - link [ref=f23e115] [cursor=pointer]:
+                      - /url: https://camo.githubusercontent.com/8a57c1eace186499d95525c48731c8a7e3af63c2bf5bf8150591adc403f06796/68747470733a2f2f696d672e736869656c64732e696f2f6e706d2f64742f2534306c6f7474696566696c6573253246646f746c6f747469652d7763
+                      - img "npm" [ref=f23e116]
+                    - link [ref=f23e117] [cursor=pointer]:
+                      - /url: https://camo.githubusercontent.com/b5476457c6082e0145f7e9e39afd61a1116c7a9d58f28e7cc41f23e5b127881f/68747470733a2f2f696d672e736869656c64732e696f2f6e706d2f6c2f406c6f7474696566696c65732f646f746c6f747469652d7763
+                      - img "NPM" [ref=f23e118]
+                  - paragraph [ref=f23e119]:
+                    - link [ref=f23e120] [cursor=pointer]:
+                      - /url: https://camo.githubusercontent.com/a3be2cf867b3d1c3b87a13a659589bcd418efc2150e7803a93706f6a39d8fcda/68747470733a2f2f6c6f747469652e686f73742f34336634333634362d623031382d346437322d613936622d3032613932396364393732372f674152786449657462452e737667
+                      - img "dotLottie Web" [ref=f23e121]
+                  - generic [ref=f23e122]:
+                    - heading "Contents" [level=2] [ref=f23e123]
+                    - 'link "Permalink: Contents" [ref=f23e124] [cursor=pointer]':
+                      - /url: "#contents"
+                  - list [ref=f23e125]:
+                    - listitem [ref=f23e126]:
+                      - link "Introduction" [ref=f23e127] [cursor=pointer]:
+                        - /url: "#introduction"
+                      - list [ref=f23e128]:
+                        - listitem [ref=f23e129]:
+                          - link "What is dotLottie?" [ref=f23e130] [cursor=pointer]:
+                            - /url: "#what-is-dotlottie"
+                    - listitem [ref=f23e131]:
+                      - link "Installation" [ref=f23e132] [cursor=pointer]:
+                        - /url: "#installation"
+                    - listitem [ref=f23e133]:
+                      - link "Usage" [ref=f23e134] [cursor=pointer]:
+                        - /url: "#usage"
+                      - list [ref=f23e135]:
+                        - listitem [ref=f23e136]:
+                          - link "Via npm" [ref=f23e137] [cursor=pointer]:
+                            - /url: "#via-npm"
+                        - listitem [ref=f23e138]:
+                          - link "Via CDN" [ref=f23e139] [cursor=pointer]:
+                            - /url: "#via-cdn"
+                    - listitem [ref=f23e140]:
+                      - link "APIs" [ref=f23e141] [cursor=pointer]:
+                        - /url: "#apis"
+                      - list [ref=f23e142]:
+                        - listitem [ref=f23e143]:
+                          - link "Attributes" [ref=f23e144] [cursor=pointer]:
+                            - /url: "#attributes"
+                    - listitem [ref=f23e145]:
+                      - link "RenderConfig" [ref=f23e146] [cursor=pointer]:
+                        - /url: "#renderconfig"
+                      - list [ref=f23e147]:
+                        - listitem [ref=f23e148]:
+                          - link "Properties" [ref=f23e149] [cursor=pointer]:
+                            - /url: "#properties"
+                        - listitem [ref=f23e150]:
+                          - link "Custom WASM URL" [ref=f23e151] [cursor=pointer]:
+                            - /url: "#custom-wasm-url"
+                    - listitem [ref=f23e152]:
+                      - link "Development" [ref=f23e153] [cursor=pointer]:
+                        - /url: "#development"
+                      - list [ref=f23e154]:
+                        - listitem [ref=f23e155]:
+                          - link "Setup" [ref=f23e156] [cursor=pointer]:
+                            - /url: "#setup"
+                        - listitem [ref=f23e157]:
+                          - link "Dev" [ref=f23e158] [cursor=pointer]:
+                            - /url: "#dev"
+                        - listitem [ref=f23e159]:
+                          - link "Build" [ref=f23e160] [cursor=pointer]:
+                            - /url: "#build"
+                  - generic [ref=f23e161]:
+                    - heading "Introduction" [level=2] [ref=f23e162]
+                    - 'link "Permalink: Introduction" [ref=f23e163] [cursor=pointer]':
+                      - /url: "#introduction"
+                  - paragraph [ref=f23e164]:
+                    - text: A web component for rendering and playing
+                    - link "Lottie" [ref=f23e165] [cursor=pointer]:
+                      - /url: https://lottiefiles.github.io/lottie-docs/
+                    - text: and
+                    - link "DotLottie" [ref=f23e166] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/dotlottie
+                    - text: animations in web applications.
+                  - generic [ref=f23e167]:
+                    - heading "What is dotLottie?" [level=3] [ref=f23e168]
+                    - 'link "Permalink: What is dotLottie?" [ref=f23e169] [cursor=pointer]':
+                      - /url: "#what-is-dotlottie"
+                  - paragraph [ref=f23e170]: dotLottie is an open-source file format that aggregates one or more Lottie files and their associated resources into a single file. They are ZIP archives compressed with the Deflate compression method and carry the file extension of ".lottie".
+                  - paragraph [ref=f23e171]:
+                    - link "Learn more about dotLottie" [ref=f23e172] [cursor=pointer]:
+                      - /url: https://lottiefiles.com/dotlottie
+                    - text: .
+                  - generic [ref=f23e173]:
+                    - heading "Installation" [level=2] [ref=f23e174]
+                    - 'link "Permalink: Installation" [ref=f23e175] [cursor=pointer]':
+                      - /url: "#installation"
+                  - generic [ref=f23e176]: npm install @lottiefiles/dotlottie-wc
+                  - generic [ref=f23e178]:
+                    - heading "Usage" [level=2] [ref=f23e179]
+                    - 'link "Permalink: Usage" [ref=f23e180] [cursor=pointer]':
+                      - /url: "#usage"
+                  - generic [ref=f23e181]:
+                    - heading "Via npm" [level=3] [ref=f23e182]
+                    - 'link "Permalink: Via npm" [ref=f23e183] [cursor=pointer]':
+                      - /url: "#via-npm"
+                  - paragraph [ref=f23e184]:
+                    - text: After installation, you can use
+                    - code [ref=f23e185]: dotlottie-wc
+                    - text: "in your HTML file:"
+                  - generic [ref=f23e186]: <dotlottie-wc src="https://lottie.host/4db68bbd-31f6-4cd8-84eb-189de081159a/IGmMCqhzpt.lottie" autoplay="true" loop="true"></dotlottie-wc>
+                  - paragraph [ref=f23e188]: "And import it in your JavaScript or TypeScript module:"
+                  - generic [ref=f23e189]: import '@lottiefiles/dotlottie-wc';
+                  - generic [ref=f23e191]:
+                    - heading "Via CDN" [level=3] [ref=f23e192]
+                    - 'link "Permalink: Via CDN" [ref=f23e193] [cursor=pointer]':
+                      - /url: "#via-cdn"
+                  - paragraph [ref=f23e194]: "You can also use the component directly via a npm CDN:"
+                  - generic [ref=f23e196]:
+                    - generic [ref=f23e197]: <!DOCTYPE html>
+                    - text: <html lang="en"> <head> <meta charset="utf-8" /> <title>@lottiefiles/dotlottie-wc | Basic Example</title> </head> <body> <dotlottie-wc src="https://lottie.host/4db68bbd-31f6-4cd8-84eb-189de081159a/IGmMCqhzpt.lottie" autoplay loop></dotlottie-wc> <script type="module" src="https://unpkg.com/@lottiefiles/dotlottie-wc@latest/dist/dotlottie-wc.js"></script> </body> </html>
+                  - generic [ref=f23e198]:
+                    - heading "APIs" [level=2] [ref=f23e199]
+                    - 'link "Permalink: APIs" [ref=f23e200] [cursor=pointer]':
+                      - /url: "#apis"
+                  - generic [ref=f23e201]:
+                    - heading "Attributes" [level=3] [ref=f23e202]
+                    - 'link "Permalink: Attributes" [ref=f23e203] [cursor=pointer]':
+                      - /url: "#attributes"
+                  - paragraph [ref=f23e204]:
+                    - text: The
+                    - code [ref=f23e205]: dotlottie-wc
+                    - text: component accepts all configuration attributes of
+                    - link [ref=f23e206] [cursor=pointer]:
+                      - /url: https://github.com/LottieFiles/dotlottie-web/blob/HEAD/packages/web/README.md#documentation
+                      - code [ref=f23e207]: DotLottie
+                    - text: from
+                    - code [ref=f23e208]: "@lottiefiles/dotlottie-web"
+                    - text: ", allowing you to customize your animation as required."
+                  - table [ref=f23e209]:
+                    - rowgroup [ref=f23e210]:
+                      - row [ref=f23e211]:
+                        - columnheader "Attribute" [ref=f23e212]
+                        - columnheader "Type" [ref=f23e213]
+                        - columnheader "Description" [ref=f23e214]
+                    - rowgroup [ref=f23e215]:
+                      - row [ref=f23e216]:
+                        - cell [ref=f23e217]:
+                          - code [ref=f23e218]: src
+                        - cell "string" [ref=f23e219]
+                        - cell "URL of the Lottie or DotLottie animation." [ref=f23e220]
+                      - row [ref=f23e221]:
+                        - cell [ref=f23e222]:
+                          - code [ref=f23e223]: autoplay
+                        - cell "boolean" [ref=f23e224]
+                        - cell "Automatically start the animation." [ref=f23e225]
+                      - row [ref=f23e226]:
+                        - cell [ref=f23e227]:
+                          - code [ref=f23e228]: loop
+                        - cell "boolean" [ref=f23e229]
+                        - cell "Loop the animation." [ref=f23e230]
+                      - row [ref=f23e231]:
+                        - cell [ref=f23e232]:
+                          - code [ref=f23e233]: speed
+                        - cell "number" [ref=f23e234]
+                        - cell "Playback speed." [ref=f23e235]
+                      - row [ref=f23e236]:
+                        - cell [ref=f23e237]:
+                          - code [ref=f23e238]: data
+                        - cell "string" [ref=f23e239]
+                        - cell "Animation data as a string or ArrayBuffer for .lottie animations." [ref=f23e240]
+                      - row [ref=f23e241]:
+                        - cell [ref=f23e242]:
+                          - code [ref=f23e243]: segment
+                        - cell "Array" [ref=f23e244]
+                        - cell "Animation segment as an array of two numbers (start frame and end frame)." [ref=f23e245]
+                      - row [ref=f23e246]:
+                        - cell [ref=f23e247]:
+                          - code [ref=f23e248]: mode
+                        - cell "string" [ref=f23e249]
+                        - cell "Animation play mode (e.g., \"forward\", \"bounce\")." [ref=f23e250]
+                      - row [ref=f23e251]:
+                        - cell [ref=f23e252]:
+                          - code [ref=f23e253]: backgroundColor
+                        - cell "string" [ref=f23e254]
+                        - cell "Background color of the canvas. Accepts 6-digit or 8-digit hex color string (e.g., \"#000000FF\")." [ref=f23e255]
+                      - row [ref=f23e256]:
+                        - cell [ref=f23e257]:
+                          - code [ref=f23e258]: renderConfig
+                        - cell "Object (RenderConfig)" [ref=f23e259]
+                        - cell "Configuration for rendering the animation." [ref=f23e260]
+                  - generic [ref=f23e261]:
+                    - heading "RenderConfig" [level=2] [ref=f23e262]
+                    - 'link "Permalink: RenderConfig" [ref=f23e263] [cursor=pointer]':
+                      - /url: "#renderconfig"
+                  - paragraph [ref=f23e264]:
+                    - text: The
+                    - code [ref=f23e265]: renderConfig
+                    - text: "object accepts the following properties:"
+                  - table [ref=f23e266]:
+                    - rowgroup [ref=f23e267]:
+                      - row [ref=f23e268]:
+                        - columnheader "Property name" [ref=f23e269]
+                        - columnheader "Type" [ref=f23e270]
+                        - columnheader "Required" [ref=f23e271]
+                        - columnheader "Default" [ref=f23e272]
+                        - columnheader "Description" [ref=f23e273]
+                    - rowgroup [ref=f23e274]:
+                      - row [ref=f23e275]:
+                        - cell [ref=f23e276]:
+                          - code [ref=f23e277]: devicePixelRatio
+                        - cell "number" [ref=f23e278]
+                        - cell [ref=f23e279]
+                        - cell "window.devicePixelRatio | 1" [ref=f23e280]
+                        - cell "The device pixel ratio." [ref=f23e281]
+                  - generic [ref=f23e282]:
+                    - heading "Properties" [level=3] [ref=f23e283]
+                    - 'link "Permalink: Properties" [ref=f23e284] [cursor=pointer]':
+                      - /url: "#properties"
+                  - paragraph [ref=f23e285]:
+                    - text: The
+                    - code [ref=f23e286]: dotlottie-wc
+                    - text: "exposes the following properties:"
+                  - table [ref=f23e287]:
+                    - rowgroup [ref=f23e288]:
+                      - row [ref=f23e289]:
+                        - columnheader "Property name" [ref=f23e290]
+                        - columnheader "Type" [ref=f23e291]
+                        - columnheader "Description" [ref=f23e292]
+                    - rowgroup [ref=f23e293]:
+                      - row [ref=f23e294]:
+                        - cell [ref=f23e295]:
+                          - code [ref=f23e296]: dotLottie
+                        - cell [ref=f23e297]:
+                          - code [ref=f23e298]: DotLottie
+                        - cell [ref=f23e299]:
+                          - text: The dotLottie instance from
+                          - link [ref=f23e300] [cursor=pointer]:
+                            - /url: https://github.com/LottieFiles/dotlottie-web/blob/HEAD/packages/web/README.md#documentation
+                            - code [ref=f23e301]: DotLottie
+                          - text: ", allowing you to call methods and listen to events for more control over the animation."
+                  - generic [ref=f23e302]:
+                    - heading "Custom WASM URL" [level=3] [ref=f23e303]
+                    - 'link "Permalink: Custom WASM URL" [ref=f23e304] [cursor=pointer]':
+                      - /url: "#custom-wasm-url"
+                  - paragraph [ref=f23e305]:
+                    - text: By default, the player's WebAssembly file is loaded from a CDN. If you need to serve it from your own host (e.g. environments where CDN access is restricted), use
+                    - code [ref=f23e306]: setWasmUrl
+                    - text: "before any animation loads:"
+                  - generic [ref=f23e307]: "import { setWasmUrl } from '@lottiefiles/dotlottie-wc'; setWasmUrl('/js/dotlottie/dotlottie-player.wasm');"
+                  - paragraph [ref=f23e309]:
+                    - text: The function is also exported from the CDN bundles, so it works when loading
+                    - code [ref=f23e310]: dist/dotlottie-wc.js
+                    - text: or
+                    - code [ref=f23e311]: dist/dotlottie-worker-wc.js
+                    - text: "directly:"
+                  - generic [ref=f23e312]: "<script type=\"module\"> import { setWasmUrl } from 'https://unpkg.com/@lottiefiles/dotlottie-wc@latest/dist/dotlottie-wc.js'; setWasmUrl('/js/dotlottie/dotlottie-player.wasm'); </script>"
+                  - paragraph [ref=f23e314]:
+                    - text: You can find the matching
+                    - code [ref=f23e315]: dotlottie-player.wasm
+                    - text: for your installed version inside the
+                    - code [ref=f23e316]: "@lottiefiles/dotlottie-web"
+                    - text: package (
+                    - code [ref=f23e317]: dist/dotlottie-player.wasm
+                    - text: ) or on a npm CDN, e.g.
+                    - code [ref=f23e318]: https://unpkg.com/@lottiefiles/dotlottie-web@x.y.z/dist/dotlottie-player.wasm
+                    - text: .
+                  - generic [ref=f23e319]:
+                    - heading "Development" [level=2] [ref=f23e320]
+                    - 'link "Permalink: Development" [ref=f23e321] [cursor=pointer]':
+                      - /url: "#development"
+                  - generic [ref=f23e322]:
+                    - heading "Setup" [level=3] [ref=f23e323]
+                    - 'link "Permalink: Setup" [ref=f23e324] [cursor=pointer]':
+                      - /url: "#setup"
+                  - generic [ref=f23e325]: npm install
+                  - generic [ref=f23e327]:
+                    - heading "Dev" [level=3] [ref=f23e328]
+                    - 'link "Permalink: Dev" [ref=f23e329] [cursor=pointer]':
+                      - /url: "#dev"
+                  - generic [ref=f23e330]: npm run dev
+                  - generic [ref=f23e332]:
+                    - heading "Build" [level=3] [ref=f23e333]
+                    - 'link "Permalink: Build" [ref=f23e334] [cursor=pointer]':
+                      - /url: "#build"
+                  - generic [ref=f23e335]: npm run build
+              - generic [ref=f23e337]:
+                - heading "Readme" [level=2] [ref=f23e338]
+                - heading "Keywords" [level=3] [ref=f23e339]
+                - list [ref=f23e340]:
+                  - listitem [ref=f23e341]:
+                    - link "dotlottie" [ref=f23e342] [cursor=pointer]:
+                      - /url: /search?q=keywords:dotlottie
+                  - listitem [ref=f23e343]:
+                    - link "lottie" [ref=f23e344] [cursor=pointer]:
+                      - /url: /search?q=keywords:lottie
+                  - listitem [ref=f23e345]:
+                    - link "player" [ref=f23e346] [cursor=pointer]:
+                      - /url: /search?q=keywords:player
+                  - listitem [ref=f23e347]:
+                    - link "animation" [ref=f23e348] [cursor=pointer]:
+                      - /url: /search?q=keywords:animation
+                  - listitem [ref=f23e349]:
+                    - link "web" [ref=f23e350] [cursor=pointer]:
+                      - /url: /search?q=keywords:web
+                  - listitem [ref=f23e351]:
+                    - link "canvas" [ref=f23e352] [cursor=pointer]:
+                      - /url: /search?q=keywords:canvas
+                  - listitem [ref=f23e353]:
+                    - link "javascript" [ref=f23e354] [cursor=pointer]:
+                      - /url: /search?q=keywords:javascript
+                  - listitem [ref=f23e355]:
+                    - link "lottiefiles" [ref=f23e356] [cursor=pointer]:
+                      - /url: /search?q=keywords:lottiefiles
+                  - listitem [ref=f23e357]:
+                    - link "dotlottie-web" [ref=f23e358] [cursor=pointer]:
+                      - /url: /search?q=keywords:dotlottie-web
+                  - listitem [ref=f23e359]:
+                    - link "thorvg" [ref=f23e360] [cursor=pointer]:
+                      - /url: /search?q=keywords:thorvg
+                  - listitem [ref=f23e361]:
+                    - link "web-component" [ref=f23e362] [cursor=pointer]:
+                      - /url: /search?q=keywords:web-component
+              - complementary [ref=f23e363]:
+                - heading "Provenance" [level=1] [ref=f23e364]
+                - link "Share feedback" [ref=f23e370] [cursor=pointer]:
+                  - /url: " https://github.com/npm/feedback"
+            - tabpanel
+            - tabpanel
+            - tabpanel "2 Dependencies"
+            - tabpanel "22 Dependents"
+            - tabpanel "157 Versions"
+          - complementary "Package sidebar" [ref=f23e371]:
+            - heading "Package Sidebar" [level=2] [ref=f23e372]
+            - heading "Install" [level=3] [ref=f23e373]
+            - paragraph [ref=f23e375]:
+              - generic [ref=f23e376]:
+                - code [ref=f23e377]: npm i @lottiefiles/dotlottie-wc
+                - button "Copy install command line" [ref=f23e378] [cursor=pointer]
+            - generic [ref=f23e379]:
+              - heading "Repository" [level=3] [ref=f23e380]
+              - paragraph [ref=f23e381]:
+                - link "Repository github.com/LottieFiles/dotlottie-web" [ref=f23e382] [cursor=pointer]:
+                  - /url: https://github.com/LottieFiles/dotlottie-web
+                  - text: github.com/LottieFiles/dotlottie-web
+            - generic [ref=f23e387]:
+              - heading "Homepage" [level=3] [ref=f23e388]
+              - paragraph [ref=f23e389]:
+                - link "Homepage docs.lottiefiles.com/en/runtimes/distributions/web-component?utm_source=npm&utm_medium=package" [ref=f23e390] [cursor=pointer]:
+                  - /url: https://docs.lottiefiles.com/en/runtimes/distributions/web-component?utm_source=npm&utm_medium=package
+                  - text: docs.lottiefiles.com/en/runtimes/distributions/web-component?utm_source=npm&utm_medium=package
+            - button "Showing weekly downloads" [ref=f23e393]:
+              - heading "Weekly Downloads" [level=3] [ref=f23e394]
+              - paragraph [ref=f23e405]: 41,869
+            - generic [ref=f23e406]:
+              - heading "Version" [level=3] [ref=f23e407]
+              - generic [ref=f23e408]:
+                - paragraph [ref=f23e409]: 0.9.24
+                - button "View more provenance details" [ref=f23e412]
+            - generic [ref=f23e415]:
+              - heading "License" [level=3] [ref=f23e416]
+              - paragraph [ref=f23e417]: MIT
+            - generic [ref=f23e418]:
+              - heading "Last publish" [level=3] [ref=f23e419]
+              - paragraph [ref=f23e420]:
+                - time [ref=f23e421]: 6 days ago
+            - generic [ref=f23e422]:
+              - heading "Collaborators" [level=3] [ref=f23e423]
+              - list "Collaborators" [ref=f23e424]:
+                - listitem [ref=f23e425]:
+                  - link [ref=f23e427] [cursor=pointer]:
+                    - /url: /~jawish
+                    - img "jawish" [ref=f23e428]
+                - listitem [ref=f23e429]:
+                  - link [ref=f23e431] [cursor=pointer]:
+                    - /url: /~nattuadnan
+                    - img "nattuadnan" [ref=f23e432]
+            - generic [ref=f23e433]:
+              - link [ref=f23e434] [cursor=pointer]:
+                - /url: https://socket.dev/npm/package/%40lottiefiles%2Fdotlottie-wc
+                - strong [ref=f23e437]: Analyze security
+                - text: with Socket
+              - link [ref=f23e438] [cursor=pointer]:
+                - /url: https://bundlephobia.com/package/%40lottiefiles%2Fdotlottie-wc
+                - strong [ref=f23e441]: Check bundle size
+              - link [ref=f23e442] [cursor=pointer]:
+                - /url: https://snyk.io/advisor/npm-package/%40lottiefiles%2Fdotlottie-wc
+                - strong [ref=f23e445]: View package health
+              - link [ref=f23e446] [cursor=pointer]:
+                - /url: https://npmgraph.js.org/?q=%40lottiefiles%2Fdotlottie-wc
+                - strong [ref=f23e449]: Explore dependencies
+            - link [ref=f23e451] [cursor=pointer]:
+              - /url: /support?inquire=security&security-inquire=malware&package=%40lottiefiles%2Fdotlottie-wc&version=0.9.24
+              - strong [ref=f23e454]: Report
+              - text: malware
+      - contentinfo [ref=f23e455]:
+        - heading "Footer" [level=2] [ref=f23e456]
+        - generic [ref=f23e457]:
+          - generic [ref=f23e458]:
+            - link "Visit npm GitHub page" [ref=f23e460] [cursor=pointer]:
+              - /url: https://github.com/npm
+            - link "GitHub" [ref=f23e465] [cursor=pointer]:
+              - /url: https://github.com
+          - generic [ref=f23e468]:
+            - heading "Support" [level=3] [ref=f23e469]
+            - list "Support" [ref=f23e470]:
+              - listitem [ref=f23e471]:
+                - link "Help" [ref=f23e472] [cursor=pointer]:
+                  - /url: https://docs.npmjs.com
+              - listitem [ref=f23e473]:
+                - link "Advisories" [ref=f23e474] [cursor=pointer]:
+                  - /url: https://github.com/advisories
+              - listitem [ref=f23e475]:
+                - link "Status" [ref=f23e476] [cursor=pointer]:
+                  - /url: http://status.npmjs.org/
+              - listitem [ref=f23e477]:
+                - link "Contact npm" [ref=f23e478] [cursor=pointer]:
+                  - /url: /support
+          - generic [ref=f23e479]:
+            - heading "Company" [level=3] [ref=f23e480]
+            - list "Company" [ref=f23e481]:
+              - listitem [ref=f23e482]:
+                - link "About" [ref=f23e483] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=f23e484]:
+                - link "Blog" [ref=f23e485] [cursor=pointer]:
+                  - /url: https://github.blog/tag/npm/
+              - listitem [ref=f23e486]:
+                - link "Press" [ref=f23e487] [cursor=pointer]:
+                  - /url: /press
+          - generic [ref=f23e488]:
+            - heading "Terms & Policies" [level=3] [ref=f23e489]
+            - list "Terms & Policies" [ref=f23e490]:
+              - listitem [ref=f23e491]:
+                - link "Policies" [ref=f23e492] [cursor=pointer]:
+                  - /url: /policies/
+              - listitem [ref=f23e493]:
+                - link "Terms of Use" [ref=f23e494] [cursor=pointer]:
+                  - /url: /policies/terms
+              - listitem [ref=f23e495]:
+                - link "Code of Conduct" [ref=f23e496] [cursor=pointer]:
+                  - /url: /policies/conduct
+              - listitem [ref=f23e497]:
+                - link "Privacy" [ref=f23e498] [cursor=pointer]:
+                  - /url: /policies/privacy
+  - generic [ref=f23e500]: Viewing @lottiefiles/dotlottie-wc version 0.9.24

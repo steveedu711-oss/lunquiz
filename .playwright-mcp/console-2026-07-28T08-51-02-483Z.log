@@ -1,0 +1,44 @@
+[    2663ms] [LOG] Bugsnag.getPlugin() was called before Bugsnag.start() @ https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:42
+[    3565ms] Error: Minified React error #418; visit https://react.dev/errors/418?args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Ga (https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:24:30922)
+    at jp (https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:24:75521)
+    at fm (https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:24:115608)
+    at cv (https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:24:115581)
+    at uv (https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:24:115438)
+    at lm (https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:24:111248)
+    at ym (https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:24:121127)
+    at MessagePort.Y (https://lottiefiles.com/assets/entry.client-OHqrJTsy.js:9:1539)
+[    3590ms] [ERROR] Failed to fetch user collections undefined @ https://lottiefiles.com/assets/animation-view-container-BVtQ1gSM.js:7
+[    3593ms] [ERROR] Failed to fetch user collections undefined @ https://lottiefiles.com/assets/animation-view-container-BVtQ1gSM.js:7
+[    3719ms] [WARNING] Amplitude Logger [Warn]: Storage provider t is not enabled. Falling back to MemoryStorage. @ https://lottiefiles.com/assets/index-D8bYgdUv.js:5
+[    3851ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'ambient-light-sensor'. @ :0
+[    3884ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'battery'. @ :0
+[    3885ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'document-domain'. @ :0
+[    3885ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'speaker'. @ :0
+[    3936ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://lottiefiles.com/api/v1/user/preference:0
+[    4374ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://accounts.lottiefiles.com/deimos/v1/session:0
+[    4424ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://lottiefiles.com/api/v1/user/animation-count:0
+[    4427ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://accounts.lottiefiles.com/deimos/v1/session:0
+[    4457ms] Error: Failed to fetch auth session
+    at C (https://lottiefiles.com/assets/index-D8bYgdUv.js:332:29601)
+[    4532ms] [LOG] Function call prevented - already executed on client @ https://lottiefiles.com/assets/index-D8bYgdUv.js:14
+[    4533ms] [LOG] Function call prevented - already executed on client @ https://lottiefiles.com/assets/index-D8bYgdUv.js:14
+[    4572ms] [LOG] Function call prevented - already executed on client @ https://lottiefiles.com/assets/index-D8bYgdUv.js:14
+[    4622ms] [ERROR] `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog @ https://login.lottiefiles.com/_next/static/chunks/main-app-59ba522d8041de61.js:0
+[    4624ms] [WARNING] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. @ https://login.lottiefiles.com/_next/static/chunks/app/(routes)/layout-b35365a7d0e95d1d.js:4
+[    5141ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://accounts.lottiefiles.com/deimos/v1/session:0
+[    5143ms] [ERROR] K @ https://login.lottiefiles.com/_next/static/chunks/main-app-59ba522d8041de61.js:0
+[    5144ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://accounts.lottiefiles.com/deimos/v1/session:0
+[    5145ms] [ERROR] K @ https://login.lottiefiles.com/_next/static/chunks/main-app-59ba522d8041de61.js:0
+[    5156ms] [LOG] Function call prevented - already executed on client @ https://lottiefiles.com/assets/index-D8bYgdUv.js:14
+[    5414ms] [ERROR] Not signed in with the identity provider. @ https://lottiefiles.com/free-animation/loading-Ymt2HaA2pc:0
+[    5473ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://accounts.lottiefiles.com/deimos/v1/session:0
+[    5585ms] [LOG] Function call prevented - already executed on client @ https://lottiefiles.com/assets/index-D8bYgdUv.js:14
+[    5586ms] [LOG] Function call prevented - already executed on client @ https://lottiefiles.com/assets/index-D8bYgdUv.js:14
+[    5718ms] [LOG] Function call prevented - already executed on client @ https://lottiefiles.com/assets/index-D8bYgdUv.js:14
+[    5719ms] [LOG] Function call prevented - already executed on client @ https://lottiefiles.com/assets/index-D8bYgdUv.js:14
+[   16428ms] [ERROR] [GSI_LOGGER]: FedCM get() rejects with NetworkError: Error retrieving a token. @ https://accounts.google.com/gsi/client:87

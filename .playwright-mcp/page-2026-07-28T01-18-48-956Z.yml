@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - img "鴻綸科技 圓形品牌徽章" [ref=e7]
+    - heading "小綸出題小幫手" [level=1] [ref=e9]
+    - heading "AI 智慧出題系統" [level=2] [ref=e10]
+    - generic [ref=e11]:
+      - button "直接進入 " [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]: 直接進入
+        - generic [ref=e14]: 
+      - button "我有自己的 API Key " [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: 我有自己的 API Key
+        - generic [ref=e17]: 
+    - generic [ref=e18]:
+      - img "鴻綸科技 x Google for Education" [ref=e20]
+      - paragraph [ref=e21]: Created by Hunglun Technology Steve
+      - paragraph [ref=e22]:
+        - text: 有任何問題？請點
+        - link "鴻綸科技官方網站" [ref=e23] [cursor=pointer]:
+          - /url: https://hunglun-new.pages.dev/
+      - generic [ref=e24]:
+        - generic [ref=e25]: 技術支援與回報
+        - link " 作者信箱" [ref=e27] [cursor=pointer]:
+          - /url: https://mail.google.com/mail/?view=cm&fs=1&to=gfeh@hunglun.com
+          - generic [ref=e28]: 
+          - text: 作者信箱
+        - link "💬 作者 Line" [ref=e29] [cursor=pointer]:
+          - /url: https://line.me/R/ti/p/%40gdm6961p
+  - text:                 
