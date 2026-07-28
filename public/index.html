@@ -147,9 +147,48 @@
             background: #fff; font-weight: 800; font-size: 0.95rem; color: var(--hl-text);
             cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
         }
-        .hl-identity-btn .hl-identity-icon { width: 2.75rem; height: 2.75rem; object-fit: contain; }
-        .hl-identity-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--hl-blue); }
+        /* 身分入口改成「每個身分一個專屬顏色＋專屬圖示」的扁平徽章(參考ClassDojo/Seesaw的身分選擇列)。
+           原本4張都是同一隻吉祥物換道具的插畫，四個按鈕看起來幾乎一樣、辨識不出差別；
+           這裡把顏色(--role)掛在按鈕上，chip底色/圖示色/hover邊框全部吃同一個變數，加身分只要多一條role-*即可 */
+        .hl-identity-btn.role-student { --role: var(--hl-blue);         --role-soft: rgba(26,115,232,0.12); }
+        .hl-identity-btn.role-parent  { --role: var(--hl-green);        --role-soft: rgba(52,168,83,0.12); }
+        .hl-identity-btn.role-teacher { --role: var(--hl-yellow-hover); --role-soft: rgba(251,188,4,0.20); }
+        .hl-identity-btn.role-admin   { --role: var(--hl-red);          --role-soft: rgba(234,67,53,0.12); }
+        .hl-identity-chip {
+            display: flex; align-items: center; justify-content: center;
+            width: 3rem; height: 3rem; border-radius: 999px; font-size: 1.65rem;
+            background: var(--role-soft); color: var(--role);
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        .hl-identity-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--role); }
+        .hl-identity-btn:hover .hl-identity-chip { background: var(--role); color: #fff; }
         .hl-identity-hint { font-size: 0.8125rem; color: var(--hl-text-secondary); margin: 0; }
+
+        /* 表單頁banner：原本放AI生成的吉祥物插畫，占滿首屏卻沒說明這工具能做什麼。
+           改成「產品畫面」路線(同Wayground/MagicSchool)——直接讓使用者看到產出的考卷長什麼樣。
+           純CSS拼的示意稿，不是圖片，換文案/配色不用重生圖 */
+        .lq-hero-visual {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center;
+            padding: 1.75rem; border-radius: var(--lq-radius); border: 1px solid var(--hl-border);
+            background: linear-gradient(135deg, rgba(26,115,232,0.08), rgba(52,168,83,0.08));
+            text-align: left;
+        }
+        @media (max-width: 640px) { .lq-hero-visual { grid-template-columns: 1fr; padding: 1.25rem; } }
+        .lq-hero-title { font-size: 1.25rem; font-weight: 800; color: var(--hl-text); margin-bottom: 0.5rem; line-height: 1.4; }
+        .lq-hero-sub { font-size: 0.875rem; color: var(--hl-text-secondary); line-height: 1.7; }
+        .lq-hero-paper {
+            background: #fffdf3; border-radius: 0.75rem; padding: 1rem 1.15rem;
+            box-shadow: var(--lq-shadow-lg); transform: rotate(-1.5deg);
+        }
+        .lq-hero-paper-head {
+            display: flex; justify-content: space-between; align-items: baseline;
+            border-bottom: 2px solid #1f2937; padding-bottom: 0.4rem; margin-bottom: 0.7rem;
+        }
+        .lq-hero-paper-title { font-size: 0.8125rem; font-weight: 800; color: #1f2937; }
+        .lq-hero-paper-meta { font-size: 0.625rem; color: #6b7280; }
+        .lq-hero-q { font-size: 0.6875rem; color: #1f2937; font-weight: 700; margin-bottom: 0.35rem; }
+        .lq-hero-opt { font-size: 0.625rem; color: #4b5563; margin-bottom: 0.15rem; }
+        .lq-hero-line { height: 0.4rem; border-radius: 999px; background: #e5e7eb; margin-bottom: 0.35rem; }
         .hl-back-link {
             align-self: flex-start; background: none; border: none; color: var(--hl-text-secondary);
             font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 0.25rem 0;
@@ -350,17 +389,17 @@
                     <span class="ph-duotone ph-rocket-launch" style="font-size:1.75rem;"></span>
                 </button>
                 <div class="hl-identity-grid">
-                    <button type="button" class="hl-identity-btn" onclick="splashSelectIdentity('student')">
-                        <img class="hl-identity-icon" src="assets/illustrations/role-student.webp" alt=""><span>學生</span>
+                    <button type="button" class="hl-identity-btn role-student" onclick="splashSelectIdentity('student')">
+                        <span class="hl-identity-chip"><span class="ph-duotone ph-student"></span></span><span>學生</span>
                     </button>
-                    <button type="button" class="hl-identity-btn" onclick="splashSelectIdentity('parent')">
-                        <img class="hl-identity-icon" src="assets/illustrations/role-parent.webp" alt=""><span>家長</span>
+                    <button type="button" class="hl-identity-btn role-parent" onclick="splashSelectIdentity('parent')">
+                        <span class="hl-identity-chip"><span class="ph-duotone ph-users-three"></span></span><span>家長</span>
                     </button>
-                    <button type="button" class="hl-identity-btn" onclick="splashSelectIdentity('teacher')">
-                        <img class="hl-identity-icon" src="assets/illustrations/role-teacher.webp" alt=""><span>老師</span>
+                    <button type="button" class="hl-identity-btn role-teacher" onclick="splashSelectIdentity('teacher')">
+                        <span class="hl-identity-chip"><span class="ph-duotone ph-presentation"></span></span><span>老師</span>
                     </button>
-                    <button type="button" class="hl-identity-btn" onclick="splashSelectIdentity('admin')">
-                        <img class="hl-identity-icon" src="assets/illustrations/role-admin.webp" alt=""><span>管理員</span>
+                    <button type="button" class="hl-identity-btn role-admin" onclick="splashSelectIdentity('admin')">
+                        <span class="hl-identity-chip"><span class="ph-duotone ph-gear-six"></span></span><span>管理員</span>
                     </button>
                 </div>
                 <p class="hl-identity-hint">學生／家長／老師／管理員需要帳號密碼登入</p>
@@ -409,8 +448,26 @@
             <span class="inline-block bg-emerald-600 text-white font-bold text-sm sm:text-base px-4 py-2 rounded-full shadow-md">👣 累計造訪人次：<span id="visitCount">--</span></span>
         </div>
 
-        <div class="mb-6 text-center">
-            <img src="assets/illustrations/mascot-banner.webp" alt="小綸出題小幫手吉祥物" class="w-full h-auto max-h-[300px] object-contain rounded-2xl bg-white shadow-md">
+        <div class="mb-6">
+            <div class="lq-hero-visual">
+                <div>
+                    <div class="lq-hero-title">選好條件，直接產出可以印的考卷</div>
+                    <div class="lq-hero-sub">依年級、科目、範圍與難度出題，附完整答案卷，可下載 PDF／Word／純文字。</div>
+                </div>
+                <div class="lq-hero-paper" aria-hidden="true">
+                    <div class="lq-hero-paper-head">
+                        <span class="lq-hero-paper-title">自然科 隨堂測驗</span>
+                        <span class="lq-hero-paper-meta">五年級 ・ 共 5 題</span>
+                    </div>
+                    <div class="lq-hero-q">1. (　) 下列關於北極星的敘述，何者正確？</div>
+                    <div class="lq-hero-opt">(A) 位於天空的正南方</div>
+                    <div class="lq-hero-opt">(B) 可利用北斗七星找到</div>
+                    <div class="lq-hero-opt" style="margin-bottom:0.6rem;">(C) 一年四季位置變化很大</div>
+                    <div class="lq-hero-line" style="width:88%;"></div>
+                    <div class="lq-hero-line" style="width:70%;"></div>
+                    <div class="lq-hero-line" style="width:80%;"></div>
+                </div>
+            </div>
         </div>
 
         <div class="lq-card p-6 sm:p-8">
