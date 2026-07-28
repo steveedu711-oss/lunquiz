@@ -409,7 +409,7 @@
                 <div class="flex gap-4 items-center">
                     <span id="accountStatus" class="text-xs text-gray-500"></span>
                     <button onclick="openSuperadminPanel()" id="superadminBtn" class="hidden lq-btn lq-btn-primary text-xs px-2 py-1">🛡️ 管理後台</button>
-                    <button onclick="openAccountModal()" id="accountBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">👤 登入/註冊</button>
+                    <button onclick="openAccountModal()" id="accountBtn" class="hidden lq-btn lq-btn-ghost text-xs px-2 py-1">👤 我的帳號</button>
                     <button onclick="openHistory()" id="historyBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">📜 出題紀錄</button>
                     <button onclick="unlockAdmin()" id="adminBtn" class="lq-btn lq-btn-ghost text-xs px-2 py-1">🔓 管理者解除限制</button>
                 </div>
@@ -516,11 +516,13 @@
                     <select id="difficulty" onchange="checkCustom(this, 'c_diff')" class="lq-input">
                         <option value="" disabled selected>請選擇...</option>
                         <option value="Custom">✍️ 自定義</option>
-                        <option value="簡單">簡單</option>
-                        <option value="適中">適中</option>
-                        <option value="困難">困難</option>
+                        <option value="基礎">基礎</option>
+                        <option value="普通">普通</option>
+                        <option value="進階">進階</option>
+                        <option value="挑戰">挑戰</option>
+                        <option value="精熟">精熟</option>
                     </select>
-                    <input type="text" id="c_diff" class="input-custom" placeholder="例: 適中">
+                    <input type="text" id="c_diff" class="input-custom" placeholder="例: 進階">
                 </div>
                 <div>
                     <label class="font-bold text-sm">輸出語言 <span class="text-red-500">*</span></label>
@@ -747,6 +749,23 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+
+        // 難度分級的實質定義：舊版只把「簡單/適中/困難」這個標籤原封不動塞給AI，
+        // AI只能自己猜「困難的國小一年級題目」該長怎樣，結果常常是拉高知識點年級(例如小一困難題混進國中概念)，
+        // 而不是在同一年級課綱內加深認知複雜度。改成明確定義每一級「考什麼認知層次」，
+        // 並且每一級都重申「知識點不可超出該年級課綱」，讓難度只調整思考深度、不調整年級高低。
+        // 只有選5個預設分級才給明確定義；使用者自訂難度文字就照原樣尊重使用者說法，不覆蓋。
+        function getDifficultyRubric(diffVal) {
+            const rubric = {
+                '基礎': '「基礎」＝直接記憶與辨識：緊扣課本原文的定義/事實，不需要推理或跨概念整合，題目應該一眼就能對應到課本某一句話。',
+                '普通': '「普通」＝基本理解與單一應用：需要理解課本概念後做一次簡單應用，但只涉及單一個知識點，不需要跨單元。',
+                '進階': '「進階」＝應用與初步分析：需要結合同單元內兩個以上的概念一起應用，或需要簡單的邏輯推理才能作答。',
+                '挑戰': '「挑戰」＝多步驟推理：需要多個步驟的推理或情境轉換(例如把課本概念套進新情境判斷)，但用到的知識點依然不可超出該年級課綱。',
+                '精熟': '「精熟」＝整合與靈活運用：該年級課綱內認知要求最高的題目，可綜合單元內多個概念，強調概念之間的靈活運用與辨析，但知識點依然完全不可超出該年級課綱。',
+            };
+            if (!rubric[diffVal]) return '';
+            return '【難度定義】：' + rubric[diffVal] + ' 無論難度高低，考的知識點都必須落在該年級課綱範圍內——難度只反映認知複雜度(記憶→理解→應用→分析→整合)的層次，絕對不可以用超出年級的知識點來製造難度。\n\n';
         }
 
         // 每台裝置的瀏覽器各自產生一個固定ID(存localStorage),讓冷卻機制以裝置為單位,
@@ -1677,6 +1696,7 @@
                          taskDescription = "【最高指令】：完全依照以下條件出題，絕不可偏離範圍！\n";
                          taskDescription += "- 年級：" + grade + "\n- 科目：" + subject + "\n- 版本：" + pubStr + "\n- 範圍：" + scope + "\n";
                          taskDescription += "- 總題數：" + total + " 題\n- 難度：" + diffVal + "\n- 題型要求：「" + typeVal + "」\n\n";
+                         taskDescription += getDifficultyRubric(diffVal);
                     }
                     taskDescription += "【語言】：請務必使用「" + langVal + "」撰寫所有內容！\n\n";
                     taskDescription += "【批次定位】：這是第 " + (i+1) + " 批，請僅生成【第 " + startNum + " 題 到 第 " + endNum + " 題】（共 " + currentCount + " 題）。\n";
@@ -1792,6 +1812,7 @@
             if (s.sType === '1') {
                 let pubStr = s.publisher === '由小綸自由發揮' ? '不限版本，請依一般課綱知識出題' : s.publisher;
                 p += "- 年級：" + s.grade + "\n- 科目：" + s.subject + "\n- 版本：" + pubStr + "\n- 範圍：" + s.scope + "\n- 難度：" + s.difficulty + "\n";
+                p += getDifficultyRubric(s.difficulty);
             } else {
                 p += "請依照參考附件/資料內容出題。\n";
             }
@@ -2547,14 +2568,13 @@
             const statusEl = document.getElementById('accountStatus');
             const btnEl = document.getElementById('accountBtn');
             const roleLabel = { student: '學生', parent: '家長', teacher: '老師', superadmin: '超級管理員' };
+            // 登入入口已經移到進場頁的身分選擇流程，header這裡不再提供「登入/註冊」，
+            // 只有已登入時才顯示「我的帳號」(查看班級歷史/連結孩子/登出等)
+            btnEl.classList.toggle('hidden', !window.currentUser);
             if (window.currentUser) {
                 statusEl.textContent = window.currentUser.displayName + '（' + (roleLabel[window.currentUser.role] || window.currentUser.role) + '）';
-                btnEl.innerHTML = '👤 我的帳號';
-                btnEl.onclick = openAccountModal;
             } else {
                 statusEl.textContent = '';
-                btnEl.innerHTML = '👤 登入/註冊';
-                btnEl.onclick = openAccountModal;
             }
             const saveBtn = document.getElementById('btnSaveHistory');
             if (saveBtn) saveBtn.classList.toggle('hidden', !(window.currentUser && window.currentUser.role === 'teacher'));
