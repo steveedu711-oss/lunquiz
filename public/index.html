@@ -705,7 +705,7 @@
                         <li><b>🔁 重新出這題</b>：只有某一題不滿意，不用整份重出</li>
                         <li><b>⬇️ 下載</b>：可選 Word / PDF / 純文字三種格式</li>
                         <li><b>🖨️ 列印</b>：請先按「⬇️ 下載 ▾ → PDF」下載成PDF檔，打開後用PDF閱讀器本身的列印功能印出，畫面才會乾淨、不會有瀏覽器多餘的日期/網址/頁碼</li>
-                        <li><b>直接線上測驗</b>：先選身分再分流，<b>三種身分都不用註冊帳號</b>——<b>學生</b>直接開新分頁作答（自動評分）；<b>家長</b>貼上孩子傳來的監看連結就能看每題作答（或登入家長帳號一次管多個孩子）；<b>老師</b>直接開全班即時進度儀表板（連結自帶金鑰，不用密碼也不用登入，但別把這條網址轉給學生）。發出去的監看連結隨時可以按「⏹ 停止監看」作廢</li>
+                        <li><b>直接線上測驗</b>：先選身分再分流，<b>三種身分都不用註冊帳號</b>——<b>學生</b>直接開新分頁作答（自動評分）；<b>家長</b>貼上孩子傳來的監看連結就能看每題作答（或登入家長帳號一次管多個孩子）；<b>老師</b>直接開全班即時進度儀表板（連結自帶金鑰，不用密碼也不用登入，但別把這條網址轉給學生）。發出去的監看連結隨時可以按「⏹ 停止監看」作廢（限老師／家長／管理員，學生不能關掉自己被監看）</li>
                         <li><b>📤 分享 ▾ 學生作答連結</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
                         <li><b>📤 分享 ▾ 家長答案連結</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
                         <li><b>學生線上作答</b>：可選「⚡每題即時看結果」或「📋全部寫完再送出」，並可選填姓名/年級/班級/座號；送出評分後可再產生「結果連結」分享回給老師/家長核對</li>
@@ -1407,7 +1407,7 @@
             container.innerHTML = "<div class='max-w-2xl mx-auto p-4'><div class='lq-card p-5 mb-4 text-center'>" +
                 "<h2 class='font-bold text-lg mb-1'>📊 即時進度儀表板</h2>" +
                 "<p class='text-sm text-gray-500'>每 8-10 秒自動更新" + (dashKey ? "（這條連結本身就是權限，不用登入）" : "（老師帳號登入即可，未登入才需要管理者密碼）") + "</p>" +
-                (dashKey ? "<button id='btnRevokeDash' onclick='toggleRevokeDashboard()' class='lq-btn lq-btn-secondary text-xs px-3 py-1 mt-3'>⏹ 停止監看（讓這條連結失效）</button>" : "") +
+                "<button id='btnRevokeDash' onclick='toggleRevokeDashboard()' class='lq-btn lq-btn-secondary text-xs px-3 py-1 mt-3'>⏹ 停止監看（讓這條連結失效）</button>" +
                 "</div>" +
                 "<div id='liveDashboardBody'><div class='text-center text-white py-10'>⏳ 載入中...</div></div></div>";
 
@@ -1483,9 +1483,13 @@
             const next = !window.dashRevoked;
             if (btn) { btn.disabled = true; }
             try {
+                // 金鑰(免登入老師)或老師/管理員帳號都可以停，帶哪個有就送哪個
+                const headers = { 'Content-Type': 'application/json' };
+                if (key) headers['X-Dash-Key'] = key;
+                const token = localStorage.getItem('lun_session_token') || '';
+                if (token) headers['X-Session-Token'] = token;
                 const res = await fetch(API_BASE + "/api/live-revoke", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Dash-Key': key },
+                    method: 'POST', headers,
                     body: JSON.stringify({ shareId, revoked: next })
                 });
                 if (!res.ok && res.status === 404) { alert('這個功能需要後端更新後才能使用，請稍後再試。'); return; }
@@ -1536,6 +1540,7 @@
                         "<div class='text-3xl font-bold mb-2' style='color:var(--hl-blue);'>" + answered + " / " + total + " 題</div>" +
                         "<div class='h-3 w-full bg-gray-200 rounded-full overflow-hidden mb-2'><div class='progress-bar' style='width:" + pct + "%;height:100%;'></div></div>" +
                         "<div class='text-xs text-gray-400'>最後更新：" + new Date(data.updatedAt || Date.now()).toLocaleTimeString() + "</div>" +
+                        "<div class='text-xs text-gray-400 mt-2'>要讓這條連結失效，請用家長帳號登入後在「我的帳號 → 即時監看」裡停止，或請老師停用。</div>" +
                         "</div>" +
                         "<div id='liveParentDetail' class='mt-4'></div>";
 
@@ -2439,31 +2444,6 @@
             }
         }
 
-        // 學生端「停止監看」：讓自己發出去的家長監看連結失效(可再按一次恢復)。
-        // 授權靠「持有自己的shareId+studentId」，不需要帳號
-        window.parentWatchStopped = false;
-        async function toggleStopParentWatch(btnEl) {
-            const next = !window.parentWatchStopped;
-            if (btnEl) btnEl.disabled = true;
-            try {
-                const res = await fetch(API_BASE + "/api/live-revoke", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ shareId: window.liveShareId, studentId: getLiveStudentId(), revoked: next })
-                });
-                if (!res.ok && res.status === 404) { alert('這個功能需要後端更新後才能使用，請稍後再試。'); return; }
-                const data = await res.json();
-                if (data.error) { alert(data.error.message); return; }
-                window.parentWatchStopped = next;
-                if (btnEl) btnEl.innerHTML = next ? '▶️ 恢復監看（讓連結重新可用）' : '⏹ 停止監看（讓已發出的連結失效）';
-                alert(next ? '已停止監看，家長手上的連結暫時看不到你的作答了。' : '已恢復監看，家長手上的連結又可以看了。');
-            } catch (e) {
-                alert('操作失敗：' + e.message);
-            } finally {
-                if (btnEl) btnEl.disabled = false;
-            }
-        }
-
         function renderAnswerMode() {
             const container = document.getElementById('answerModeContainer');
             if (!container) return;
@@ -2527,8 +2507,7 @@
             });
             // 即時進度分享連結：只有透過分享連結進來作答的學生(有shareId)才需要，老師自己預覽不用
             if (window.isSharedView && window.sharedMode === 'student' && window.liveShareId) {
-                html += "<button type='button' onclick='shareLiveProgressLink(this)' class='lq-btn lq-btn-share w-full py-2 text-sm mb-2'>📤 分享即時監看連結給家長（家長不用註冊）</button>";
-                html += "<button type='button' id='btnStopParentWatch' onclick='toggleStopParentWatch(this)' class='lq-btn lq-btn-ghost w-full py-2 text-sm mb-3'>⏹ 停止監看（讓已發出的連結失效）</button>";
+                html += "<button type='button' onclick='shareLiveProgressLink(this)' class='lq-btn lq-btn-share w-full py-2 text-sm mb-3'>📤 分享即時監看連結給家長（家長不用註冊）</button>";
             }
             html += "<button onclick='gradeAnswers()' class='lq-btn lq-btn-primary w-full py-3 rounded-xl text-lg'>✅ 送出評分</button>";
             html += "<div id='scoreResult' class='mt-4'></div>";
@@ -3354,6 +3333,40 @@
             return html;
         }
 
+        // 停止/恢復「某一位學生」的監看連結。學生自己不能按(被監考的人不該關掉監考)，
+        // 後端要求儀表板金鑰(老師)、老師/管理員帳號、或已連結該學生的家長帳號
+        window.studentWatchStopped = {};
+        function revokeStudentBtnHtml(shareId, studentId) {
+            const stopped = !!window.studentWatchStopped[shareId + ':' + studentId];
+            return "<button type='button' onclick=\"toggleRevokeStudentWatch('" + escapeHtml(shareId) + "','" + escapeHtml(studentId) + "', this)\" class='lq-btn lq-btn-ghost text-xs px-3 py-1 mb-3'>" +
+                (stopped ? '▶️ 恢復監看' : '⏹ 停止監看（讓這條連結失效）') + "</button>";
+        }
+        async function toggleRevokeStudentWatch(shareId, studentId, btnEl) {
+            const mapKey = shareId + ':' + studentId;
+            const next = !window.studentWatchStopped[mapKey];
+            if (btnEl) btnEl.disabled = true;
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                const token = localStorage.getItem('lun_session_token') || '';
+                if (token) headers['X-Session-Token'] = token;
+                if (window.currentDashKey) headers['X-Dash-Key'] = window.currentDashKey;
+                const res = await fetch(API_BASE + "/api/live-revoke", {
+                    method: 'POST', headers,
+                    body: JSON.stringify({ shareId, studentId, revoked: next })
+                });
+                if (!res.ok && res.status === 404) { alert('這個功能需要後端更新後才能使用，請稍後再試。'); return; }
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                window.studentWatchStopped[mapKey] = next;
+                if (btnEl) btnEl.innerHTML = next ? '▶️ 恢復監看' : '⏹ 停止監看（讓這條連結失效）';
+                alert(next ? '已停止監看，發出去的這條連結暫時看不到作答內容了。' : '已恢復監看。');
+            } catch (e) {
+                alert('操作失敗：' + e.message);
+            } finally {
+                if (btnEl) btnEl.disabled = false;
+            }
+        }
+
         window.proctorPollTimer = null;
         function closeProctorModal() {
             document.getElementById('proctorModal').classList.add('hidden');
@@ -3371,7 +3384,7 @@
                     const res = await fetch(API_BASE + "/api/live-progress/" + encodeURIComponent(shareId) + "/" + encodeURIComponent(studentId), { headers });
                     const data = await res.json();
                     if (data.error) { bodyEl.innerHTML = "<div class='text-center text-gray-500 py-8'>" + escapeHtml(data.error.message) + "</div>"; return; }
-                    bodyEl.innerHTML = renderProctorAnswersHtml(items, data.answers || []);
+                    bodyEl.innerHTML = revokeStudentBtnHtml(shareId, studentId) + renderProctorAnswersHtml(items, data.answers || []);
                 } catch (e) {
                     bodyEl.innerHTML = "<div class='text-center text-red-600 py-8'>載入失敗：" + escapeHtml(e.message) + "</div>";
                 }
@@ -3393,7 +3406,7 @@
                     const data = await liveRes.json();
                     if (data.error) { bodyEl.innerHTML = "<div class='text-center text-gray-500 py-8'>" + escapeHtml(data.error.message) + "</div>"; return; }
                     const items = await fetchShareItems(data.shareId);
-                    bodyEl.innerHTML = renderProctorAnswersHtml(items, data.answers || []);
+                    bodyEl.innerHTML = revokeStudentBtnHtml(data.shareId, data.studentId) + renderProctorAnswersHtml(items, data.answers || []);
                 } catch (e) {
                     bodyEl.innerHTML = "<div class='text-center text-red-600 py-8'>載入失敗：" + escapeHtml(e.message) + "</div>";
                 }

@@ -390,9 +390,11 @@ async function hasValidDashKey(request, env, shareId) {
   return !!expected && given === expected;
 }
 
-// 停止/恢復監看：
-// - 老師(持儀表板金鑰)可以停掉整份測驗的免登入儀表板連結
-// - 學生(持自己的shareId+studentId，也就是自己作答用的那組)可以停掉發給家長的單人監看連結
+// 停止/恢復監看：只有老師、家長、超級管理員可以，學生不行——被監考的人不該有權關掉監考。
+// 學生手上雖然握有自己的shareId+studentId，但那組ID不構成撤銷權，這裡一律要求下列憑證之一：
+// - 儀表板金鑰(老師，免登入)
+// - 超級管理員的session token
+// - 家長的session token，且該studentId確實屬於自己已連結的孩子
 async function handleLiveRevoke(request, env) {
   if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   if (request.method !== "POST") return json({ error: { message: "Method Not Allowed" } }, 405);
@@ -408,20 +410,49 @@ async function handleLiveRevoke(request, env) {
   const revoked = body.revoked !== false;
   if (!shareId) return json({ error: { message: "缺少shareId" } }, 400);
 
+  const hasKey = await hasValidDashKey(request, env, shareId);
+  const session = hasKey ? null : await verifySession(request, env);
+  const isTeacher = !!session && (session.role === "teacher" || session.role === "superadmin");
+
   if (studentId) {
+    let allowed = hasKey || isTeacher;
+    if (!allowed && session && session.role === "parent") {
+      allowed = await parentOwnsLiveStudent(env, session.uid, shareId, studentId);
+    }
+    if (!allowed) {
+      return json({ error: { message: "只有老師、已連結的家長或管理員可以停止監看" } }, 403);
+    }
     const key = "revoke:live:" + shareId + ":" + studentId;
     if (revoked) await env.COOLDOWN_KV.put(key, "1", { expirationTtl: LIVE_PROGRESS_TTL_SECONDS });
     else await env.COOLDOWN_KV.delete(key);
     return json({ ok: true, revoked });
   }
 
-  if (!(await hasValidDashKey(request, env, shareId))) {
-    return json({ error: { message: "需要儀表板金鑰才能停止全班監看" } }, 401);
+  if (!hasKey && !isTeacher) {
+    return json({ error: { message: "需要儀表板連結或老師帳號才能停止全班監看" } }, 403);
   }
   const key = "revoke:dash:" + shareId;
   if (revoked) await env.COOLDOWN_KV.put(key, "1", { expirationTtl: SHARE_TTL_SECONDS });
   else await env.COOLDOWN_KV.delete(key);
   return json({ ok: true, revoked });
+}
+
+// 這位家長是不是這筆即時進度的家長？即時進度的studentId是作答分頁的隨機ID、不是帳號，
+// 所以透過孩子登入時寫下的student-active:<username>指標反查：只要指標指到同一組shareId+studentId，
+// 而且該username確實是這位家長已連結的孩子，就算數
+async function parentOwnsLiveStudent(env, parentId, shareId, studentId) {
+  const rows = await env.DB.prepare(
+    "SELECT u.username FROM parent_child_links l JOIN users u ON u.id = l.student_id WHERE l.parent_id = ?"
+  ).bind(parentId).all();
+  for (const r of rows.results || []) {
+    const raw = await env.COOLDOWN_KV.get("student-active:" + r.username);
+    if (!raw) continue;
+    try {
+      const a = JSON.parse(raw);
+      if (a.shareId === shareId && a.studentId === studentId) return true;
+    } catch (e) {}
+  }
+  return false;
 }
 
 async function handleLiveProgressList(request, env, shareId) {
