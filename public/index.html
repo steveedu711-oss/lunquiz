@@ -237,14 +237,22 @@
         .q-item {
             display: flex;
             align-items: baseline;
+            position: relative;
             margin-bottom: 12pt;
             page-break-inside: avoid;
             break-inside: avoid;
         }
         /* 重新出這題按鈕預設隱藏,只有滑鼠移到該題範圍才淡入,讓試卷預設看起來像乾淨的真考卷,
            而不是每題上方都常駐一顆黃色標籤 */
-        .q-item .q-regen-toolbar { opacity: 0; transition: opacity 0.15s ease; }
+        /* 絕對定位塞在題號正下方的空白處：原本它是一般區塊元素，每題都白白吃掉一整行高度
+           (列印/PDF時雖然會隱藏，但螢幕上很浪費空間，Steve反映) */
+        .q-item .q-regen-toolbar {
+            position: absolute; left: 0; top: 1.7em; margin: 0; z-index: 5;
+            opacity: 0; transition: opacity 0.15s ease;
+        }
         .q-item:hover .q-regen-toolbar { opacity: 1; }
+        /* 題號欄在小螢幕只有48-56px寬，塞不下文字，收起來只留圖示(title仍看得到說明) */
+        @media screen and (max-width: 820px) { .q-regen-label { display: none; } }
 
         .q-num-box {
             width: 90px;
@@ -2083,7 +2091,7 @@
         // --- 單題重新出（會再打一次API，一樣受30秒冷卻限制） ---
         function regenBtnHTML(idx) {
             if (window.isSharedView) return "";
-            return "<div class='no-print q-regen-toolbar' contenteditable='false' style='margin-bottom:4px;'><button type='button' onclick='regenerateQuestion(" + idx + ", this)' class='text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-0.5 rounded border border-amber-300' style='cursor:pointer;'>🔁 重新出這題</button></div>";
+            return "<div class='no-print q-regen-toolbar' contenteditable='false'><button type='button' title='重新出這題' onclick='regenerateQuestion(" + idx + ", this)' class='text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300' style='cursor:pointer;white-space:nowrap;'>🔁<span class='q-regen-label'> 重出</span></button></div>";
         }
 
         function buildRegenPrompt(idx) {
