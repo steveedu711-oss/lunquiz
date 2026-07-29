@@ -126,7 +126,7 @@
             opacity: 0; transition: opacity 0.35s ease; z-index: -1;
             animation: hl-rotate-border 5s linear infinite;
         }
-        .lq-cta:hover::before, .lq-cta:focus-visible::before { opacity: 1; }
+        .lq-cta:hover::before, .lq-cta:focus-visible::before, .lq-cta.is-working::before { opacity: 1; }
 
         .lq-card { background: #fff; border-radius: var(--lq-radius); box-shadow: var(--lq-shadow-sm); border: 1px solid #eef0f3; }
 
@@ -587,7 +587,7 @@
                         <option value="普通">普通</option>
                         <option value="進階">進階</option>
                         <option value="挑戰">挑戰</option>
-                        <option value="精熟">精熟</option>
+                        <option value="熟練">熟練</option>
                     </select>
                     <input type="text" id="c_diff" class="input-custom" placeholder="例: 進階">
                 </div>
@@ -843,7 +843,7 @@
                 '普通': '「普通」＝基本理解與單一應用：需要理解課本概念後做一次簡單應用，但只涉及單一個知識點，不需要跨單元。',
                 '進階': '「進階」＝應用與初步分析：需要結合同單元內兩個以上的概念一起應用，或需要簡單的邏輯推理才能作答。',
                 '挑戰': '「挑戰」＝多步驟推理：需要多個步驟的推理或情境轉換(例如把課本概念套進新情境判斷)，但用到的知識點依然不可超出該年級課綱。',
-                '精熟': '「精熟」＝整合與靈活運用：該年級課綱內認知要求最高的題目，可綜合單元內多個概念，強調概念之間的靈活運用與辨析，但知識點依然完全不可超出該年級課綱。',
+                '熟練': '「熟練」＝整合與靈活運用：該年級課綱內認知要求最高的題目，可綜合單元內多個概念，強調概念之間的靈活運用與辨析，但知識點依然完全不可超出該年級課綱。',
             };
             if (!rubric[diffVal]) return '';
             return '【難度定義】：' + rubric[diffVal] + ' 無論難度高低，考的知識點都必須落在該年級課綱範圍內——難度只反映認知複雜度(記憶→理解→應用→分析→整合)的層次，絕對不可以用超出年級的知識點來製造難度。\n\n';
@@ -1927,6 +1927,8 @@
 
             document.getElementById('btnGo').disabled = true;
             document.getElementById('btnGo').innerText = "⏳ 運算中...";
+            // 運算中直接亮四色跑馬燈邊框：這時按鈕是disabled，滑鼠移過去也不會觸發hover特效
+            document.getElementById('btnGo').classList.add('is-working');
             document.getElementById('barBox').classList.remove('hidden');
             document.getElementById('loadingAnim').classList.remove('hidden');
             document.getElementById('loadingAnim').classList.add('flex');
@@ -2070,6 +2072,7 @@
                 alert("錯誤: " + e.message);
                 document.getElementById('btnGo').disabled = false;
                 document.getElementById('btnGo').innerText = "🚀 小綸開始出題";
+                document.getElementById('btnGo').classList.remove('is-working');
                 document.getElementById('barBox').classList.add('hidden');
                 document.getElementById('loadingAnim').classList.add('hidden');
                 document.getElementById('loadingAnim').classList.remove('flex');
