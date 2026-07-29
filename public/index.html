@@ -10,6 +10,9 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- 真正的 .docx 產生器(Office Open XML)。舊版是把HTML存成.doc，Word雖然打得開，
+         但Google文件/手機版Word匯入常跑版，改用標準docx格式 -->
+    <script src="https://unpkg.com/docx@9.7.1/dist/index.umd.cjs"></script>
     <script type="module" src="https://unpkg.com/@lottiefiles/dotlottie-wc@latest/dist/dotlottie-wc.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -483,7 +486,7 @@
             <div class="lq-hero-visual">
                 <div>
                     <div class="lq-hero-title">選好條件，直接產出可以印的考卷</div>
-                    <div class="lq-hero-sub">依年級、科目、範圍與難度出題，附完整答案卷，可下載 PDF／Word／純文字。</div>
+                    <div class="lq-hero-sub">依年級、科目、範圍與難度出題，附完整答案卷，可下載 Word（.docx）與 PDF。</div>
                 </div>
                 <div class="lq-hero-paper" aria-hidden="true">
                     <div class="lq-hero-paper-head">
@@ -677,9 +680,8 @@
                 <div class="relative inline-block" id="downloadMenuWrap">
                     <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-download-simple lq-icon lq-icon-blue"></span> 下載 ▾</button>
                     <div id="downloadMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
-                        <button onclick="dlDoc(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-doc lq-icon text-blue-600"></span> Word (.doc)</button>
+                        <button onclick="dlDoc(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-doc lq-icon text-blue-600"></span> Word (.docx)</button>
                         <button onclick="dlPDF(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-pdf lq-icon text-red-600"></span> PDF</button>
-                        <button onclick="dlTxt(); closeDownloadMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-file-text lq-icon text-slate-500"></span> 純文字 (.txt)</button>
                         <div class="px-4 py-2 text-xs text-gray-400 border-t">🖨️ 要列印請先下載PDF，開啟後用PDF閱讀器本身的列印功能</div>
                     </div>
                 </div>
@@ -734,7 +736,7 @@
                     <ul class="list-disc list-inside space-y-1">
                         <li><b>編輯內容</b>：直接點試卷上的文字修改，跟打字一樣</li>
                         <li><b>🔁 重新出這題</b>：只有某一題不滿意，不用整份重出</li>
-                        <li><b>⬇️ 下載</b>：可選 Word / PDF / 純文字三種格式</li>
+                        <li><b>⬇️ 下載</b>：可選 Word（.docx）或 PDF 兩種格式</li>
                         <li><b>🖨️ 列印</b>：請先按「⬇️ 下載 ▾ → PDF」下載成PDF檔，打開後用PDF閱讀器本身的列印功能印出，畫面才會乾淨、不會有瀏覽器多餘的日期/網址/頁碼</li>
                         <li><b>直接線上測驗</b>：先選身分再分流，<b>三種身分都不用註冊帳號</b>——<b>學生</b>直接開新分頁作答（自動評分）；<b>家長</b>貼上孩子傳來的監看連結就能看每題作答（或登入家長帳號一次管多個孩子）；<b>老師</b>直接開全班即時進度儀表板（連結自帶金鑰，不用密碼也不用登入，但別把這條網址轉給學生）。發出去的監看連結隨時可以按「⏹ 停止監看」作廢（限老師／家長／管理員，學生不能關掉自己被監看）</li>
                         <li><b>📤 分享 ▾ 學生作答連結</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
@@ -2793,33 +2795,6 @@
             if (wrap && !wrap.contains(e.target)) closeShareMenu();
         });
 
-        function dlTxt() {
-            let content = "";
-            document.querySelectorAll('#paperContainer > .quiz-page').forEach(page => {
-                if (page.style.display === 'none') return;
-                content += page.innerText.trim() + "\n\n";
-            });
-            document.querySelectorAll('.key-page').forEach(p => {
-                if (p.style.display !== 'none') content += p.innerText.trim() + "\n";
-            });
-            if (!content.trim()) { alert('沒有可匯出的內容'); return; }
-            let blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            let fileName = (window.docName || "試卷") + ".txt";
-            let a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
-        }
-
-        // 元素相對某個祖先的layout距離(累加offsetTop)。中途若跳出祖先範圍就回傳null，
-        // 讓呼叫端知道量不到、不要拿錯的數字當切點
-        function offsetTopWithin(el, ancestor) {
-            let y = 0, n = el;
-            while (n && n !== ancestor) {
-                y += n.offsetTop;
-                n = n.offsetParent;
-            }
-            return n === ancestor ? y : null;
-        }
-
         async function dlPDF() {
             if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
                 alert('PDF 元件載入失敗，請檢查網路連線後重新整理再試一次');
@@ -2830,7 +2805,10 @@
 
             // 用display:none而不是visibility:hidden：visibility只是「看不見」，元素照樣佔位，
             // 每題上方那顆「🔁 重新出這題」工具列就會在PDF裡的題號後面留下一整行空白。
-            const noPrintEls = document.querySelectorAll('#paperContainer .no-print');
+            // 頁尾一起隱藏：它印的是螢幕分頁的頁碼(每10題一頁)，但PDF是照實際內容高度切，
+            // 兩者頁數不一樣，截進去就會出現「第1頁/共1頁」卻有兩頁的矛盾(Steve回報)。
+            // 正確頁碼改由jsPDF在最後統一補上。
+            const noPrintEls = document.querySelectorAll('#paperContainer .no-print, #paperContainer .page-footer');
             const noPrintPrevDisplay = [];
             noPrintEls.forEach((el, i) => { noPrintPrevDisplay[i] = el.style.display; el.style.display = 'none'; });
 
@@ -2900,6 +2878,15 @@
                         offsetPx = endPx;
                     }
                 }
+                // 補頁碼：等所有頁都產生完才知道總頁數，用純數字避免內建字型不支援中文而變亂碼
+                const totalPages = pdf.internal.getNumberOfPages();
+                pdf.setFontSize(9);
+                pdf.setTextColor(90);
+                for (let p = 1; p <= totalPages; p++) {
+                    pdf.setPage(p);
+                    pdf.text('- ' + p + ' / ' + totalPages + ' -', PAGE_W_MM / 2, PAGE_H_MM - 5, { align: 'center' });
+                }
+
                 pdf.save((window.docName || "試卷") + ".pdf");
             } catch (e) {
                 alert('PDF 匯出失敗: ' + e.message);
@@ -2908,70 +2895,116 @@
             }
         }
 
+        // Word 匯出：產生真正的 .docx（Office Open XML）。
+        // 舊版是把HTML存成.doc，Word打得開但Google文件/手機Word匯入常跑版；改用docx函式庫產生標準格式。
+        // 網頁上的分頁(每頁10題)是螢幕預覽用的，Word一頁塞得下的題數跟它不同，
+        // 所以題目連續輸出讓Word自然填滿每一頁(舊版每頁後都強制分頁，每張紙只印5題就跳頁很浪費紙)。
         async function dlDoc() {
-            // 網頁上的分頁(每頁10題)是螢幕預覽用的，Word 一頁塞得下的題數跟它不一樣。
-            // 舊版把每個 .quiz-page 之後都插入強制分頁，Word 自己又會再斷一次，
-            // 結果每張紙只印到5題就跳頁、後面一大片空白很浪費紙(Steve反映)。
-            // 改成只保留一次表頭，題目連續輸出讓 Word 自然排版填滿每一頁，
-            // 只有「答案卷」之前才真的強制分頁。
-            let content = "";
-            let headerDone = false;
+            if (typeof window.docx === 'undefined') {
+                alert('Word 元件載入失敗，請檢查網路連線後重新整理再試一次');
+                return;
+            }
+            const items = window.currentItems || [];
+            if (items.length === 0) { alert('沒有可匯出的內容'); return; }
 
-            const qItemToTable = (item) => {
-                const numBox = item.querySelector('.q-num-box').innerHTML;
-                const contentBox = item.querySelector('.q-content-box').innerHTML;
-                // 整題包在一個 table 裡，Word 預設不會把同一列拆到兩頁，題目就不會被斷開
-                return '<table width="100%" style="margin-bottom:9pt; border-collapse:collapse;">' +
-                    '<tr>' +
-                        '<td valign="top" width="80" style="width:80px; font-weight:bold; padding-right:5px;">' + numBox + '</td>' +
-                        '<td valign="top">' + contentBox + '</td>' +
-                    '</tr></table>';
-            };
+            const D = window.docx;
+            const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, HeadingLevel } = D;
+            const FONT = '微軟正黑體';
+            const run = (text, opts) => new TextRun(Object.assign({ text: String(text), font: FONT }, opts || {}));
 
-            document.querySelectorAll('#paperContainer > .quiz-page').forEach(page => {
-                if(page.style.display === 'none') return;
+            // 標題與班級/姓名/座號欄（沿用畫面上的標題，使用者若改過標題也跟著走）
+            const headerEl = document.querySelector('#paperContainer .paper-header');
+            const title = (headerEl && headerEl.querySelector('h2') ? headerEl.querySelector('h2').innerText : (window.docTitle || '試卷')).trim();
+            const infoSpans = headerEl ? Array.from(headerEl.querySelectorAll('.paper-info span')).map(e => e.innerText.trim()) : [];
 
-                let pageClone = page.cloneNode(true);
-                pageClone.removeAttribute('contenteditable');
-                pageClone.querySelectorAll('.no-print').forEach(el => el.remove());
-                pageClone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+            const children = [];
+            children.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 120 },
+                children: [run(title, { bold: true, size: 36 })]
+            }));
+            if (infoSpans.length > 0) {
+                children.push(new Paragraph({
+                    spacing: { after: 200 },
+                    border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: '000000', space: 6 } },
+                    children: [run(infoSpans.join('　　'), { size: 21 })]
+                }));
+            }
 
-                const header = pageClone.querySelector('.paper-header');
-                if (header && !headerDone) { content += header.outerHTML; headerDone = true; }
-
-                pageClone.querySelectorAll('.q-item').forEach(item => { content += qItemToTable(item); });
+            items.forEach((q, i) => {
+                const isChoice = q.o && q.o.length > 0;
+                const prefix = isChoice ? ((i + 1) + '. (　　) ') : ((i + 1) + '. ');
+                // 題號與題幹放同一段，靠首行凸排讓第二行對齊題幹起點，不用表格也能整齊
+                children.push(new Paragraph({
+                    spacing: { before: 120, after: 40 },
+                    indent: { left: 720, hanging: 720 },
+                    keepNext: true,
+                    children: [
+                        run(prefix, { bold: true }),
+                        run(q.q, { bold: true }),
+                        run('  (' + (q.s || 0) + '分)', { size: 18, color: '666666' })
+                    ]
+                }));
+                if (isChoice) {
+                    q.o.forEach((o, oi) => {
+                        const label = String.fromCharCode(65 + oi);
+                        children.push(new Paragraph({
+                            spacing: { after: 20 },
+                            indent: { left: 1080 },
+                            children: [run('(' + label + ') ' + stripOptLabel(o, label))]
+                        }));
+                    });
+                } else {
+                    // 非選擇題留三行作答空間
+                    for (let k = 0; k < 3; k++) {
+                        children.push(new Paragraph({
+                            spacing: { after: 120 },
+                            indent: { left: 720 },
+                            border: { bottom: { style: BorderStyle.DASHED, size: 6, color: '000000', space: 4 } },
+                            children: [run('')]
+                        }));
+                    }
+                }
             });
 
-            let keyContent = "";
-            document.querySelectorAll('.key-page').forEach(p => {
-                if(p.style.display !== 'none') keyContent += p.innerHTML;
+            // 答案卷：另起新頁
+            children.push(new Paragraph({ pageBreakBefore: true, alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [run('解析卷', { bold: true, size: 32 })] }));
+            items.forEach((q, i) => {
+                let ans = q.a;
+                if (Array.isArray(q.a)) ans = q.a.map(x => String.fromCharCode(65 + x)).join('');
+                else if (typeof q.a === 'number') ans = String.fromCharCode(65 + q.a);
+                else ans = q.a || '(略)';
+                children.push(new Paragraph({
+                    spacing: { after: 60 },
+                    indent: { left: 720, hanging: 720 },
+                    children: [
+                        run((i + 1) + '. ', { bold: true }),
+                        run(String(ans) + '  ', { bold: true, color: 'CC0000' }),
+                        run(q.e || '', { size: 18, color: '666666' })
+                    ]
+                }));
             });
-            if (keyContent) content += "<br clear=all style='page-break-before:always'>" + keyContent;
 
-            const style = "<style>" +
-                "@page { size: A4; margin: 1.2cm 1.5cm; } " +
-                "body { font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PMingLiU', sans-serif; font-size: 11pt; line-height: 1.25; }" +
-                "h2 { text-align: center; font-size: 18pt; margin: 0 0 10pt 0; }" +
-                ".paper-header { border-bottom: 1.5pt solid #000; padding-bottom: 6pt; margin-bottom: 12pt; }" +
-                ".paper-info { font-size: 10.5pt; }" +
-                ".q-text { font-weight: bold; margin-bottom: 2pt; }" +
-                ".q-opt { margin-bottom: 1pt; }" +
-                "table { width: 100%; }" +
-                ".writing-space { height: 42pt; border-bottom: 1px dashed #000; }" +
-                "</style>";
+            const doc = new Document({
+                styles: { default: { document: { run: { font: FONT, size: 22 } } } },
+                sections: [{
+                    properties: { page: { margin: { top: 850, right: 1000, bottom: 850, left: 1000 } } },
+                    children: children
+                }]
+            });
 
-            let html = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'>" + style + "</head><body>" + content + "</body></html>";
-            let blob = new Blob([html], {type:'application/msword'});
-            let fileName = (window.docName || "試卷") + ".doc";
+            const blob = await Packer.toBlob(doc);
+            const fileName = (window.docName || '試卷') + '.docx';
+            const MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
             if (window.showSaveFilePicker) {
                 try {
-                    const h = await showSaveFilePicker({suggestedName: fileName, types:[{description:'Word', accept:{'application/msword':['.doc']}}]});
+                    const h = await showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Word 文件', accept: { [MIME]: ['.docx'] } }] });
                     const w = await h.createWritable();
                     await w.write(blob); await w.close(); return;
-                } catch(e) { return; }
+                } catch (e) { return; }
             }
-            let a = document.createElement('a');
+            const a = document.createElement('a');
             a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
         }
 
