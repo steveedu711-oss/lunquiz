@@ -233,6 +233,32 @@
         .source-btn { flex: 1; padding: 15px; border: 2px solid #e5e7eb; border-radius: var(--lq-radius); text-align: center; cursor: pointer; font-weight: bold; transition: all 0.2s ease; font-size: 1.05em; }
         .source-btn:hover { transform: translateY(-1px); box-shadow: var(--lq-shadow-sm); }
 
+        /* --- 年級／科目膠囊按鈕：這兩欄不給預設值(猜錯就整份考卷報廢)，
+               所以改成一排點就好的按鈕，比下拉選單少 2~3 次點擊，手機上差更多 --- */
+        .lq-chip-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
+        .lq-chip-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+        .lq-chip-group-label {
+            font-size: 0.75rem; font-weight: 700; color: #94a3b8;
+            min-width: 2.4rem; flex-shrink: 0;
+        }
+        .lq-chip {
+            padding: 0.5rem 0.85rem; border: 1.5px solid #e2e8f0; border-radius: 999px;
+            background: #fff; color: #475569; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; transition: all 0.15s ease; line-height: 1.2;
+            /* 手機上要好按：44px 是觸控目標的下限 */
+            min-height: 2.5rem;
+        }
+        .lq-chip:hover { border-color: var(--hl-blue, #2563eb); color: var(--hl-blue, #2563eb); }
+        .lq-chip.is-active {
+            background: var(--hl-blue, #2563eb); border-color: var(--hl-blue, #2563eb);
+            color: #fff; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+        }
+        .lq-chip-custom { border-style: dashed; color: #64748b; }
+        @media (max-width: 480px) {
+            .lq-chip { padding: 0.5rem 0.7rem; font-size: 0.85rem; }
+            .lq-chip-group-label { min-width: 100%; margin-bottom: -0.1rem; }
+        }
+
         /* --- 試卷排版核心 (螢幕預覽) --- */
         .a4-page {
             width: 210mm;
@@ -308,8 +334,28 @@
             color: #000;
         }
 
-        [contenteditable="true"]:hover { background-color: #fff9db; cursor: text; }
-        [contenteditable="true"]:focus { background-color: #fff; outline: none; }
+        /* 試卷上的文字都可以直接點下去改，但這件事本來完全沒有視覺提示，老師根本不會發現。
+           hover 時給淡黃底＋虛線底線＋文字游標三個訊號，focus 時再給明確外框。
+           這些全部只在螢幕生效，列印/PDF 由下面的 @media print 清乾淨 */
+        [contenteditable="true"]:hover {
+            background-color: #fff9db;
+            box-shadow: inset 0 -1px 0 0 #fbbf24;
+            cursor: text;
+        }
+        [contenteditable="true"]:focus {
+            background-color: #fff;
+            outline: 2px solid var(--hl-blue, #2563eb);
+            outline-offset: 2px;
+            border-radius: 3px;
+        }
+        /* 試卷上方的一次性提示，讓「可以直接改」這件事被看見 */
+        .lq-edit-hint {
+            max-width: 60rem; margin: 0 auto 0.5rem; padding: 0.5rem 0.9rem;
+            background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+            color: #92400e; font-size: 0.8rem; font-weight: 600;
+            display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+        }
+        .lq-edit-hint button { color: #b45309; font-weight: 700; flex-shrink: 0; }
 
         .progress-bar {
             width: 0%; height: 100%;
@@ -370,6 +416,15 @@
             }
 
             .editable-text:hover { background: none; outline: none; }
+            /* 編輯提示只是給螢幕上的老師看的，絕對不能印出來 */
+            .lq-edit-hint { display: none !important; }
+            [contenteditable="true"],
+            [contenteditable="true"]:hover,
+            [contenteditable="true"]:focus {
+                background: transparent !important;
+                box-shadow: none !important;
+                outline: none !important;
+            }
         }
 
         .hidden { display: none !important; }
@@ -511,6 +566,7 @@
             <div class="mb-6 flex justify-between items-center flex-wrap gap-2">
                 <button onclick="openUsageGuide()" id="usageGuideBtn" class="lq-btn lq-btn-secondary text-xs px-3 py-1.5 rounded-full">❓ 使用說明</button>
                 <div class="flex gap-4 items-center">
+                    <button onclick="clearAllSettings()" class="text-xs text-gray-400 hover:text-red-500 underline">↺ 重置表單</button>
                     <span id="accountStatus" class="text-xs text-gray-500"></span>
                     <button onclick="openSuperadminPanel()" id="superadminBtn" class="hidden lq-btn lq-btn-primary text-xs px-2 py-1">🛡️ 管理後台</button>
                     <button onclick="openAccountModal()" id="accountBtn" class="hidden lq-btn lq-btn-ghost text-xs px-2 py-1">👤 我的帳號</button>
@@ -552,10 +608,15 @@
             </div>
 
             <h3 class="section-title">2. 詳細設定</h3>
-            <div id="aiInputs" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="font-bold text-sm">年級 <span class="text-red-500">*</span></label>
-                    <select id="grade" onchange="checkCustom(this, 'c_grade')" class="lq-input">
+            <!-- 年級與科目：這兩個是「猜錯就整份考卷報廢」的欄位，所以不給預設值，一定要老師自己選。
+                 但也因此要讓他選得夠快——改成一排點就好的膠囊按鈕，免打字、免展開下拉。
+                 下拉/輸入框本體保留（只是隱藏），繼續當值的來源，
+                 startGen / getFormSettingsSnapshot / applySettings / clearAllSettings 全部不用改 -->
+            <div id="aiInputs" class="mb-4">
+                <div class="mb-4">
+                    <label class="font-bold text-sm">年級</label>
+                    <div id="gradeChips" class="lq-chip-wrap mt-1"></div>
+                    <select id="grade" onchange="checkCustom(this, 'c_grade')" class="lq-input hidden">
                         <option value="" disabled selected>請選擇...</option>
                         <option value="Custom">✍️ 自定義</option>
                         <optgroup label="國小"><option>國小一年級</option><option>國小二年級</option><option>國小三年級</option><option>國小四年級</option><option>國小五年級</option><option>國小六年級</option></optgroup>
@@ -564,22 +625,24 @@
                     </select>
                     <input type="text" id="c_grade" class="input-custom" placeholder="請輸入年級">
                 </div>
-                <div>
-                    <label class="font-bold text-sm">科目 <span class="text-red-500">*</span></label>
-                    <input type="text" id="subject" class="lq-input" placeholder="例：自然">
+                <div class="mb-4">
+                    <label class="font-bold text-sm">科目</label>
+                    <div id="subjectChips" class="lq-chip-wrap mt-1"></div>
+                    <input type="text" id="subject" class="lq-input hidden" placeholder="例：自然">
                 </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="font-bold text-sm">版本 <span class="text-red-500">*</span></label>
+                    <label class="font-bold text-sm">版本</label>
                     <select id="publisher" onchange="checkCustom(this, 'c_publisher')" class="lq-input">
-                        <option value="" disabled selected>請選擇...</option>
-                        <option value="由小綸自由發揮">由小綸自由發揮 (不限版本)</option>
+                        <option value="由小綸自由發揮" selected>由小綸自由發揮 (不限版本)</option>
                         <option value="Custom">✍️ 依照課本資訊填入</option>
                     </select>
                     <input type="text" id="c_publisher" class="input-custom" placeholder="請輸入自定義版本資訊">
                 </div>
                 <div>
-                    <label class="font-bold text-sm">範圍 <span class="text-red-500">*</span></label>
-                    <input type="text" id="scope" class="lq-input" placeholder="例 : 第一課~第三課">
+                    <label class="font-bold text-sm">範圍 <span class="text-gray-400 font-normal">（選填）</span></label>
+                    <input type="text" id="scope" class="lq-input" placeholder="不填＝整冊；也可填「第一課~第三課」">
+                </div>
                 </div>
             </div>
 
@@ -594,42 +657,43 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 <div>
-                    <label class="font-bold text-sm">題數 <span class="text-red-500">*</span></label>
+                    <label class="font-bold text-sm">題數</label>
                     <select id="count" onchange="checkCustom(this, 'c_count')" class="lq-input">
-                        <option value="" disabled selected>請選擇...</option>
+                        <option value="5">5 題</option><option value="10" selected>10 題</option><option value="20">20 題</option><option value="25">25 題</option><option value="50">50 題</option><option value="100">100 題</option>
                         <option value="Custom">✍️ 自定義</option>
-                        <option value="5">5 題</option><option value="10">10 題</option><option value="20">20 題</option><option value="25">25 題</option><option value="50">50 題</option><option value="100">100 題</option>
                     </select>
                     <input type="number" id="c_count" class="input-custom" placeholder="請輸入數字">
                 </div>
                 <div>
-                    <label class="font-bold text-sm">題型 <span class="text-red-500">*</span></label>
+                    <label class="font-bold text-sm">題型</label>
                     <select id="qType" onchange="checkCustom(this, 'c_qType')" class="lq-input">
-                        <option value="" disabled selected>請選擇...</option>
-                        <option value="Custom">✍️ 自定義</option>
-                        <option value="全部單選題">全部單選題</option>
+                        <option value="全部單選題" selected>全部單選題</option>
                         <option value="全部複選題">全部複選題</option>
-                        <option value="Mixed_10_10">混搭 (10單選+10複選)</option>
+                        <!-- 原本寫死「混搭(10單選+10複選)」，但題數是另一個獨立欄位，
+                             老師選 5 題配這個題型就自相矛盾。改成不帶數字，由題數決定比例 -->
+                        <option value="智慧混搭(單選+複選各半)">智慧混搭（單選＋複選各半）</option>
                         <option value="全部填充題">全部填充題</option>
                         <option value="全部簡答題(計算題)">全部簡答題(計算題)</option>
+                        <option value="Custom">✍️ 自定義</option>
                     </select>
                     <input type="text" id="c_qType" class="input-custom" placeholder="例: 20題單選">
                 </div>
                 <div>
-                    <label class="font-bold text-sm">難度 <span class="text-red-500">*</span></label>
+                    <label class="font-bold text-sm">難度</label>
+                    <!-- 舊版是 基礎/普通/進階/挑戰/熟練 五階，但「熟練」描述的是學生的學習狀態、
+                         不是題目難度，跟「進階/挑戰」語意重疊，老師看不出高低順序。收斂成四階並各附情境說明。
+                         （getDifficultyRubric() 仍保留「熟練」的定義，舊的儲存設定與分享連結不受影響） -->
                     <select id="difficulty" onchange="checkCustom(this, 'c_diff')" class="lq-input">
-                        <option value="" disabled selected>請選擇...</option>
+                        <option value="基礎">🐣 基礎 — 課本原文、觀念複習</option>
+                        <option value="普通" selected>⚖️ 普通 — 標準段考難度</option>
+                        <option value="進階">🚀 進階 — 跨概念、需要推理</option>
+                        <option value="挑戰">🏆 挑戰 — 多步驟思考、情境轉換</option>
                         <option value="Custom">✍️ 自定義</option>
-                        <option value="基礎">基礎</option>
-                        <option value="普通">普通</option>
-                        <option value="進階">進階</option>
-                        <option value="挑戰">挑戰</option>
-                        <option value="熟練">熟練</option>
                     </select>
                     <input type="text" id="c_diff" class="input-custom" placeholder="例: 進階">
                 </div>
                 <div>
-                    <label class="font-bold text-sm">輸出語言 <span class="text-red-500">*</span></label>
+                    <label class="font-bold text-sm">輸出語言</label>
                     <select id="lang" class="lq-input">
                         <option value="繁體中文">繁體中文</option>
                         <option value="English (英文)">English (英文)</option>
@@ -637,11 +701,12 @@
                 </div>
             </div>
 
+            <!-- 主 CTA 獨佔一排。原本正下方並排三顆同樣醒目的按鈕在跟它搶焦點，
+                 其中「清除所有條件」還是破壞性操作卻放在最順手的位置，已移到卡片右上角 -->
             <button onclick="startGen()" id="btnGo" class="lq-btn lq-cta lq-btn-primary w-full py-4 rounded-xl text-xl">🚀 小綸開始出題</button>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
-                <button onclick="saveDefaultSettings()" class="lq-btn lq-btn-tool w-full py-2.5 text-sm sm:text-base"><span class="ph-duotone ph-floppy-disk lq-icon-chip"></span> 儲存出題條件</button>
-                <button onclick="clearAllSettings()" class="lq-btn lq-btn-tool lq-btn-tool-danger w-full py-2.5 text-sm sm:text-base"><span class="ph-duotone ph-trash lq-icon-chip"></span> 清除所有條件</button>
-                <button onclick="copySettingsLink()" class="lq-btn lq-btn-tool lq-btn-tool-share w-full py-2.5 text-sm sm:text-base"><span class="ph-duotone ph-link-simple lq-icon-chip"></span> 複製設定連結</button>
+            <div class="flex justify-center gap-4 mt-3">
+                <button onclick="saveDefaultSettings()" class="lq-btn lq-btn-ghost text-sm px-3 py-2"><span class="ph-duotone ph-floppy-disk lq-icon-chip"></span> 記住這些條件</button>
+                <button onclick="copySettingsLink()" class="lq-btn lq-btn-ghost text-sm px-3 py-2"><span class="ph-duotone ph-link-simple lq-icon-chip"></span> 複製設定連結</button>
             </div>
             <div id="loadingAnim" class="hidden justify-center mt-4">
                 <dotlottie-wc src="https://assets-v2.lottiefiles.com/a/35dde376-1178-11ee-9ed9-5fa2debad506/1LggE3RFrL.lottie" autoplay loop style="width:160px;height:160px;"></dotlottie-wc>
@@ -671,14 +736,12 @@
 
             <div class="lq-header-divider hidden sm:block order-1"></div>
 
-            <div class="w-full sm:w-auto sm:flex-1 text-center sm:max-w-md order-3 sm:order-2">
-                <span class="text-yellow-400 text-xs sm:text-sm font-bold animate-pulse">💡 點擊試卷即可修改內容</span>
-            </div>
+            <div class="lq-header-divider hidden sm:block order-1"></div>
 
-            <div class="lq-header-divider hidden sm:block order-3"></div>
-
-            <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3">
-                <button id="btnReload" onclick="restartWholeQuiz()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-arrow-clockwise lq-icon lq-icon-amber"></span> 重新出整份</button>
+            <!-- 動作區。原本這排把「檢視切換」跟「對外動作」混在一起，
+                 老師分不出哪些只是換畫面、哪些會真的送出去。
+                 現在左邊是切換(上面那組連體按鈕)，這裡只放動作，低頻的收進「更多」 -->
+            <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3 items-center">
                 <button onclick="openQuizEntryModal()" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-device-mobile lq-icon lq-icon-sky"></span> 直接線上測驗</button>
                 <div class="relative inline-block" id="downloadMenuWrap">
                     <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-download-simple lq-icon lq-icon-blue"></span> 下載 ▾</button>
@@ -688,17 +751,29 @@
                         <div class="px-4 py-2 text-xs text-gray-400 border-t">🖨️ 要列印請先下載PDF，開啟後用PDF閱讀器本身的列印功能</div>
                     </div>
                 </div>
-                <button onclick="saveToClassHistory()" id="btnSaveHistory" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base hidden"><span class="ph-duotone ph-floppy-disk lq-icon"></span> 存入班級歷史</button>
-                <div class="lq-header-divider hidden sm:block"></div>
                 <!-- 原本是「分享 ▾」下拉，裡面四個選項（學生連結/家長連結/測驗代碼/儀表板）
                      要老師在還沒看到內容前就先選一個，實測老師分不出差別。
                      改成一顆按鈕開一個視窗，四種出口一次全部給，老師要哪個自己拿 -->
                 <div class="inline-block" id="shareBtnsWrap">
                     <button onclick="openSendQuizModal()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-paper-plane-tilt lq-icon"></span> 發送測驗</button>
                 </div>
+                <!-- 低頻／破壞性動作收進來，不跟主要動作平起平坐 -->
+                <div class="relative inline-block" id="moreMenuWrap">
+                    <button onclick="toggleMoreMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base" aria-label="更多動作"><span class="ph-duotone ph-dots-three-outline lq-icon"></span> 更多 ▾</button>
+                    <div id="moreMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
+                        <button onclick="saveToClassHistory(); closeMoreMenu()" id="btnSaveHistory" class="hidden w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-floppy-disk lq-icon text-blue-600"></span> 存入班級歷史</button>
+                        <button id="btnReload" onclick="restartWholeQuiz(); closeMoreMenu()" class="w-full text-left px-4 py-2 hover:bg-red-50 text-sm flex items-center gap-2 text-red-600 border-t"><span class="ph-duotone ph-arrow-clockwise lq-icon lq-icon-amber"></span> 重新出整份（清空目前題目）</button>
+                    </div>
+                </div>
             </div>
         </div>
-        <div id="paperContainer" class="max-w-5xl mx-auto pt-6"></div>
+        <!-- 提示從工具列裡搬出來：它在那裡佔了一整段寬度，窄螢幕還會逼出一整行。
+             放在試卷正上方反而更貼近它要講的東西，也讓老師關掉就不再打擾 -->
+        <div id="editHint" class="lq-edit-hint no-print mt-4 hidden">
+            <span>💡 試卷上的任何文字都可以直接點下去修改，改完會一起帶進下載的 Word／PDF。</span>
+            <button type="button" onclick="dismissEditHint()" aria-label="不再顯示這個提示">知道了 ✕</button>
+        </div>
+        <div id="paperContainer" class="max-w-5xl mx-auto pt-2"></div>
         <div id="answerModeContainer" class="no-print" style="display:none; background:#f3f4f6; min-height:100vh;"></div>
         <p class="no-print text-center text-sm text-gray-300 py-6">有任何問題？請點<a href="https://hunglun-new.pages.dev/" target="_blank" rel="noopener noreferrer" class="text-emerald-400 underline font-bold hover:text-emerald-300">鴻綸科技官方網站</a></p>
     </div>
@@ -969,6 +1044,10 @@
         window.onload = async function() {
             let k = localStorage.getItem('lun_key');
             if (k) document.getElementById('userKey').value = k;
+
+            // 年級／科目的膠囊按鈕要先建好，後面 applySettingsFromURL / loadSavedSettingsIfAny
+            // 才有東西可以同步選取狀態
+            buildChoiceChips();
 
             initAuthUI();
 
@@ -1795,20 +1874,29 @@
             const btnReload = document.getElementById('btnReload');
             const downloadWrap = document.getElementById('downloadMenuWrap');
             const shareBtnsWrap = document.getElementById('shareBtnsWrap');
-            const hintSpan = document.querySelector('.sticky-header .animate-pulse');
+            const moreWrap = document.getElementById('moreMenuWrap');
+            // 提示列原本在工具列裡（.animate-pulse），已搬到試卷正上方；
+            // 分享模式借用同一條來說明「你現在看到的是什麼」
+            const hintBar = document.getElementById('editHint');
+            const hintText = hintBar ? hintBar.querySelector('span') : null;
+            const hintClose = hintBar ? hintBar.querySelector('button') : null;
 
             if (window.sharedMode === 'student') {
                 if (btnQuiz) btnQuiz.classList.add('hidden');
                 if (btnKey) btnKey.classList.add('hidden');
                 if (btnAnswerMode) btnAnswerMode.classList.add('hidden');
-                if (hintSpan) hintSpan.textContent = "📱 請完成以下題目，作答完按「送出評分」";
+                if (hintText) hintText.textContent = "📱 請完成以下題目，作答完按「送出評分」";
             } else {
                 if (btnAnswerMode) btnAnswerMode.classList.add('hidden');
-                if (hintSpan) hintSpan.textContent = "👨‍👩‍👧 家長答案檢視（僅供查看，內容不可編輯）";
+                if (hintText) hintText.textContent = "👨‍👩‍👧 家長答案檢視（僅供查看，內容不可編輯）";
             }
+            // 這條在分享模式是狀態說明不是提示，學生/家長不該關掉它
+            if (hintBar) hintBar.classList.remove('hidden');
+            if (hintClose) hintClose.classList.add('hidden');
             if (btnReload) btnReload.classList.add('hidden');
             if (downloadWrap) downloadWrap.classList.add('hidden');
             if (shareBtnsWrap) shareBtnsWrap.classList.add('hidden');
+            if (moreWrap) moreWrap.classList.add('hidden');
         }
 
         // --- 即時進度：老師班級儀表板 / 家長單人視角(輪詢,不用WebSocket) ---
@@ -2075,6 +2163,85 @@
         }
 
         // --- 複製設定連結 / 帶入連結設定 ---
+        // --- 年級／科目膠囊按鈕 ---
+        // 這兩欄不給預設值（猜錯就整份考卷報廢），但要讓老師選得夠快：
+        // 一排點就好的按鈕，比下拉選單少 2~3 次點擊，手機上差更多。
+        // 真正的值仍然存在隱藏的 #grade / #subject 裡，其他既有邏輯完全不用改。
+        const SUBJECT_CHIPS = ['國語', '數學', '英語', '自然', '社會'];
+
+        function buildChoiceChips() {
+            // 年級選項直接從隱藏的 <select> 讀，避免同一份清單維護兩處
+            const sel = document.getElementById('grade');
+            const groups = [];
+            Array.from(sel.querySelectorAll('optgroup')).forEach(function (og) {
+                groups.push({
+                    label: og.label,
+                    items: Array.from(og.querySelectorAll('option')).map(function (o) { return o.value || o.text; })
+                });
+            });
+            let html = '';
+            groups.forEach(function (g) {
+                html += "<div class='lq-chip-group'><span class='lq-chip-group-label'>" + escapeHtml(g.label) + "</span>";
+                g.items.forEach(function (v) {
+                    // 「國小三年級」在按鈕上只顯示「三年級」，同一列已經標了學制，不用重複
+                    const short = v.replace(/^(國小|國中|高中)/, '');
+                    html += "<button type='button' class='lq-chip' data-val='" + escapeHtml(v) + "' onclick=\"pickGrade('" + escapeHtml(v) + "')\">" + escapeHtml(short) + "</button>";
+                });
+                html += "</div>";
+            });
+            html += "<div class='lq-chip-group'><button type='button' class='lq-chip lq-chip-custom' data-val='Custom' onclick=\"pickGrade('Custom')\">✍️ 其他</button></div>";
+            document.getElementById('gradeChips').innerHTML = html;
+
+            let sHtml = "<div class='lq-chip-group'>";
+            SUBJECT_CHIPS.forEach(function (v) {
+                sHtml += "<button type='button' class='lq-chip' data-val='" + escapeHtml(v) + "' onclick=\"pickSubject('" + escapeHtml(v) + "')\">" + escapeHtml(v) + "</button>";
+            });
+            sHtml += "<button type='button' class='lq-chip lq-chip-custom' data-val='Custom' onclick=\"pickSubject('Custom')\">✍️ 其他科目</button></div>";
+            document.getElementById('subjectChips').innerHTML = sHtml;
+        }
+
+        function pickGrade(val) {
+            const sel = document.getElementById('grade');
+            sel.value = val;
+            checkCustom(sel, 'c_grade');
+            if (val === 'Custom') {
+                const c = document.getElementById('c_grade');
+                c.style.display = 'block';
+                c.focus();
+            }
+            syncChoiceChips();
+        }
+
+        function pickSubject(val) {
+            const input = document.getElementById('subject');
+            if (val === 'Custom') {
+                input.classList.remove('hidden');
+                input.value = '';
+                input.focus();
+            } else {
+                input.value = val;
+                input.classList.add('hidden');
+            }
+            syncChoiceChips();
+        }
+
+        // 讓膠囊的選取狀態跟隱藏欄位的實際值一致
+        // （儲存的設定、分享的設定連結都是直接寫進隱藏欄位，不會經過上面兩個 pick 函式）
+        function syncChoiceChips() {
+            const gradeVal = document.getElementById('grade').value;
+            document.querySelectorAll('#gradeChips .lq-chip').forEach(function (b) {
+                b.classList.toggle('is-active', b.dataset.val === gradeVal);
+            });
+            const subjectVal = document.getElementById('subject').value.trim();
+            const isPreset = SUBJECT_CHIPS.indexOf(subjectVal) >= 0;
+            document.querySelectorAll('#subjectChips .lq-chip').forEach(function (b) {
+                b.classList.toggle('is-active', b.dataset.val === 'Custom' ? (!!subjectVal && !isPreset) : b.dataset.val === subjectVal);
+            });
+            // 科目是自訂值時，把輸入框顯示出來讓老師看得到自己填了什麼
+            const input = document.getElementById('subject');
+            if (subjectVal && !isPreset) input.classList.remove('hidden');
+        }
+
         function applySettings(s) {
             function setSelectOrCustom(selectId, customId, value) {
                 if (!value) return;
@@ -2098,6 +2265,7 @@
             setSelectOrCustom('qType', 'c_qType', s.qType);
             setSelectOrCustom('difficulty', 'c_diff', s.difficulty);
             if (s.lang) document.getElementById('lang').value = s.lang;
+            syncChoiceChips();
         }
 
         function applySettingsFromURL() {
@@ -2173,16 +2341,19 @@
                 const custom = document.getElementById(customId);
                 if (custom) { custom.value = ''; custom.style.display = 'none'; }
             }
+            // 年級/科目回到「未選」（這兩個猜錯代價高，不給預設）；
+            // 其餘回到安全預設值，而不是全部清空讓老師重新選一輪
             resetSelect('grade', 'c_grade');
             document.getElementById('subject').value = '';
-            resetSelect('publisher', 'c_publisher');
+            resetSelect('publisher', 'c_publisher', '由小綸自由發揮');
             document.getElementById('scope').value = '';
-            resetSelect('count', 'c_count');
-            resetSelect('qType', 'c_qType');
-            resetSelect('difficulty', 'c_diff');
+            resetSelect('count', 'c_count', '10');
+            resetSelect('qType', 'c_qType', '全部單選題');
+            resetSelect('difficulty', 'c_diff', '普通');
             document.getElementById('lang').value = '繁體中文';
+            syncChoiceChips();
 
-            alert('🗑️ 已清除所有出題條件');
+            alert('↺ 已重置表單（年級與科目請重新選擇，其餘已回到常用預設值）');
         }
 
         // --- 出題紀錄（存在這台裝置的 localStorage，最多留20筆） ---
@@ -2351,14 +2522,16 @@
             if(sType === '1' && (!grade || grade === '')) return alert("❌ 請選擇或輸入【年級】！");
 
             let subject = document.getElementById('subject').value.trim();
-            if(sType === '1' && !subject) return alert("❌ 請輸入【科目】！");
+            if(sType === '1' && !subject) return alert("❌ 請選擇【科目】！");
 
             let publisher = document.getElementById('publisher').value;
             if(publisher === 'Custom') publisher = document.getElementById('c_publisher').value.trim();
             if(sType === '1' && (!publisher || publisher === '')) return alert("❌ 請選擇或輸入【版本】！");
 
+            // 範圍改成選填：出綜合/複習卷的老師本來就不需要指定課次，
+            // 空白時明講「整冊」讓 AI 有明確依據，而不是拿到一個空字串自己亂猜
             let scope = document.getElementById('scope').value.trim();
-            if(sType === '1' && !scope) return alert("❌ 請輸入【範圍】！");
+            if (!scope) scope = '整冊（不限特定課次）';
 
             let countVal = document.getElementById('count').value;
             if(countVal === 'Custom') countVal = document.getElementById('c_count').value.trim();
@@ -2386,7 +2559,14 @@
 
             let batchSize = 10;
             if (typeVal.includes("簡答") || typeVal.includes("填充")) batchSize = 8;
-            if (typeVal === 'Mixed_10_10') { typeVal = "前10單選,後10複選"; total=20; batchSize=10; }
+            // 智慧混搭：依老師選的題數對半分，奇數時單選多 1 題。
+            // 舊版是寫死 20 題（前10單選+後10複選），會反過來覆蓋老師選的題數
+            if (typeVal.indexOf('智慧混搭') === 0) {
+                const single = Math.ceil(total / 2);
+                typeVal = "前" + single + "題單選,後" + (total - single) + "題複選";
+            }
+            // 相容舊的儲存設定與分享連結（值還是 Mixed_10_10）
+            if (typeVal === 'Mixed_10_10') { typeVal = "前10單選,後10複選"; total = 20; batchSize = 10; }
 
             let batches = Math.ceil(total / batchSize);
             let scorePerQ = Math.floor(100 / total);
@@ -2783,6 +2963,28 @@
             container.appendChild(kDiv);
         }
 
+        // 「更多」選單：低頻／破壞性動作（存班級歷史、重新出整份）收在這裡，
+        // 不跟下載、發送測驗這些主要動作平起平坐
+        function toggleMoreMenu() {
+            document.getElementById('moreMenu').classList.toggle('hidden');
+        }
+        function closeMoreMenu() {
+            document.getElementById('moreMenu').classList.add('hidden');
+        }
+        document.addEventListener('click', function (e) {
+            const wrap = document.getElementById('moreMenuWrap');
+            if (wrap && !wrap.contains(e.target)) closeMoreMenu();
+        });
+
+        // 老師按過「知道了」就不再顯示編輯提示（記在這台裝置上）
+        window.editHintDismissed = localStorage.getItem('lun_edit_hint_done') === '1';
+        function dismissEditHint() {
+            window.editHintDismissed = true;
+            localStorage.setItem('lun_edit_hint_done', '1');
+            const el = document.getElementById('editHint');
+            if (el) el.classList.add('hidden');
+        }
+
         function switchSheet(t) {
             let qs = document.querySelectorAll('.quiz-page');
             let ks = document.querySelectorAll('.key-page');
@@ -2798,6 +3000,13 @@
 
             if (b1) b1.classList.toggle('is-active', t === 'quiz');
             if (b2) b2.classList.toggle('is-active', t === 'key');
+
+            // 編輯提示只在看得到試卷時才有意義（線上作答分頁沒有可編輯的東西）。
+            // 分享模式下這條被借去當狀態說明，由 applySharedViewChrome() 管，這裡不碰
+            const hint = document.getElementById('editHint');
+            if (hint && !window.isSharedView) {
+                hint.classList.toggle('hidden', t === 'answer' || window.editHintDismissed);
+            }
 
             if (t === 'answer' && ansContainer && !ansContainer.dataset.rendered) {
                 renderAnswerMode();
