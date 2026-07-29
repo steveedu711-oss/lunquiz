@@ -2961,6 +2961,11 @@
             });
             kDiv.innerHTML = kHtml;
             container.appendChild(kDiv);
+
+            // 試卷剛渲染完就要提示「可以直接點文字改」。
+            // 不能只靠 switchSheet() 帶出來——正常出題流程根本不會呼叫它
+            // （它只在按分頁鈕、分享模式、線上作答時才跑），提示會一直維持隱藏
+            updateEditHintVisibility('quiz');
         }
 
         // 「更多」選單：低頻／破壞性動作（存班級歷史、重新出整份）收在這裡，
@@ -2978,6 +2983,15 @@
 
         // 老師按過「知道了」就不再顯示編輯提示（記在這台裝置上）
         window.editHintDismissed = localStorage.getItem('lun_edit_hint_done') === '1';
+
+        // 提示只在「看得到可編輯的試卷」時才顯示：線上作答分頁沒有東西可編輯，
+        // 分享模式下這條被借去當狀態說明由 applySharedViewChrome() 管，這裡不碰
+        function updateEditHintVisibility(sheet) {
+            const el = document.getElementById('editHint');
+            if (!el || window.isSharedView) return;
+            el.classList.toggle('hidden', sheet === 'answer' || window.editHintDismissed);
+        }
+
         function dismissEditHint() {
             window.editHintDismissed = true;
             localStorage.setItem('lun_edit_hint_done', '1');
@@ -3001,12 +3015,7 @@
             if (b1) b1.classList.toggle('is-active', t === 'quiz');
             if (b2) b2.classList.toggle('is-active', t === 'key');
 
-            // 編輯提示只在看得到試卷時才有意義（線上作答分頁沒有可編輯的東西）。
-            // 分享模式下這條被借去當狀態說明，由 applySharedViewChrome() 管，這裡不碰
-            const hint = document.getElementById('editHint');
-            if (hint && !window.isSharedView) {
-                hint.classList.toggle('hidden', t === 'answer' || window.editHintDismissed);
-            }
+            updateEditHintVisibility(t);
 
             if (t === 'answer' && ansContainer && !ansContainer.dataset.rendered) {
                 renderAnswerMode();
