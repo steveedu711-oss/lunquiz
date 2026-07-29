@@ -477,7 +477,13 @@
         </div>
     </section>
 
+    <!-- 學生首頁：學生要的是「進老師的測驗」和「自己練習」，不是出題參數表單，
+         所以登入身分是學生時走這個畫面，不進 #inputForm -->
+    <div id="studentHome" class="hidden max-w-2xl mx-auto p-4 no-print min-h-screen"></div>
+
     <div id="inputForm" class="hidden max-w-5xl mx-auto p-4 no-print bg-gray-50 min-h-screen">
+        <!-- 家長專用：孩子狀況面板(出題工具家長跟老師一樣完整，只是上方多這一塊) -->
+        <div id="parentPanel" class="hidden mb-6"></div>
         <div class="mb-3 text-center">
             <span class="inline-block bg-emerald-600 text-white font-bold text-sm sm:text-base px-4 py-2 rounded-full shadow-md">👣 累計造訪人次：<span id="visitCount">--</span></span>
         </div>
@@ -692,6 +698,7 @@
                     <div id="shareMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
                         <button onclick="shareQuiz('student'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-graduation-cap lq-icon text-emerald-600"></span> 學生作答連結</button>
                         <button onclick="shareQuiz('key'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-users-four lq-icon text-orange-500"></span> 家長答案連結</button>
+                        <button onclick="shareQuizCode(); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-hash lq-icon text-emerald-600"></span> 測驗代碼（報給學生）</button>
                         <button onclick="shareLiveDashboardLink(); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-chart-line lq-icon text-blue-600"></span> 即時進度儀表板</button>
                     </div>
                 </div>
@@ -785,6 +792,16 @@
                 <button onclick="closeClassHistory()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
             </div>
             <div id="classHistoryList"></div>
+        </div>
+    </div>
+
+    <!-- 測驗代碼：投影在教室螢幕上讓學生輸入 -->
+    <div id="quizCodeModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-md w-full p-8 text-center" style="box-shadow: var(--lq-shadow-lg);">
+            <div class="text-sm text-gray-500 mb-2">請學生到首頁輸入這組代碼</div>
+            <div id="quizCodeValue" class="font-black mb-3" style="font-size:3.2rem; letter-spacing:0.15em; color:var(--hl-blue);">000 000</div>
+            <div class="text-xs text-gray-400 mb-5">代碼已複製到剪貼簿，30 天內有效。學生也可以直接用分享連結進入。</div>
+            <button onclick="closeQuizCodeModal()" class="lq-btn lq-btn-primary w-full py-2">關閉</button>
         </div>
     </div>
 
@@ -964,10 +981,67 @@
             document.getElementById('hlStepIdentity').classList.add('hidden');
             if (kind === 'guest') {
                 document.getElementById('hlStepApiKey').classList.remove('hidden');
+            } else if (kind === 'student') {
+                // 學生多半沒有帳號也不想註冊，先讓他選：登入 或 填基本資料直接練習
+                document.getElementById('hlStepAuth').classList.remove('hidden');
+                renderStudentEntryChoice();
             } else {
                 document.getElementById('hlStepAuth').classList.remove('hidden');
                 renderSplashAuthForm('login');
             }
+        }
+
+        // 學生入口：登入 / 免登入直接練習
+        function renderStudentEntryChoice() {
+            const box = document.getElementById('hlStepAuth');
+            box.innerHTML =
+                "<h3 style='font-weight:900;font-size:1.1rem;margin-bottom:0.25rem;color:var(--hl-text);'>🎒 學生</h3>" +
+                "<div style='font-size:0.78rem;color:#5f6368;margin-bottom:0.9rem;'>要做老師指定的測驗，或自己練習都可以</div>" +
+                "<div class='space-y-3'>" +
+                "<button onclick='renderStudentGuestForm()' class='lq-btn lq-btn-primary w-full py-3'>📝 我要練習（不用註冊）</button>" +
+                "<button onclick=\"renderSplashAuthForm('login')\" class='lq-btn lq-btn-secondary w-full py-2'>🔑 我有帳號，要登入</button>" +
+                "<div style='font-size:0.72rem;color:#80868b;line-height:1.5;'>登入的好處：練習紀錄跨裝置保存、可以用「每題即時看結果」、家長能看到你的即時作答。</div>" +
+                "<button onclick='splashBackToIdentity()' class='lq-btn lq-btn-ghost w-full py-2 text-sm'>← 重選身分</button>" +
+                "</div>";
+        }
+
+        // 免登入學生：填學校/年級/班級/姓名，資料只留在這台裝置(給練習卷抬頭與紀錄用)
+        function renderStudentGuestForm() {
+            const prof = getStudentProfile() || {};
+            const box = document.getElementById('hlStepAuth');
+            box.innerHTML =
+                "<h3 style='font-weight:900;font-size:1.1rem;margin-bottom:0.25rem;color:var(--hl-text);'>📝 我要練習</h3>" +
+                "<div style='font-size:0.78rem;color:#5f6368;margin-bottom:0.9rem;'>填一下基本資料，練習卷上會幫你寫好</div>" +
+                "<div class='space-y-3'>" +
+                "<input id='guestSchool' class='lq-input' placeholder='學校（例如：鴻綸國中）' value='" + escapeHtml(prof.school || '') + "'>" +
+                "<select id='guestGrade' class='lq-input'>" + practiceGradeOptions() + "</select>" +
+                "<input id='guestClass' class='lq-input' placeholder='班級（例如：七年3班）' value='" + escapeHtml(prof.className || '') + "'>" +
+                "<input id='guestName' class='lq-input' placeholder='姓名' value='" + escapeHtml(prof.name || '') + "'>" +
+                "<div id='guestFormError' class='text-sm text-red-600 hidden'></div>" +
+                "<button onclick='doStudentGuestEnter()' class='lq-btn lq-btn-primary w-full py-3'>開始使用</button>" +
+                "<button onclick='renderStudentEntryChoice()' class='lq-btn lq-btn-ghost w-full py-2 text-sm'>← 上一步</button>" +
+                "</div>";
+            if (prof.grade) {
+                const sel = document.getElementById('guestGrade');
+                if (sel) sel.value = prof.grade;
+            }
+        }
+
+        function doStudentGuestEnter() {
+            const name = (document.getElementById('guestName').value || '').trim();
+            const err = document.getElementById('guestFormError');
+            if (!name) {
+                err.textContent = '請至少填姓名，練習卷才知道要寫誰的名字';
+                err.classList.remove('hidden');
+                return;
+            }
+            saveStudentProfile({
+                school: (document.getElementById('guestSchool').value || '').trim(),
+                grade: document.getElementById('guestGrade').value,
+                className: (document.getElementById('guestClass').value || '').trim(),
+                name: name
+            });
+            enterMainApp();
         }
 
         function splashBackToIdentity() {
@@ -1016,7 +1090,13 @@
             window.currentUser = data.user;
             updateAccountUI();
             document.getElementById('hlStepAuth').classList.add('hidden');
-            document.getElementById('hlStepApiKey').classList.remove('hidden');
+            // 學生不需要碰 API Key(他只是要練習/作答)，直接進學生首頁；
+            // 老師/家長/管理員維持原本的 Key 選擇那一步
+            if (data.user && data.user.role === 'student') {
+                enterMainApp();
+            } else {
+                document.getElementById('hlStepApiKey').classList.remove('hidden');
+            }
         }
 
         async function doSplashLogin() {
@@ -1064,16 +1144,14 @@
         }
 
         document.getElementById('hlEnterBuiltin').onclick = function() {
-            document.getElementById('hlSplash').style.display = 'none';
-            document.getElementById('inputForm').classList.remove('hidden');
+            enterMainApp();
             // 選了「直接進入」代表沒有自己的Key，把Key欄位藏起來避免版面空格造成混亂，
             // 但留一條小連結讓使用者可以隨時改用自己的Key
             document.getElementById('apiKeyBox').classList.add('hidden');
             document.getElementById('showKeyBoxLink').classList.remove('hidden');
         };
         document.getElementById('hlEnterOwnKey').onclick = function() {
-            document.getElementById('hlSplash').style.display = 'none';
-            document.getElementById('inputForm').classList.remove('hidden');
+            enterMainApp();
             setTimeout(function() {
                 const keyInput = document.getElementById('userKey');
                 const keyBox = document.getElementById('apiKeyBox');
@@ -1114,6 +1192,236 @@
                 alert('開啟線上作答分頁失敗: ' + e.message);
             } finally {
                 if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = originalText; }
+            }
+        }
+
+        // ==================== 依身分決定進入哪個首頁 ====================
+        // 老師/管理員/訪客 → 出題工具(#inputForm)；學生 → 學生首頁(#studentHome)；
+        // 家長 → 出題工具，但上方多一塊孩子狀況面板。
+        // 學生沒登入也能用：進場頁選「學生」可以直接填學校/年級/班級/姓名開始練習。
+        const STUDENT_PROFILE_KEY = 'lun_student_profile';
+        const PRACTICE_LOG_KEY = 'lun_practice_log';
+
+        function getStudentProfile() {
+            try { return JSON.parse(localStorage.getItem(STUDENT_PROFILE_KEY) || 'null'); } catch (e) { return null; }
+        }
+        function saveStudentProfile(prof) {
+            localStorage.setItem(STUDENT_PROFILE_KEY, JSON.stringify(prof));
+        }
+
+        // 進入主畫面：所有「離開進場頁」的路徑都走這裡，才不會有的地方漏掉身分判斷
+        function enterMainApp() {
+            document.getElementById('hlSplash').style.display = 'none';
+            const u = window.currentUser;
+            const isStudent = (u && u.role === 'student') || (!u && !!getStudentProfile());
+            const isParent = u && u.role === 'parent';
+
+            document.getElementById('studentHome').classList.toggle('hidden', !isStudent);
+            document.getElementById('inputForm').classList.toggle('hidden', isStudent);
+            document.getElementById('parentPanel').classList.toggle('hidden', !isParent);
+
+            if (isStudent) renderStudentHome();
+            if (isParent) renderParentPanel();
+            updateGlobalBackBtn();
+        }
+
+        function practiceGradeOptions() {
+            const grades = [];
+            ['一', '二', '三', '四', '五', '六'].forEach(function (g) { grades.push('國小' + g + '年級'); });
+            ['一', '二', '三'].forEach(function (g) { grades.push('國中' + g + '年級'); });
+            ['一', '二', '三'].forEach(function (g) { grades.push('高中' + g + '年級'); });
+            return grades.map(function (g) { return "<option>" + g + "</option>"; }).join('');
+        }
+
+        function renderStudentHome() {
+            const u = window.currentUser;
+            const prof = getStudentProfile() || {};
+            const name = u ? u.displayName : (prof.name || '同學');
+            const infoLine = u ? (u.className || '') : [prof.school, prof.grade, prof.className].filter(Boolean).join('・');
+            const subjects = ['國語文', '英語文', '數學', '自然科學', '社會', '理化', '生物', '地球科學', '歷史', '地理', '公民'];
+            const box = document.getElementById('studentHome');
+
+            let html = "<div class='lq-card p-5 mb-4 text-center'>" +
+                "<div class='text-xl font-black mb-1'>👋 " + escapeHtml(name) + "，歡迎回來</div>" +
+                (infoLine ? "<div class='text-sm text-gray-500'>" + escapeHtml(infoLine) + "</div>" : "") +
+                (u ? "" : "<div class='text-xs text-gray-400 mt-2'>目前是免登入模式，練習紀錄只留在這台裝置。" +
+                    "<button onclick='openAccountModal()' class='underline font-semibold' style='color:var(--hl-blue);'>登入帳號</button>可跨裝置保存，家長也才看得到你的即時作答。</div>") +
+                "</div>";
+
+            html += "<div class='lq-card p-5 mb-4'>" +
+                "<div class='font-bold text-lg mb-1'>🎯 進入老師的測驗</div>" +
+                "<div class='text-xs text-gray-500 mb-3'>輸入老師報的 6 位數代碼，或貼上老師給的連結</div>" +
+                "<div class='flex gap-2 mb-2'>" +
+                    "<input id='joinCodeInput' class='lq-input text-center font-black text-lg' style='letter-spacing:0.3em;' maxlength='6' inputmode='numeric' placeholder='000000'>" +
+                    "<button onclick='joinByCode(this)' class='lq-btn lq-btn-primary px-5 whitespace-nowrap'>進入</button>" +
+                "</div>" +
+                "<div class='flex gap-2'>" +
+                    "<input id='joinLinkInput' class='lq-input text-sm' placeholder='或貼上測驗連結'>" +
+                    "<button onclick='joinByLink()' class='lq-btn lq-btn-secondary px-4 whitespace-nowrap'>前往</button>" +
+                "</div></div>";
+
+            html += "<div class='lq-card p-5 mb-4'>" +
+                "<div class='font-bold text-lg mb-1'>📝 我要練習</div>" +
+                "<div class='text-xs text-gray-500 mb-3'>小綸幫你出一份練習卷，寫完自動對答案（每次間隔 30 秒）</div>" +
+                "<div class='grid grid-cols-2 gap-2 mb-2'>" +
+                    "<select id='practiceGrade' class='lq-input text-sm'>" + practiceGradeOptions() + "</select>" +
+                    "<select id='practiceSubject' class='lq-input text-sm'>" + subjects.map(function (x) { return "<option>" + x + "</option>"; }).join('') + "</select>" +
+                "</div>" +
+                "<input id='practiceScope' class='lq-input text-sm mb-2' placeholder='想練哪個範圍？（例如：第三章 光的折射；留空就綜合練習）'>" +
+                "<div class='grid grid-cols-2 gap-2 mb-3'>" +
+                    "<select id='practiceCount' class='lq-input text-sm'>" + [5, 10, 15, 20].map(function (n) { return "<option value='" + n + "'" + (n === 10 ? " selected" : "") + ">" + n + " 題</option>"; }).join('') + "</select>" +
+                    "<select id='practiceDiff' class='lq-input text-sm'>" + ['基礎', '普通', '進階', '挑戰', '熟練'].map(function (d) { return "<option" + (d === '普通' ? " selected" : "") + ">" + d + "</option>"; }).join('') + "</select>" +
+                "</div>" +
+                "<button id='btnPractice' onclick='startPractice(this)' class='lq-btn lq-cta lq-btn-primary w-full py-3 text-lg'>🚀 開始練習</button></div>";
+
+            html += "<div class='lq-card p-5 mb-4'>" +
+                "<div class='font-bold text-lg mb-2'>📊 我的練習紀錄</div>" +
+                renderPracticeLog() + "</div>";
+
+            html += "<div class='text-center'><button onclick='studentLeaveHome()' class='lq-btn lq-btn-ghost text-sm px-4 py-2'>切換身分／回到首頁</button></div>";
+            box.innerHTML = html;
+
+            if (!u && prof.grade) {
+                const sel = document.getElementById('practiceGrade');
+                if (sel) sel.value = prof.grade;
+            }
+        }
+
+        function renderPracticeLog() {
+            let log = [];
+            try { log = JSON.parse(localStorage.getItem(PRACTICE_LOG_KEY) || '[]'); } catch (e) {}
+            if (log.length === 0) return "<div class='text-sm text-gray-400'>還沒有練習紀錄，做完一份就會出現在這裡。</div>";
+            return log.slice(0, 8).map(function (r) {
+                return "<div class='flex justify-between items-center text-sm py-1.5 border-b border-gray-100'>" +
+                    "<span class='truncate' style='max-width:60%;'>" + escapeHtml(r.title || '練習卷') + "</span>" +
+                    "<span class='font-bold' style='color:var(--hl-blue);'>" + r.score + " 分</span>" +
+                    "<span class='text-xs text-gray-400'>" + new Date(r.at).toLocaleDateString() + "</span></div>";
+            }).join('');
+        }
+
+        function savePracticeLog(title, score) {
+            let log = [];
+            try { log = JSON.parse(localStorage.getItem(PRACTICE_LOG_KEY) || '[]'); } catch (e) {}
+            log.unshift({ title: title, score: score, at: Date.now() });
+            localStorage.setItem(PRACTICE_LOG_KEY, JSON.stringify(log.slice(0, 30)));
+        }
+
+        function studentLeaveHome() {
+            localStorage.removeItem(STUDENT_PROFILE_KEY);
+            location.href = location.origin + location.pathname;
+        }
+
+        async function joinByCode(btnEl) {
+            const raw = (document.getElementById('joinCodeInput').value || '').replace(/[^0-9]/g, '');
+            if (raw.length !== 6) { alert('請輸入老師給的 6 位數代碼'); return; }
+            const original = btnEl ? btnEl.innerHTML : '';
+            if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳'; }
+            try {
+                const res = await fetch(API_BASE + "/api/code/" + raw);
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                location.href = location.origin + location.pathname + "?share=" + data.shareId + "&mode=student";
+            } catch (e) {
+                alert('進入失敗：' + e.message);
+            } finally {
+                if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = original; }
+            }
+        }
+
+        function joinByLink() {
+            const raw = (document.getElementById('joinLinkInput').value || '').trim();
+            if (!raw) return;
+            let target;
+            try { target = new URL(raw, location.href); } catch (e) { alert('連結格式看起來不對，請整條複製貼上'); return; }
+            if (!target.searchParams.get('share')) { alert('這不是測驗連結（網址裡要有 share=）'); return; }
+            location.href = target.href;
+        }
+
+        // 學生自主練習：把簡化的選項塞進既有出題表單再走同一套出題流程，
+        // 不另外寫一份出題邏輯(冷卻、Key池、批次重試那些都直接沿用)
+        function startPractice(btnEl) {
+            const u = window.currentUser;
+            const prof = getStudentProfile() || {};
+            const grade = document.getElementById('practiceGrade').value;
+            const subject = document.getElementById('practiceSubject').value;
+            const scope = (document.getElementById('practiceScope').value || '').trim() || '綜合練習';
+            const count = document.getElementById('practiceCount').value;
+            const diff = document.getElementById('practiceDiff').value;
+
+            const set = function (id, val) { const el = document.getElementById(id); if (el) el.value = val; };
+            set('sourceType', '1');
+            set('grade', grade);
+            set('subject', subject);
+            set('publisher', '由小綸自由發揮');
+            set('scope', scope);
+            set('count', count);
+            set('qType', '單選題');
+            set('difficulty', diff);
+
+            // 出題完成後直接進線上作答：學生要的是「寫」，不是看考卷排版
+            window.practiceMode = true;
+            window.practiceStudentInfo = {
+                grade: grade,
+                className: u ? (u.className || '') : (prof.className || ''),
+                name: u ? u.displayName : (prof.name || '')
+            };
+            document.getElementById('studentHome').classList.add('hidden');
+            document.getElementById('inputForm').classList.remove('hidden');
+            startGen();
+        }
+
+        function renderParentPanel() {
+            const box = document.getElementById('parentPanel');
+            box.innerHTML = "<div class='lq-card p-5'>" +
+                "<div class='font-bold text-lg mb-1'>👨‍👩‍👧 我的孩子</div>" +
+                "<div class='text-xs text-gray-500 mb-3'>連結孩子的帳號後，可以即時看到他正在寫哪一題。下方出題工具跟老師版本完全相同，可以自己幫孩子出練習卷。</div>" +
+                "<div id='parentPanelChildren' class='mb-3'><div class='text-sm text-gray-400'>⏳ 載入中...</div></div>" +
+                "<div class='flex gap-2'><input id='parentPanelChildInput' class='lq-input text-sm' placeholder='孩子的帳號名稱'>" +
+                "<button onclick='parentPanelLinkChild(this)' class='lq-btn lq-btn-primary px-4 whitespace-nowrap'>連結</button></div></div>";
+            loadParentPanelChildren();
+        }
+
+        async function loadParentPanelChildren() {
+            const box = document.getElementById('parentPanelChildren');
+            if (!box) return;
+            const token = localStorage.getItem('lun_session_token') || '';
+            try {
+                const res = await fetch(API_BASE + "/api/parent/children", { headers: { 'X-Session-Token': token } });
+                const data = await res.json();
+                const children = data.children || [];
+                if (children.length === 0) {
+                    box.innerHTML = "<div class='text-sm text-gray-400'>還沒有連結任何孩子帳號，在下面輸入孩子的帳號名稱即可連結。</div>";
+                    return;
+                }
+                box.innerHTML = children.map(function (c) {
+                    return "<div class='flex justify-between items-center bg-gray-50 p-2 rounded-lg mb-2'>" +
+                        "<span class='text-sm font-semibold'>" + escapeHtml(c.displayName) + "（" + escapeHtml(c.username) + "）</span>" +
+                        "<button onclick=\"openProctorDetailParent('" + escapeHtml(c.username) + "')\" class='lq-btn lq-btn-primary text-xs px-3 py-1'>🔍 即時監看</button></div>";
+                }).join('');
+            } catch (e) {
+                box.innerHTML = "<div class='text-sm text-red-600'>載入失敗：" + escapeHtml(e.message) + "</div>";
+            }
+        }
+
+        async function parentPanelLinkChild(btnEl) {
+            const studentUsername = (document.getElementById('parentPanelChildInput').value || '').trim();
+            if (!studentUsername) return;
+            const token = localStorage.getItem('lun_session_token') || '';
+            if (btnEl) btnEl.disabled = true;
+            try {
+                const res = await fetch(API_BASE + "/api/parent/link-child", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+                    body: JSON.stringify({ studentUsername: studentUsername })
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                document.getElementById('parentPanelChildInput').value = '';
+                loadParentPanelChildren();
+            } catch (e) {
+                alert('連結失敗：' + e.message);
+            } finally {
+                if (btnEl) btnEl.disabled = false;
             }
         }
 
@@ -1307,7 +1615,12 @@
         // 分享出去的連結會佔用伺服器儲存(KV)、也可能被大量產生，所以限定登入使用者才能用。
         // 未登入者仍可自己出題、下載、預覽線上作答，只是不能發連結給別人
         function requireLoginForShare() {
-            if (window.currentUser) return true;
+            const u = window.currentUser;
+            if (u && u.role === 'student') {
+                alert('分享測驗連結是老師／家長的功能喔。你可以把練習卷下載成 PDF 或 Word 自己印出來。');
+                return false;
+            }
+            if (u) return true;
             alert('🔒 分享功能需要登入帳號才能使用。\n\n登入後可以分享學生作答連結、家長答案連結，以及全班即時進度儀表板。');
             openAccountModal();
             return false;
@@ -1352,6 +1665,40 @@
 
         // 老師用：即時進度儀表板連結，跟shareQuiz('student')共用同一個shareId(靠getOrCreateShareId的快取)，
         // 這樣不管老師先分享學生連結還是先開儀表板，兩邊看到的都是同一批學生的進度
+        // 課堂上報一組6位數字比貼網址快：學生在首頁輸入就直接進到這份測驗
+        async function shareQuizCode() {
+            if (!requireLoginForShare()) return;
+            if (!window.currentItems || window.currentItems.length === 0) {
+                alert('目前沒有題目可以分享');
+                return;
+            }
+            try {
+                const shareId = await getOrCreateShareId();
+                const token = localStorage.getItem('lun_session_token') || '';
+                const res = await fetch(API_BASE + "/api/code", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
+                    body: JSON.stringify({ shareId: shareId })
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error.message); return; }
+                showQuizCodeModal(data.code);
+            } catch (e) {
+                alert('產生測驗代碼失敗：' + e.message);
+            }
+        }
+
+        function showQuizCodeModal(code) {
+            const modal = document.getElementById('quizCodeModal');
+            document.getElementById('quizCodeValue').textContent = String(code).replace(/(\d{3})(\d{3})/, '$1 $2');
+            modal.classList.remove('hidden');
+            navigator.clipboard.writeText(String(code)).catch(function () {});
+        }
+
+        function closeQuizCodeModal() {
+            document.getElementById('quizCodeModal').classList.add('hidden');
+        }
+
         async function shareLiveDashboardLink() {
             if (!requireLoginForShare()) return;
             if (!window.currentItems || window.currentItems.length === 0) {
@@ -2144,6 +2491,19 @@
 
                 renderPaperFixed(allItems);
 
+                // 學生的「我要練習」：出完題直接進線上作答(他要的是寫，不是看考卷排版)，
+                // 姓名/班級也先幫他填好，省得每次重打
+                if (window.practiceMode) {
+                    switchSheet('answer');
+                    const info = window.practiceStudentInfo || {};
+                    setTimeout(function () {
+                        const setVal = function (id, v) { const el = document.getElementById(id); if (el && v) el.value = v; };
+                        setVal('ansStuGrade', info.grade);
+                        setVal('ansStuClass', info.className);
+                        setVal('ansStuName', info.name);
+                    }, 50);
+                }
+
                 window.currentItems = allItems;
                 window.currentSettings = { sType, grade, subject, publisher, scope, count: total, qType: typeVal, difficulty: diffVal, lang: langVal, contentText };
                 saveQuizToHistory();
@@ -2703,6 +3063,10 @@
 
             const pct = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
             window.lastGradeSummary = { totalScore, maxScore, pct };
+            // 學生端(自主練習或用連結進來作答)把成績留在這台裝置的練習紀錄
+            if (window.practiceMode || (window.currentUser && window.currentUser.role === 'student')) {
+                savePracticeLog(window.docTitle || '練習卷', pct);
+            }
             let resultHTML = "<div class='lq-card p-5 text-center ans-score-pop' style='border:2px solid var(--hl-blue);'>";
             resultHTML += "<div class='text-3xl font-bold mb-1' style='color:var(--hl-blue);'>" + totalScore + " / " + maxScore + " 分</div>";
             resultHTML += "<div class='text-sm text-gray-500 mb-3'>約 " + pct + " 分" + (needReview > 0 ? "（含填空/簡答題的文字比對估算，建議自行核對）" : "（選擇/複選題自動判分）") + "</div>";
@@ -3015,12 +3379,21 @@
 
         async function initAuthUI() {
             const token = localStorage.getItem('lun_session_token');
-            if (!token) { updateAccountUI(); return; }
+            if (!token) {
+                updateAccountUI();
+                // 免登入學生上次填過基本資料就直接回學生首頁，不用每次重選身分
+                if (getStudentProfile() && !location.search) enterMainApp();
+                return;
+            }
             try {
                 const res = await fetch(API_BASE + "/api/auth/me", { headers: { 'X-Session-Token': token } });
                 const data = await res.json();
                 if (data.error) { localStorage.removeItem('lun_session_token'); window.currentUser = null; }
-                else window.currentUser = data.user;
+                else {
+                    window.currentUser = data.user;
+                    // 學生/家長已經登入過，重新整理時直接進他的首頁(老師仍走進場頁選Key)
+                    if (!location.search && (data.user.role === 'student' || data.user.role === 'parent')) enterMainApp();
+                }
             } catch (e) { window.currentUser = null; }
             updateAccountUI();
         }

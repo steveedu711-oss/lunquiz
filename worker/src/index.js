@@ -62,6 +62,12 @@ export default {
     if (url.pathname.startsWith("/api/result/")) {
       return handleResultGet(request, env, url.pathname.slice("/api/result/".length));
     }
+    if (url.pathname === "/api/code" && request.method === "POST") {
+      return handleCodeCreate(request, env);
+    }
+    if (url.pathname.startsWith("/api/code/")) {
+      return handleCodeLookup(request, env, url.pathname.slice("/api/code/".length));
+    }
     if (url.pathname === "/api/live-revoke") {
       return handleLiveRevoke(request, env);
     }
@@ -381,7 +387,56 @@ async function handleLiveProgressPost(request, env) {
 
 // 老師儀表板用：列出這個shareId底下所有學生目前進度。會洩漏全班姓名+分數，
 // 敏感度比單人分享連結高，需要管理者密碼(比照handleKeysCheck的驗證寫法)。
-// 儀表板金鑰驗證：接受 ?k=xxx 或 X-Dash-Key header(前端輪詢時用header，複製給人的連結用query)
+// 測驗代碼：課堂上報一組6位數字比貼網址快得多(學生手機打6個數字就進得去)。
+// 代碼只是shareId的短別名，存活時間跟分享題目一樣(30天)。
+// 產生代碼需要登入(跟分享連結同一個門檻)，查詢不需要——學生本來就是要靠它進來。
+async function handleCodeCreate(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+
+  const session = await verifySession(request, env);
+  if (!session) return json({ error: { message: "產生測驗代碼需要登入" } }, 401);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return json({ error: { message: "格式錯誤" } }, 400);
+  }
+  const shareId = String(body.shareId || "").trim();
+  if (!shareId) return json({ error: { message: "缺少shareId" } }, 400);
+
+  const exists = await env.COOLDOWN_KV.get("share:" + shareId);
+  if (!exists) return json({ error: { message: "找不到這份測驗，請重新分享一次" } }, 404);
+
+  // 同一份測驗重複產生就沿用原本的代碼，老師才不會每按一次就換一組、報錯數字
+  const cached = await env.COOLDOWN_KV.get("share-code:" + shareId);
+  if (cached) return json({ code: cached });
+
+  // 六位數字，開頭不為0(避免使用者漏打前面的0)。碰撞就重抽，最多5次
+  let code = "";
+  for (let i = 0; i < 5; i++) {
+    const candidate = String(Math.floor(100000 + Math.random() * 900000));
+    const taken = await env.COOLDOWN_KV.get("code:" + candidate);
+    if (!taken) { code = candidate; break; }
+  }
+  if (!code) return json({ error: { message: "代碼產生失敗，請再試一次" } }, 500);
+
+  await env.COOLDOWN_KV.put("code:" + code, shareId, { expirationTtl: SHARE_TTL_SECONDS });
+  await env.COOLDOWN_KV.put("share-code:" + shareId, code, { expirationTtl: SHARE_TTL_SECONDS });
+  return json({ code });
+}
+
+async function handleCodeLookup(request, env, code) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  const clean = String(code || "").replace(/\D/g, "");
+  if (clean.length !== 6) return json({ error: { message: "測驗代碼是6位數字" } }, 400);
+
+  const shareId = await env.COOLDOWN_KV.get("code:" + clean);
+  if (!shareId) return json({ error: { message: "查無此測驗代碼，可能打錯或已過期(30天)" } }, 404);
+  return json({ shareId });
+}
+
+// 儀表板金鑰驗證：接受 ?k=xxx 或 X-Dash-Key header(前端輪詢時用header，複製給人的連結用查詢字串)
 async function hasValidDashKey(request, env, shareId) {
   const url = new URL(request.url);
   const given = request.headers.get("X-Dash-Key") || url.searchParams.get("k") || "";
