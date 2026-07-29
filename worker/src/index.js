@@ -27,7 +27,7 @@ const HISTORY_MAX_PER_CLASS = 50; // 每個班級最多存50份出題歷史,超�
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key, X-Client-Id, X-Session-Token",
+  "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key, X-Client-Id, X-Session-Token, X-Dash-Key",
 };
 
 function json(data, status = 200) {
@@ -61,6 +61,9 @@ export default {
     }
     if (url.pathname.startsWith("/api/result/")) {
       return handleResultGet(request, env, url.pathname.slice("/api/result/".length));
+    }
+    if (url.pathname === "/api/live-revoke") {
+      return handleLiveRevoke(request, env);
     }
     if (url.pathname === "/api/live-progress" && request.method !== "GET") {
       return handleLiveProgressPost(request, env);
@@ -156,7 +159,13 @@ async function handleShareCreate(request, env) {
     const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
     await env.COOLDOWN_KV.put("share:" + id, payload, { expirationTtl: SHARE_TTL_SECONDS });
 
-    return new Response(JSON.stringify({ id }), {
+    // 儀表板金鑰：老師不登入也要能看全班進度，但不能只憑shareId——shareId跟學生作答連結是同一組，
+    // 學生自己改網址就會看到全班。所以另外發一把只有出題者拿得到的key，存成獨立KV(不放進share:的payload，
+    // 免得/api/share/:id這個公開端點把它一起吐給學生)
+    const dashKey = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+    await env.COOLDOWN_KV.put("dashkey:" + id, dashKey, { expirationTtl: SHARE_TTL_SECONDS });
+
+    return new Response(JSON.stringify({ id, dashKey }), {
       status: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
@@ -372,24 +381,88 @@ async function handleLiveProgressPost(request, env) {
 
 // 老師儀表板用：列出這個shareId底下所有學生目前進度。會洩漏全班姓名+分數，
 // 敏感度比單人分享連結高，需要管理者密碼(比照handleKeysCheck的驗證寫法)。
+// 儀表板金鑰驗證：接受 ?k=xxx 或 X-Dash-Key header(前端輪詢時用header，複製給人的連結用query)
+async function hasValidDashKey(request, env, shareId) {
+  const url = new URL(request.url);
+  const given = request.headers.get("X-Dash-Key") || url.searchParams.get("k") || "";
+  if (!given || !shareId) return false;
+  const expected = await env.COOLDOWN_KV.get("dashkey:" + shareId);
+  return !!expected && given === expected;
+}
+
+// 停止/恢復監看：
+// - 老師(持儀表板金鑰)可以停掉整份測驗的免登入儀表板連結
+// - 學生(持自己的shareId+studentId，也就是自己作答用的那組)可以停掉發給家長的單人監看連結
+async function handleLiveRevoke(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (request.method !== "POST") return json({ error: { message: "Method Not Allowed" } }, 405);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return json({ error: { message: "格式錯誤" } }, 400);
+  }
+  const shareId = String(body.shareId || "").trim();
+  const studentId = String(body.studentId || "").trim();
+  const revoked = body.revoked !== false;
+  if (!shareId) return json({ error: { message: "缺少shareId" } }, 400);
+
+  if (studentId) {
+    const key = "revoke:live:" + shareId + ":" + studentId;
+    if (revoked) await env.COOLDOWN_KV.put(key, "1", { expirationTtl: LIVE_PROGRESS_TTL_SECONDS });
+    else await env.COOLDOWN_KV.delete(key);
+    return json({ ok: true, revoked });
+  }
+
+  if (!(await hasValidDashKey(request, env, shareId))) {
+    return json({ error: { message: "需要儀表板金鑰才能停止全班監看" } }, 401);
+  }
+  const key = "revoke:dash:" + shareId;
+  if (revoked) await env.COOLDOWN_KV.put(key, "1", { expirationTtl: SHARE_TTL_SECONDS });
+  else await env.COOLDOWN_KV.delete(key);
+  return json({ ok: true, revoked });
+}
+
 async function handleLiveProgressList(request, env, shareId) {
   if (request.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
   }
 
-  const adminPass = request.headers.get("X-Admin-Pass") || "";
-  const expectedAdminPass = env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
-  if (adminPass === "" || adminPass !== expectedAdminPass) {
-    return new Response(JSON.stringify({ error: { message: "需要管理者密碼" } }), {
-      status: 401,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-    });
-  }
   if (!shareId) {
     return new Response(JSON.stringify({ error: { message: "缺少shareId" } }), {
       status: 400,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
+  }
+
+  // 三種身分都可以看全班進度：
+  // (1) 儀表板金鑰(免登入，出題當下拿到的那條連結) (2) 登入的老師/超級管理員 (3) 管理者密碼(舊有用法)
+  const hasKey = await hasValidDashKey(request, env, shareId);
+  const adminPass = request.headers.get("X-Admin-Pass") || "";
+  const expectedAdminPass = env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
+  const isAdminPass = adminPass !== "" && adminPass === expectedAdminPass;
+  let isTeacher = false;
+  if (!hasKey && !isAdminPass) {
+    const session = await verifySession(request, env);
+    isTeacher = !!session && (session.role === "teacher" || session.role === "superadmin");
+  }
+  if (!hasKey && !isAdminPass && !isTeacher) {
+    return new Response(JSON.stringify({ error: { message: "需要儀表板連結、老師帳號登入或管理者密碼" } }), {
+      status: 401,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  // 老師按過「停止監看」就讓這條金鑰連結失效(帳號/密碼身分不受影響，因為那是自己的帳號)
+  if (hasKey && !isAdminPass && !isTeacher) {
+    const revoked = await env.COOLDOWN_KV.get("revoke:dash:" + shareId);
+    if (revoked) {
+      return new Response(JSON.stringify({ error: { message: "這份測驗的監看已被停止" } }), {
+        status: 403,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
   }
 
   const list = await env.COOLDOWN_KV.list({ prefix: "live:" + shareId + ":" });
@@ -413,6 +486,15 @@ async function handleLiveProgressGet(request, env, shareId, studentId) {
   if (!shareId || !studentId) {
     return new Response(JSON.stringify({ error: { message: "缺少shareId或studentId" } }), {
       status: 400,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  // 學生按過「停止監看」就讓發出去的家長連結失效；老師持儀表板金鑰仍看得到(監考需求不受學生控制)
+  const revoked = await env.COOLDOWN_KV.get("revoke:live:" + shareId + ":" + studentId);
+  if (revoked && !(await hasValidDashKey(request, env, shareId))) {
+    return new Response(JSON.stringify({ error: { message: "學生已停止分享即時監看" } }), {
+      status: 403,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   }
