@@ -12,15 +12,24 @@
 //   就自動 fallback 到 gemini-3.1-flash-lite，不會整批直接失敗
 
 const COOLDOWN_MS = 30000;
-const DEFAULT_ADMIN_PASSWORD = "5407";
+// 管理者密碼只從 secret 讀，原始碼裡不留預設值——這個 repo 是 public，
+// 寫死的預設密碼等於公開，任何人都能拿去略過冷卻、查 Key 池狀態。
+// 沒設 ADMIN_PASSWORD secret 時，管理者密碼一律視為不成立（功能停用，不是放行）。
+function adminPassMatches(request, env) {
+  const expected = String(env.ADMIN_PASSWORD || "");
+  if (expected === "") return false;
+  const got = request.headers.get("X-Admin-Pass") || "";
+  return got !== "" && got === expected;
+}
 const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
 const SHARE_TTL_SECONDS = 60 * 60 * 24 * 30; // 分享連結30天後過期
-const SHARE_MAX_BYTES = 500 * 1024; // 單份分享內容上限500KB,避免濫用KV空間
+// 單份分享內容上限。/api/share 不需登入(訪客也能分享)，所以這是唯一擋濫用的關卡。
+// 50 題的題目 JSON 實測約 30KB，120KB 已經很寬鬆；原本設 500KB 是沒必要的攻擊面
+// （KV 免費方案每日只有 1000 次寫入，被灌大包資料很快就把全站額度吃光）
+const SHARE_MAX_BYTES = 120 * 1024;
 const RESULT_TTL_SECONDS = 60 * 60 * 24 * 30; // 作答結果連結30天後過期
 const RESULT_MAX_BYTES = 300 * 1024; // 單份結果內容上限300KB
 const LIVE_PROGRESS_TTL_SECONDS = 60 * 60 * 8; // 即時進度8小時後自動過期(教室情境用不到這麼久)
-const LIVE_PROGRESS_DAILY_WRITE_CAP = 400; // 這個功能自己保留的每日KV寫入預算,見live-budget:計數key
-const LIVE_BUDGET_TTL_SECONDS = 60 * 60 * 25; // 25小時,每天自動歸零(比24小時多留緩衝)
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 登入session 30天後需要重新登入
 const HISTORY_MAX_PER_CLASS = 50; // 每個班級最多存50份出題歷史,超過自動刪最舊的
 
@@ -294,14 +303,14 @@ async function handleResultGet(request, env, id) {
   });
 }
 
-// 即時進度：學生線上作答時，答題狀態每次真的改變(而不是定時)才推送一次進度，
-// 老師可以開儀表板看全班進度、家長可以看自己小孩單人進度。
-// key: live:{shareId}:{studentId}，shareId直接沿用/api/share產生的ID(不用另外設計「批次」)，
-// value存完整進度(給家長單人查看)，metadata存精簡摘要(老師儀表板list()時直接拿，不用逐一get())。
-// 8小時後自動過期。另外用 live-budget:{今天日期} 計數key做每日寫入預算保護——
-// Cloudflare KV免費方案每天只有1000次寫入額度，這個功能跟其他既有功能(冷卻/分享/分享結果/訪客數)
-// 共用同一個COOLDOWN_KV，設一個明顯低於1000的自我上限，超過就靜默停止寫入(不報錯)，
-// 避免這個錦上添花的新功能把其他既有功能的額度也一起吃光。
+// 即時進度：學生線上作答時把進度推上來，老師可以開儀表板看全班、家長可以看自己小孩。
+// 存在 D1 的 live_progress 表（primary key = share_id + student_id，UPSERT 覆蓋）。
+//
+// 2026-07-29 從 KV 搬過來：KV 免費方案每日只有 1000 次寫入，而舊版一次上報要寫 2~3 個 key
+// （進度本身、每日預算計數器、student-active 指標），舊的 400 次「請求數」上限實際等於
+// 800~1200 次寫入，早就超過額度，保護形同虛設；而且計數器是 read-modify-write，
+// 多人同時作答還會互相覆蓋。D1 免費每日 10 萬列寫入，一個班考一次試只用掉 0.6%。
+// D1 沒有 TTL，改成寫入時順手刪掉逾期的列。
 async function handleLiveProgressPost(request, env) {
   if (request.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
@@ -324,17 +333,6 @@ async function handleLiveProgressPost(request, env) {
       });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const budgetKey = "live-budget:" + today;
-    const budgetUsed = parseInt((await env.COOLDOWN_KV.get(budgetKey)) || "0", 10);
-    if (budgetUsed >= LIVE_PROGRESS_DAILY_WRITE_CAP) {
-      // 靜默停止,不算錯誤:學生作答本身完全不受影響,只是老師/家長那邊這次看不到最新進度
-      return new Response(JSON.stringify({ throttled: true }), {
-        status: 200,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      });
-    }
-
     const studentInfo = {
       grade: String((body.studentInfo && body.studentInfo.grade) || "").slice(0, 50),
       className: String((body.studentInfo && body.studentInfo.className) || "").slice(0, 50),
@@ -344,8 +342,7 @@ async function handleLiveProgressPost(request, env) {
     const answered = Number(body.answered) || 0;
     const total = Number(body.total) || 0;
     const updatedAt = Date.now();
-    // 監考式即時監看用：每題目前實際選的選項/填的文字(不只是「是否已答」的數字)，
-    // 只放進完整value(單人get()時才回傳)，不放進metadata(老師總覽list()用，維持輕量避免超過1KB上限)
+    // 監考式即時監看用：每題目前實際選的選項/填的文字(不只是「是否已答」的數字)
     const answers = Array.isArray(body.answers)
       ? body.answers.slice(0, 200).map((a) => ({
           i: Number(a && a.i) || 0,
@@ -353,24 +350,34 @@ async function handleLiveProgressPost(request, env) {
         }))
       : [];
 
-    const payload = JSON.stringify({ shareId, studentId, studentInfo, answered, total, answers, updatedAt });
+    // 學生若剛好有登入帳號(非強制)就記下來，讓已連結的家長能用孩子帳號反查
+    // 「現在正在寫哪一份」，不必另外拿到分享連結
+    const studentUsername = String(body.studentUsername || "").trim().slice(0, 100);
 
-    await env.COOLDOWN_KV.put(budgetKey, String(budgetUsed + 1), { expirationTtl: LIVE_BUDGET_TTL_SECONDS });
-    await env.COOLDOWN_KV.put("live:" + shareId + ":" + studentId, payload, {
-      expirationTtl: LIVE_PROGRESS_TTL_SECONDS,
-      metadata: { ...studentInfo, answered, total, updatedAt },
-    });
+    await env.DB.prepare(
+      `INSERT INTO live_progress
+         (share_id, student_id, student_username, grade, class_name, seat, name, answered, total, answers, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(share_id, student_id) DO UPDATE SET
+         student_username = excluded.student_username,
+         grade = excluded.grade, class_name = excluded.class_name,
+         seat = excluded.seat, name = excluded.name,
+         answered = excluded.answered, total = excluded.total,
+         answers = excluded.answers, updated_at = excluded.updated_at`
+    )
+      .bind(
+        shareId, studentId, studentUsername,
+        studentInfo.grade, studentInfo.className, studentInfo.seat, studentInfo.name,
+        answered, total, JSON.stringify(answers), updatedAt
+      )
+      .run();
 
-    // 若學生剛好有登入帳號(非必要,登入非強制)，額外記一筆「目前正在寫哪一份」的指標，
-    // 讓已連結的家長帳號能直接透過孩子的username找到現在該看哪個shareId+studentId，
-    // 不用另外拿到分享連結才能監看
-    const studentUsername = String(body.studentUsername || "").trim();
-    if (studentUsername) {
-      await env.COOLDOWN_KV.put(
-        "student-active:" + studentUsername,
-        JSON.stringify({ shareId, studentId, updatedAt }),
-        { expirationTtl: LIVE_PROGRESS_TTL_SECONDS }
-      );
+    // D1 沒有 TTL，順手清掉逾期的列。只在剛開始作答時做(answered <= 1)，
+    // 避免每次上報都多跑一次 DELETE
+    if (answered <= 1) {
+      await env.DB.prepare("DELETE FROM live_progress WHERE updated_at < ?")
+        .bind(updatedAt - LIVE_PROGRESS_TTL_SECONDS * 1000)
+        .run();
     }
 
     return new Response(JSON.stringify({ ok: true }), {
@@ -493,21 +500,17 @@ async function handleLiveRevoke(request, env) {
 }
 
 // 這位家長是不是這筆即時進度的家長？即時進度的studentId是作答分頁的隨機ID、不是帳號，
-// 所以透過孩子登入時寫下的student-active:<username>指標反查：只要指標指到同一組shareId+studentId，
-// 而且該username確實是這位家長已連結的孩子，就算數
+// 所以靠學生上報時一起寫下的 student_username 反查：只要那筆進度的帳號確實是
+// 這位家長已連結的孩子，就算數。（原本要逐一 KV get，現在一條 JOIN 就問完）
 async function parentOwnsLiveStudent(env, parentId, shareId, studentId) {
-  const rows = await env.DB.prepare(
-    "SELECT u.username FROM parent_child_links l JOIN users u ON u.id = l.student_id WHERE l.parent_id = ?"
-  ).bind(parentId).all();
-  for (const r of rows.results || []) {
-    const raw = await env.COOLDOWN_KV.get("student-active:" + r.username);
-    if (!raw) continue;
-    try {
-      const a = JSON.parse(raw);
-      if (a.shareId === shareId && a.studentId === studentId) return true;
-    } catch (e) {}
-  }
-  return false;
+  const row = await env.DB.prepare(
+    `SELECT 1 FROM live_progress p
+       JOIN users u ON u.username = p.student_username
+       JOIN parent_child_links l ON l.student_id = u.id
+      WHERE l.parent_id = ? AND p.share_id = ? AND p.student_id = ?
+      LIMIT 1`
+  ).bind(parentId, shareId, studentId).first();
+  return !!row;
 }
 
 async function handleLiveProgressList(request, env, shareId) {
@@ -525,9 +528,7 @@ async function handleLiveProgressList(request, env, shareId) {
   // 三種身分都可以看全班進度：
   // (1) 儀表板金鑰(免登入，出題當下拿到的那條連結) (2) 登入的老師/超級管理員 (3) 管理者密碼(舊有用法)
   const hasKey = await hasValidDashKey(request, env, shareId);
-  const adminPass = request.headers.get("X-Admin-Pass") || "";
-  const expectedAdminPass = env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
-  const isAdminPass = adminPass !== "" && adminPass === expectedAdminPass;
+  const isAdminPass = adminPassMatches(request, env);
   let isTeacher = false;
   if (!hasKey && !isAdminPass) {
     const session = await verifySession(request, env);
@@ -551,16 +552,55 @@ async function handleLiveProgressList(request, env, shareId) {
     }
   }
 
-  const list = await env.COOLDOWN_KV.list({ prefix: "live:" + shareId + ":" });
-  const students = list.keys.map((k) => ({
-    studentId: k.name.slice(("live:" + shareId + ":").length),
-    ...(k.metadata || {}),
+  // 總覽只取輕量欄位，不撈 answers（那是單人詳情視窗才要的）
+  const rows = await env.DB.prepare(
+    `SELECT student_id, grade, class_name, seat, name, answered, total, updated_at
+       FROM live_progress WHERE share_id = ? AND updated_at >= ?
+      ORDER BY updated_at DESC`
+  )
+    .bind(shareId, Date.now() - LIVE_PROGRESS_TTL_SECONDS * 1000)
+    .all();
+  const students = (rows.results || []).map((r) => ({
+    studentId: r.student_id,
+    grade: r.grade,
+    className: r.class_name,
+    seat: r.seat,
+    name: r.name,
+    answered: r.answered,
+    total: r.total,
+    updatedAt: r.updated_at,
   }));
 
   return new Response(JSON.stringify({ students }), {
     status: 200,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
+}
+
+// 讀一筆即時進度，並組回前端原本就在吃的那個 JSON 形狀（studentInfo 巢狀、answers 陣列）。
+// 逾期(8小時)的列視同不存在，等下一次寫入時的 DELETE 順手清掉。
+async function getLiveProgressRow(env, shareId, studentId) {
+  const r = await env.DB.prepare(
+    `SELECT * FROM live_progress WHERE share_id = ? AND student_id = ? AND updated_at >= ?`
+  )
+    .bind(shareId, studentId, Date.now() - LIVE_PROGRESS_TTL_SECONDS * 1000)
+    .first();
+  if (!r) return null;
+  let answers = [];
+  try {
+    answers = JSON.parse(r.answers || "[]");
+  } catch (e) {
+    answers = [];
+  }
+  return {
+    shareId: r.share_id,
+    studentId: r.student_id,
+    studentInfo: { grade: r.grade, className: r.class_name, seat: r.seat, name: r.name },
+    answered: r.answered,
+    total: r.total,
+    answers,
+    updatedAt: r.updated_at,
+  };
 }
 
 // 家長單人視角：跟/api/share、/api/result一樣是capability-URL哲學,知道shareId+studentId
@@ -585,15 +625,15 @@ async function handleLiveProgressGet(request, env, shareId, studentId) {
     });
   }
 
-  const raw = await env.COOLDOWN_KV.get("live:" + shareId + ":" + studentId);
-  if (!raw) {
+  const live = await getLiveProgressRow(env, shareId, studentId);
+  if (!live) {
     return new Response(JSON.stringify({ error: { message: "找不到這位學生的即時進度，可能還沒開始作答或已過期(8小時)" } }), {
       status: 404,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   }
 
-  return new Response(raw, {
+  return new Response(JSON.stringify(live), {
     status: 200,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
@@ -633,9 +673,7 @@ async function handleKeysCheck(request, env) {
     return new Response(null, { headers: CORS_HEADERS });
   }
 
-  const adminPass = request.headers.get("X-Admin-Pass") || "";
-  const expectedAdminPass = env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
-  if (adminPass === "" || adminPass !== expectedAdminPass) {
+  if (!adminPassMatches(request, env)) {
     return new Response(JSON.stringify({ error: { message: "需要管理者密碼" } }), {
       status: 401,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
@@ -686,10 +724,8 @@ async function handleGenerate(request, env) {
   }
 
   try {
-    const adminPass = request.headers.get("X-Admin-Pass") || "";
     const batchIndex = parseInt(request.headers.get("X-Batch-Index") || "0", 10);
-    const expectedAdminPass = env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
-    const isAdmin = adminPass !== "" && adminPass === expectedAdminPass;
+    const isAdmin = adminPassMatches(request, env);
     const userApiKey = (request.headers.get("X-Gemini-Api-Key") || "").trim();
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
     const clientId = (request.headers.get("X-Client-Id") || "").trim();
@@ -1153,8 +1189,7 @@ async function handleParentChildren(request, env) {
   return json({ children: rows.results.map((r) => ({ id: r.id, username: r.username, displayName: r.display_name })) });
 }
 
-// 家長監考式即時監看：透過已連結孩子的username找到孩子「目前正在寫哪一份」(student-active:指標，
-// 由pushLiveProgress()在學生有登入時順便寫入)，再直接讀那份的即時進度(含每題實際作答內容)回傳，
+// 家長監考式即時監看：用已連結孩子的username直接撈出他最近一筆即時進度(含每題實際作答內容)，
 // 格式跟handleLiveProgressGet一樣，前端可以共用同一套渲染函式。
 async function handleParentChildLive(request, env, studentUsername) {
   if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
@@ -1174,18 +1209,22 @@ async function handleParentChildLive(request, env, studentUsername) {
     return json({ error: { message: "尚未連結這個學生帳號" } }, 403);
   }
 
-  const activeRaw = await env.COOLDOWN_KV.get("student-active:" + studentUsername);
-  if (!activeRaw) {
+  // 孩子最近在寫的那一份（8小時內），直接一條 SQL 問完
+  const active = await env.DB.prepare(
+    `SELECT share_id, student_id FROM live_progress
+      WHERE student_username = ? AND updated_at >= ?
+      ORDER BY updated_at DESC LIMIT 1`
+  ).bind(studentUsername, Date.now() - LIVE_PROGRESS_TTL_SECONDS * 1000).first();
+  if (!active) {
     return json({ error: { message: "孩子目前沒有正在作答中的測驗" } }, 404);
   }
-  const active = JSON.parse(activeRaw);
 
-  const raw = await env.COOLDOWN_KV.get("live:" + active.shareId + ":" + active.studentId);
-  if (!raw) {
+  const live = await getLiveProgressRow(env, active.share_id, active.student_id);
+  if (!live) {
     return json({ error: { message: "找不到即時進度，可能已過期(8小時)" } }, 404);
   }
 
-  return new Response(raw, { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+  return json(live);
 }
 
 // ==================== 超級管理員後台 ====================

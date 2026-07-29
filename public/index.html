@@ -6,14 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>小綸出題小幫手</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- 真正的 .docx 產生器(Office Open XML)。舊版是把HTML存成.doc，Word雖然打得開，
-         但Google文件/手機版Word匯入常跑版，改用標準docx格式 -->
-    <script src="https://unpkg.com/docx@9.7.1/dist/index.umd.cjs"></script>
-    <script type="module" src="https://unpkg.com/@lottiefiles/dotlottie-wc@latest/dist/dotlottie-wc.js"></script>
+    <!-- mammoth / SheetJS / html2canvas / jsPDF / docx 這五個加起來是首屏最重的一塊，
+         但它們只有在「上傳檔案出題」跟「按下載」時才用得到。改成按需載入（見 loadScript()），
+         首屏不再為了可能永遠不會按的按鈕付這筆流量。版本號都寫死，不用 @latest，
+         免得上游改版時線上無預警壞掉 -->
+    <script type="module" src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.24/dist/dotlottie-wc.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -681,7 +678,7 @@
             <div class="lq-header-divider hidden sm:block order-3"></div>
 
             <div class="flex gap-2 flex-wrap justify-center order-2 sm:order-3">
-                <button id="btnReload" onclick="location.reload()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-arrow-clockwise lq-icon lq-icon-amber"></span> 重新出題</button>
+                <button id="btnReload" onclick="restartWholeQuiz()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-arrow-clockwise lq-icon lq-icon-amber"></span> 重新出整份</button>
                 <button onclick="openQuizEntryModal()" id="btnAnswerMode" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-device-mobile lq-icon lq-icon-sky"></span> 直接線上測驗</button>
                 <div class="relative inline-block" id="downloadMenuWrap">
                     <button onclick="toggleDownloadMenu()" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-download-simple lq-icon lq-icon-blue"></span> 下載 ▾</button>
@@ -693,14 +690,11 @@
                 </div>
                 <button onclick="saveToClassHistory()" id="btnSaveHistory" class="lq-btn lq-btn-dark px-2 sm:px-3 py-1.5 text-sm sm:text-base hidden"><span class="ph-duotone ph-floppy-disk lq-icon"></span> 存入班級歷史</button>
                 <div class="lq-header-divider hidden sm:block"></div>
-                <div class="relative inline-block" id="shareBtnsWrap">
-                    <button onclick="toggleShareMenu()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-share-network lq-icon"></span> 分享 ▾</button>
-                    <div id="shareMenu" class="hidden absolute right-0 mt-1 bg-white text-slate-800 rounded-lg shadow-xl border z-50 overflow-hidden w-56">
-                        <button onclick="shareQuiz('student'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-graduation-cap lq-icon text-emerald-600"></span> 學生作答連結</button>
-                        <button onclick="shareQuiz('key'); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-users-four lq-icon text-orange-500"></span> 家長答案連結</button>
-                        <button onclick="shareQuizCode(); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-hash lq-icon text-emerald-600"></span> 測驗代碼（報給學生）</button>
-                        <button onclick="shareLiveDashboardLink(); closeShareMenu()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm flex items-center gap-2"><span class="ph-duotone ph-chart-line lq-icon text-blue-600"></span> 即時進度儀表板</button>
-                    </div>
+                <!-- 原本是「分享 ▾」下拉，裡面四個選項（學生連結/家長連結/測驗代碼/儀表板）
+                     要老師在還沒看到內容前就先選一個，實測老師分不出差別。
+                     改成一顆按鈕開一個視窗，四種出口一次全部給，老師要哪個自己拿 -->
+                <div class="inline-block" id="shareBtnsWrap">
+                    <button onclick="openSendQuizModal()" class="lq-btn lq-btn-share px-2 sm:px-3 py-1.5 text-sm sm:text-base"><span class="ph-duotone ph-paper-plane-tilt lq-icon"></span> 發送測驗</button>
                 </div>
             </div>
         </div>
@@ -742,12 +736,11 @@
                     <p class="font-bold text-emerald-700 mb-1">📝 出題完成後可以做什麼</p>
                     <ul class="list-disc list-inside space-y-1">
                         <li><b>編輯內容</b>：直接點試卷上的文字修改，跟打字一樣</li>
-                        <li><b>🔁 重新出這題</b>：只有某一題不滿意，不用整份重出</li>
+                        <li><b>🎲 換這題</b>：只有某一題不滿意時用，其他題目和你改過的內容都不受影響（要整份重來才按上方的「重新出整份」）</li>
                         <li><b>⬇️ 下載</b>：可選 Word（.docx）或 PDF 兩種格式</li>
                         <li><b>🖨️ 列印</b>：請先按「⬇️ 下載 ▾ → PDF」下載成PDF檔，打開後用PDF閱讀器本身的列印功能印出，畫面才會乾淨、不會有瀏覽器多餘的日期/網址/頁碼</li>
                         <li><b>直接線上測驗</b>：先選身分再分流，<b>三種身分都不用註冊帳號</b>——<b>學生</b>直接開新分頁作答（自動評分）；<b>家長</b>貼上孩子傳來的監看連結就能看每題作答（或登入家長帳號一次管多個孩子）；<b>老師</b>直接開全班即時進度儀表板（連結自帶金鑰，不用密碼也不用登入，但別把這條網址轉給學生）。發出去的監看連結隨時可以按「⏹ 停止監看」作廢（限老師／家長／管理員，學生不能關掉自己被監看）</li>
-                        <li><b>📤 分享 ▾ 學生作答連結</b>：產生連結傳給學生，學生開了直接線上作答＋自動評分，看不到答案</li>
-                        <li><b>📤 分享 ▾ 家長答案連結</b>：產生連結傳給家長，可查看題目與解析（唯讀）</li>
+                        <li><b>📤 發送測驗</b>：按一次就把四種發法一起產好——<b>6 位數代碼</b>（課堂投影，學生在首頁輸入就進得去）、<b>學生作答連結</b>（直接線上作答＋自動評分，看不到答案）、<b>家長答案連結</b>（可看題目與解析，唯讀）、<b>老師即時進度儀表板</b>（自己留著，不要轉給學生）</li>
                         <li><b>學生線上作答</b>：可選「⚡每題即時看結果」或「📋全部寫完再送出」，並可選填姓名/年級/班級/座號；送出評分後可再產生「結果連結」分享回給老師/家長核對</li>
                         <li><b>📜 出題紀錄</b>：這台裝置留有最近20次出題紀錄，可以重新開啟</li>
                         <li><b>🔗 複製目前設定連結</b>：把年級/科目/範圍等設定分享給同事，對方開了會自動帶入表單</li>
@@ -802,6 +795,17 @@
             <div id="quizCodeValue" class="font-black mb-3" style="font-size:3.2rem; letter-spacing:0.15em; color:var(--hl-blue);">000 000</div>
             <div class="text-xs text-gray-400 mb-5">代碼已複製到剪貼簿，30 天內有效。學生也可以直接用分享連結進入。</div>
             <button onclick="closeQuizCodeModal()" class="lq-btn lq-btn-primary w-full py-2">關閉</button>
+        </div>
+    </div>
+
+    <!-- 發送測驗：四種出口（代碼／學生連結／家長連結／老師儀表板）一次呈現，不用先選再看 -->
+    <div id="sendQuizModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="lq-card max-w-lg w-full max-h-[88vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">📤 發送這份測驗</h3>
+                <button onclick="closeSendQuizModal()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
+            </div>
+            <div id="sendQuizBody"></div>
         </div>
     </div>
 
@@ -873,6 +877,32 @@
         const API_BASE = "https://linquiz-api.steve-edu711.workers.dev";
 
         let uploadItems = [];
+
+        // 按需載入外部函式庫：mammoth/SheetJS(上傳檔案才用)、html2canvas+jsPDF(下載PDF才用)、
+        // docx(下載Word才用)。同一個網址只會真的載入一次，之後直接回傳同一個 Promise。
+        window._loadedScripts = window._loadedScripts || {};
+        function loadScript(src) {
+            if (window._loadedScripts[src]) return window._loadedScripts[src];
+            window._loadedScripts[src] = new Promise(function (resolve, reject) {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = function () { resolve(); };
+                s.onerror = function () {
+                    delete window._loadedScripts[src]; // 失敗就別記住，下次按還能重試
+                    reject(new Error('載入失敗：' + src));
+                };
+                document.head.appendChild(s);
+            });
+            return window._loadedScripts[src];
+        }
+        const LIB_URLS = {
+            mammoth: "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
+            html2canvas: "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
+            jspdf: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+            // 真正的 .docx 產生器(Office Open XML)。CDN 必須用 unpkg：
+            // jsdelivr 對 .cjs 回傳 application/node，瀏覽器會拒絕執行
+            docx: "https://unpkg.com/docx@9.7.1/dist/index.umd.cjs",
+        };
 
         // 題目內容(q.q/q.o/q.a/q.e)來自AI回傳,分享題目(/api/share)又是任何人都能未經驗證寫入的公開端點,
         // 所以在用innerHTML插入畫面前一律要escape,避免惡意分享連結在別人瀏覽器裡跑出XSS
@@ -1579,7 +1609,7 @@
                 const url = liveDashboardUrl(shareId);
                 if (newTab) newTab.location.href = url; else window.open(url, '_blank');
                 body.innerHTML = "<div class='space-y-3'>" +
-                    "<div class='lq-card p-3 text-sm'>已在新分頁開啟即時進度儀表板（免登入，不用管理者密碼）。學生要用「分享 ▾ → 學生作答連結」這份同一份測驗作答，儀表板才會出現他們的進度。<br><b>這條網址等於監看權限，不要轉貼給學生。</b></div>" +
+                    "<div class='lq-card p-3 text-sm'>已在新分頁開啟即時進度儀表板（免登入，不用管理者密碼）。學生要用「發送測驗」裡的學生作答連結或測驗代碼進到同一份測驗作答，儀表板才會出現他們的進度。<br><b>這條網址等於監看權限，不要轉貼給學生。</b></div>" +
                     "<button onclick='renderQuizEntryRoleChoice()' class='lq-btn lq-btn-ghost w-full py-2'>← 重選身分</button></div>";
             } catch (e) {
                 if (newTab) newTab.close();
@@ -1626,68 +1656,8 @@
             return false;
         }
 
-        async function shareQuiz(mode) {
-            if (!requireLoginForShare()) return;
-            if (!window.currentItems || window.currentItems.length === 0) {
-                alert('目前沒有題目可以分享');
-                return;
-            }
-            const btn = event && event.target && event.target.closest('button');
-            const originalHTML = btn ? btn.innerHTML : '';
-            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 產生連結中...'; }
-            try {
-                const title = window.docTitle || '測驗';
-                const shareId = await getOrCreateShareId();
-
-                const url = location.origin + location.pathname + "?share=" + shareId + "&mode=" + mode;
-                const label = mode === 'student' ? '學生作答連結' : '家長答案連結';
-                const clipboardText = "【" + title + "】" + label + "\n" + url;
-                const msg = "✅ 已複製「" + title + "」的" + label + "！（連結前已自動附上題目名稱，方便分辨多份連結。30天內有效，" +
-                    (mode === 'student' ? '貼給學生開啟後可直接線上作答＋自動評分，看不到答案卷' : '貼給家長開啟可查看題目與解析，唯讀不可編輯') + "）";
-
-                let copied = false;
-                try {
-                    await navigator.clipboard.writeText(clipboardText);
-                    copied = true;
-                } catch (e) {}
-
-                if (copied) {
-                    alert(msg);
-                } else {
-                    prompt(msg + '\n複製失敗，請手動複製以下內容：', clipboardText);
-                }
-            } catch (e) {
-                alert('產生分享連結失敗: ' + e.message);
-            } finally {
-                if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
-            }
-        }
-
-        // 老師用：即時進度儀表板連結，跟shareQuiz('student')共用同一個shareId(靠getOrCreateShareId的快取)，
-        // 這樣不管老師先分享學生連結還是先開儀表板，兩邊看到的都是同一批學生的進度
-        // 課堂上報一組6位數字比貼網址快：學生在首頁輸入就直接進到這份測驗
-        async function shareQuizCode() {
-            if (!requireLoginForShare()) return;
-            if (!window.currentItems || window.currentItems.length === 0) {
-                alert('目前沒有題目可以分享');
-                return;
-            }
-            try {
-                const shareId = await getOrCreateShareId();
-                const token = localStorage.getItem('lun_session_token') || '';
-                const res = await fetch(API_BASE + "/api/code", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Session-Token': token },
-                    body: JSON.stringify({ shareId: shareId })
-                });
-                const data = await res.json();
-                if (data.error) { alert(data.error.message); return; }
-                showQuizCodeModal(data.code);
-            } catch (e) {
-                alert('產生測驗代碼失敗：' + e.message);
-            }
-        }
-
+        // 課堂上報一組6位數字比貼網址快：學生在首頁輸入就直接進到這份測驗。
+        // 代碼本身由 openSendQuizModal() 產生，這裡只負責投影用的大字視窗。
         function showQuizCodeModal(code) {
             const modal = document.getElementById('quizCodeModal');
             document.getElementById('quizCodeValue').textContent = String(code).replace(/(\d{3})(\d{3})/, '$1 $2');
@@ -1699,37 +1669,90 @@
             document.getElementById('quizCodeModal').classList.add('hidden');
         }
 
-        async function shareLiveDashboardLink() {
+        // --- 發送測驗（單一出口）---
+        // 老師分不出「學生作答連結／家長答案連結／測驗代碼／即時進度儀表板」哪個是哪個，
+        // 所以不再要他先選；按一次就把四種出口一起產好攤在同一個視窗裡，各自附上「什麼時候用」。
+        function closeSendQuizModal() {
+            document.getElementById('sendQuizModal').classList.add('hidden');
+        }
+
+        async function openSendQuizModal() {
             if (!requireLoginForShare()) return;
             if (!window.currentItems || window.currentItems.length === 0) {
-                alert('目前沒有題目可以分享');
+                alert('目前沒有題目可以發送');
                 return;
             }
-            const btn = event && event.target && event.target.closest('button');
-            const originalHTML = btn ? btn.innerHTML : '';
-            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 產生連結中...'; }
-            try {
-                const title = window.docTitle || '測驗';
-                const shareId = await getOrCreateShareId();
-                const url = liveDashboardUrl(shareId);
-                const clipboardText = "【" + title + "】即時進度儀表板(老師用)\n" + url;
-                const msg = "✅ 已複製「" + title + "」的即時進度儀表板連結！開啟後不用登入、不用密碼就能看到全班作答進度（每8-10秒自動更新）。\n⚠️ 這條網址等於監看權限，只給老師，不要轉貼給學生。";
+            const modal = document.getElementById('sendQuizModal');
+            const body = document.getElementById('sendQuizBody');
+            body.innerHTML = "<div class='text-center text-gray-500 py-10'>⏳ 產生連結與代碼中...</div>";
+            modal.classList.remove('hidden');
 
-                let copied = false;
+            try {
+                const shareId = await getOrCreateShareId();
+                const base = location.origin + location.pathname;
+                const studentUrl = base + "?share=" + shareId + "&mode=student";
+                const parentUrl = base + "?share=" + shareId + "&mode=key";
+                const dashUrl = liveDashboardUrl(shareId);
+
+                // 代碼要登入才產得出來，失敗不影響其他三個出口，所以單獨 try
+                let code = '';
                 try {
-                    await navigator.clipboard.writeText(clipboardText);
-                    copied = true;
+                    const res = await fetch(API_BASE + "/api/code", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Session-Token': localStorage.getItem('lun_session_token') || '' },
+                        body: JSON.stringify({ shareId: shareId })
+                    });
+                    const data = await res.json();
+                    if (!data.error) code = String(data.code || '');
                 } catch (e) {}
 
-                if (copied) {
-                    alert(msg);
-                } else {
-                    prompt(msg + '\n複製失敗，請手動複製以下內容：', clipboardText);
+                window._sendQuizLinks = { code: code, student: studentUrl, parent: parentUrl, dash: dashUrl, title: window.docTitle || '測驗' };
+
+                let html = "";
+                if (code) {
+                    html += "<div class='lq-card p-4 text-center mb-4' style='border:2px solid var(--hl-blue);'>" +
+                        "<div class='text-xs text-gray-500 mb-1'>課堂上最快的方式：報這組代碼，學生在首頁輸入就進得去</div>" +
+                        "<div class='font-black' style='font-size:2.6rem; letter-spacing:0.15em; color:var(--hl-blue);'>" + escapeHtml(code.replace(/(\d{3})(\d{3})/, '$1 $2')) + "</div>" +
+                        "<div class='flex gap-2 justify-center mt-3'>" +
+                        "<button onclick=\"copySendQuizItem('code', this)\" class='lq-btn lq-btn-primary text-sm px-3 py-1.5'>複製代碼</button>" +
+                        "<button onclick=\"showQuizCodeModal(window._sendQuizLinks.code)\" class='lq-btn lq-btn-secondary text-sm px-3 py-1.5'>投影大字</button>" +
+                        "</div></div>";
                 }
+
+                html += sendQuizRow('student', '🎓 學生作答連結', '傳給學生（LINE／Google Classroom）。開啟直接線上作答＋自動評分，看不到答案。');
+                html += sendQuizRow('parent', '👨‍👩‍👧 家長答案連結', '傳給家長。可以看題目、答案與解析，唯讀不能改。');
+                html += sendQuizRow('dash', '📊 老師即時進度儀表板', '你自己留著。開啟不用登入就能看全班進度，所以<b class="text-red-600">不要轉給學生或貼到班級群組</b>。');
+
+                html += "<div class='text-xs text-gray-400 mt-4 text-center'>以上連結與代碼 30 天內有效，指向同一份測驗。</div>";
+                body.innerHTML = html;
             } catch (e) {
-                alert('產生儀表板連結失敗: ' + e.message);
-            } finally {
-                if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+                body.innerHTML = "<div class='text-center text-red-600 py-8'>產生失敗：" + escapeHtml(e.message) + "</div>";
+            }
+        }
+
+        function sendQuizRow(key, title, desc) {
+            return "<div class='lq-card p-3 mb-3'>" +
+                "<div class='font-bold text-sm mb-1'>" + title + "</div>" +
+                "<div class='text-xs text-gray-500 mb-2'>" + desc + "</div>" +
+                "<div class='flex gap-2'>" +
+                "<button onclick=\"copySendQuizItem('" + key + "', this)\" class='lq-btn lq-btn-secondary text-sm px-3 py-1.5 flex-1'>複製連結</button>" +
+                (key === 'dash' ? "<button onclick=\"window.open(window._sendQuizLinks.dash,'_blank')\" class='lq-btn lq-btn-primary text-sm px-3 py-1.5'>直接開啟</button>" : "") +
+                "</div></div>";
+        }
+
+        async function copySendQuizItem(key, btnEl) {
+            const L = window._sendQuizLinks || {};
+            // 剪貼簿內容前面固定加題目名稱：老師一次出好幾份時，光看網址完全分不出誰是誰
+            const labels = { code: '測驗代碼', student: '學生作答連結', parent: '家長答案連結', dash: '即時進度儀表板(老師用，勿外流)' };
+            const value = L[key] || '';
+            if (!value) return;
+            const text = key === 'code' ? value : "【" + L.title + "】" + labels[key] + "\n" + value;
+            const original = btnEl ? btnEl.textContent : '';
+            try {
+                await navigator.clipboard.writeText(text);
+                if (btnEl) { btnEl.textContent = '✅ 已複製'; setTimeout(function () { btnEl.textContent = original; }, 1600); }
+            } catch (e) {
+                prompt('複製失敗，請手動複製以下內容：', text);
             }
         }
 
@@ -2252,6 +2275,7 @@
             Array.from(el.files).forEach(async (f) => {
                 if(f.name.endsWith('.docx')) {
                     let ab = await f.arrayBuffer();
+                    await loadScript(LIB_URLS.mammoth);
                     let res = await mammoth.extractRawText({arrayBuffer:ab});
                     uploadItems.push({ type: 'docx', name: f.name, content: res.value });
                     renderFileList();
@@ -2521,9 +2545,22 @@
         }
 
         // --- 單題重新出（會再打一次API，一樣受30秒冷卻限制） ---
+        // 「重新出整份」實際上是整頁 reload，會把已經產生的題目、老師手動改過的內容、
+        // 還沒複製的分享連結全部丟掉，卻沒有任何確認。加一道防呆。
+        function restartWholeQuiz() {
+            const n = (window.currentItems || []).length;
+            const msg = n > 0
+                ? "確定要重出整份試卷嗎？\n\n目前這 " + n + " 題（含你手動修改過的內容）都會被清掉，回到出題設定畫面。\n\n如果只是某一題不滿意，請關掉這個視窗，改按該題右上角的「🎲 換這題」。"
+                : "確定要回到出題設定畫面嗎？";
+            if (!confirm(msg)) return;
+            location.reload();
+        }
+
         function regenBtnHTML(idx) {
             if (window.isSharedView) return "";
-            return "<div class='no-print q-regen-toolbar' contenteditable='false'><button type='button' title='重新出這題' onclick='regenerateQuestion(" + idx + ", this)' class='text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300' style='cursor:pointer;white-space:nowrap;'>🔁<span class='q-regen-label'> 重出</span></button></div>";
+            // 標籤刻意跟工具列的「重新出整份」拉開距離：兩顆按鈕原本叫「重新出題」跟「重新出這題」，
+            // 只差一個字、圖示又都是旋轉箭頭，老師想換一題卻按到整份重來會把改好的內容全部洗掉
+            return "<div class='no-print q-regen-toolbar' contenteditable='false'><button type='button' title='只換掉這一題（其他題目不受影響）' onclick='regenerateQuestion(" + idx + ", this)' class='text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300' style='cursor:pointer;white-space:nowrap;'>🎲<span class='q-regen-label'> 換這題</span></button></div>";
         }
 
         function buildRegenPrompt(idx) {
@@ -2837,9 +2874,41 @@
             pushLiveProgress();
         }
 
-        // fire-and-forget：失敗不影響作答本身，這只是加值功能。也會被worker端的每日寫入預算擋下
-        // (throttled:true)，這種情況同樣靜默不處理，反正下一題答完還會再推送一次
-        async function pushLiveProgress() {
+        // 上報節流：原本每答一題就送一次，30人班級考10題 = 300 次寫入，
+        // 老師只需要看出「誰卡住、誰落後」，不需要逐秒精確，所以改成 15 秒最多送一次。
+        // 第一次作答立刻送(老師才看得到「已開始作答」)，之後同一個 15 秒窗內只會在窗尾送最新狀態一次。
+        const LIVE_PUSH_INTERVAL_MS = 15000;
+        window._livePushTimer = null;
+        window._livePushLastAt = 0;
+        function pushLiveProgress(immediate) {
+            if (immediate) {
+                if (window._livePushTimer) { clearTimeout(window._livePushTimer); window._livePushTimer = null; }
+                window._livePushLastAt = Date.now();
+                pushLiveProgressNow();
+                return;
+            }
+            const waited = Date.now() - window._livePushLastAt;
+            if (waited >= LIVE_PUSH_INTERVAL_MS) {
+                window._livePushLastAt = Date.now();
+                pushLiveProgressNow();
+                return;
+            }
+            if (window._livePushTimer) return; // 這個窗內已經排好一次了，等它送最新狀態就好
+            window._livePushTimer = setTimeout(function () {
+                window._livePushTimer = null;
+                window._livePushLastAt = Date.now();
+                pushLiveProgressNow();
+            }, LIVE_PUSH_INTERVAL_MS - waited);
+        }
+
+        // 學生把分頁關掉/切到背景時，如果還有排程中的上報就先補送，
+        // 否則老師看到的會停在 15 秒前的舊狀態
+        window.addEventListener('pagehide', function () {
+            if (window._livePushTimer) { clearTimeout(window._livePushTimer); window._livePushTimer = null; pushLiveProgressNow(); }
+        });
+
+        // fire-and-forget：失敗不影響作答本身，這只是加值功能
+        async function pushLiveProgressNow() {
             if (!(window.isSharedView && window.sharedMode === 'student' && window.liveShareId)) return;
             const items = window.currentItems || [];
             let answered = 0;
@@ -2858,6 +2927,8 @@
             try {
                 await fetch(API_BASE + "/api/live-progress", {
                     method: 'POST',
+                    // keepalive：學生關分頁時最後一次補送才不會被瀏覽器中斷
+                    keepalive: true,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         shareId: window.liveShareId,
@@ -3050,6 +3121,8 @@
         }
 
         function gradeAnswers() {
+            // 交卷是關鍵事件，不等節流窗，立刻把最終狀態送出去讓老師/家長看到已完成
+            pushLiveProgress(true);
             const items = window.currentItems || [];
             let totalScore = 0, maxScore = 0, needReview = 0;
             window.gradedDetails = {};
@@ -3147,21 +3220,27 @@
             if (wrap && !wrap.contains(e.target)) closeDownloadMenu();
         });
 
-        // --- 分享選單（學生作答連結/家長答案連結，合併成一個下拉，取代原本兩顆各自散落的分享按鈕）---
-        function toggleShareMenu() {
-            document.getElementById('shareMenu').classList.toggle('hidden');
-        }
-        function closeShareMenu() {
-            document.getElementById('shareMenu').classList.add('hidden');
-        }
-        document.addEventListener('click', function(e) {
-            const wrap = document.getElementById('shareBtnsWrap');
-            if (wrap && !wrap.contains(e.target)) closeShareMenu();
-        });
+
+        // 函式庫改成按需載入後，第一次按下載會多等一下才有反應，老師很容易連按好幾次
+        // 導致同時跑好幾份匯出。用一個旗標擋住重入。
+        window._exporting = false;
 
         async function dlPDF() {
+            if (window._exporting) return;
+            window._exporting = true;
+            try {
+                await dlPDFInner();
+            } finally {
+                window._exporting = false;
+            }
+        }
+
+        async function dlPDFInner() {
+            try {
+                await Promise.all([loadScript(LIB_URLS.html2canvas), loadScript(LIB_URLS.jspdf)]);
+            } catch (e) {}
             if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-                alert('PDF 元件載入失敗，請檢查網路連線後重新整理再試一次');
+                alert('PDF 元件載入失敗，請檢查網路連線後再試一次');
                 return;
             }
             let pages = Array.from(document.querySelectorAll('#paperContainer > .a4-page')).filter(p => p.style.display !== 'none');
@@ -3264,8 +3343,19 @@
         // 網頁上的分頁(每頁10題)是螢幕預覽用的，Word一頁塞得下的題數跟它不同，
         // 所以題目連續輸出讓Word自然填滿每一頁(舊版每頁後都強制分頁，每張紙只印5題就跳頁很浪費紙)。
         async function dlDoc() {
+            if (window._exporting) return;
+            window._exporting = true;
+            try {
+                await dlDocInner();
+            } finally {
+                window._exporting = false;
+            }
+        }
+
+        async function dlDocInner() {
+            try { await loadScript(LIB_URLS.docx); } catch (e) {}
             if (typeof window.docx === 'undefined') {
-                alert('Word 元件載入失敗，請檢查網路連線後重新整理再試一次');
+                alert('Word 元件載入失敗，請檢查網路連線後再試一次');
                 return;
             }
             const items = window.currentItems || [];
