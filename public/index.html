@@ -607,7 +607,7 @@
                 <button onclick="copySettingsLink()" class="lq-btn lq-btn-tool lq-btn-tool-share w-full py-2.5 text-sm sm:text-base"><span class="ph-duotone ph-link-simple lq-icon-chip"></span> 複製設定連結</button>
             </div>
             <div id="loadingAnim" class="hidden justify-center mt-4">
-                <dotlottie-wc src="https://assets-v2.lottiefiles.com/a/35dde376-1178-11ee-9ed9-5fa2debad506/1LggE3RFrL.lottie" autoplay loop style="width:60px;height:60px;"></dotlottie-wc>
+                <dotlottie-wc src="https://assets-v2.lottiefiles.com/a/35dde376-1178-11ee-9ed9-5fa2debad506/1LggE3RFrL.lottie" autoplay loop style="width:160px;height:160px;"></dotlottie-wc>
             </div>
             <div id="barBox" class="hidden mt-4 h-3 w-full bg-gray-200 rounded-full overflow-hidden"><div id="bar" class="progress-bar">0%</div></div>
             <p id="status" class="text-center text-sm mt-2 text-blue-700 font-bold animate-pulse"></p>
@@ -2104,6 +2104,13 @@
             return p;
         }
 
+        // AI 有時會在選項內容裡自己帶上「(A)」「A.」這種標號，前端再加一次就變成「(A) (A) 14」。
+        // 只有開頭那個字母跟這個選項的標號相同、而且後面接著括號/句點這類分隔符時才拿掉，
+        // 避免誤刪像「A 原子的質子數」這種本來就以字母開頭的正常內容
+        function stripOptLabel(text, label) {
+            return String(text).replace(new RegExp('^\\s*[（(]?\\s*' + label + '\\s*[)）.、:：]\\s*', 'i'), '');
+        }
+
         function updateQuestionDOM(idx, q) {
             let qItem = document.querySelector('.q-item[data-idx="' + idx + '"]');
             if (qItem) {
@@ -2113,7 +2120,7 @@
                     optsHTML += "<div class='q-opts'>";
                     q.o.forEach((o, oi) => {
                         let label = String.fromCharCode(65+oi);
-                        optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+escapeHtml(o)+"</div>";
+                        optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+escapeHtml(stripOptLabel(o, label))+"</div>";
                     });
                     optsHTML += "</div>";
                 }
@@ -2257,7 +2264,7 @@
                         optsHTML += "<div class='q-opts'>";
                         q.o.forEach((o, oi) => {
                             let label = String.fromCharCode(65+oi);
-                            optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+escapeHtml(o)+"</div>";
+                            optsHTML += "<div class='q-opt editable-text' contenteditable='true'>("+label+") "+escapeHtml(stripOptLabel(o, label))+"</div>";
                         });
                         optsHTML += "</div>";
                     }
@@ -2493,7 +2500,7 @@
                         html += "<label class='flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 cursor-pointer'>" +
                             "<input type='" + inputType + "' name='ans-" + i + "' value='" + label + "'" +
                             " class='w-4 h-4 flex-shrink-0 accent-[color:var(--hl-blue)]' onchange='onAnswerPicked(" + i + ")'>" +
-                            "<span>(" + label + ") " + escapeHtml(o) + "</span></label>";
+                            "<span>(" + label + ") " + escapeHtml(stripOptLabel(o, label)) + "</span></label>";
                     });
                     // 只有選擇/複選題才需要「確認這題」按鈕(即時模式用)：原本一點選項就馬上判定，
                     // 誤按到旁邊的選項也會被當成已送出，Steve反映要有明確的送出動作才不會誤按。
@@ -2713,6 +2720,17 @@
             a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
         }
 
+        // 元素相對某個祖先的layout距離(累加offsetTop)。中途若跳出祖先範圍就回傳null，
+        // 讓呼叫端知道量不到、不要拿錯的數字當切點
+        function offsetTopWithin(el, ancestor) {
+            let y = 0, n = el;
+            while (n && n !== ancestor) {
+                y += n.offsetTop;
+                n = n.offsetParent;
+            }
+            return n === ancestor ? y : null;
+        }
+
         async function dlPDF() {
             if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
                 alert('PDF 元件載入失敗，請檢查網路連線後重新整理再試一次');
@@ -2747,11 +2765,17 @@
 
                     // 可切頁的位置＝每一題(.q-item)的底部。純照297mm硬切會把一題切成兩半
                     // (上一頁結尾只剩半行字、下一頁又接著半行)，改成切在最靠近頁尾、又不會切斷題目的那個邊界。
-                    // 座標用「相對pageEl頂端」再乘上canvas的實際縮放比，才能對應到截圖裡的像素位置。
-                    const pageTop = pageEl.getBoundingClientRect().top;
-                    const canvasScale = canvas.height / pageEl.scrollHeight;
+                    //
+                    // 座標一律用layout座標(offsetTop/offsetHeight)，不能用getBoundingClientRect：
+                    // rect回傳的是「視覺」尺寸，會被瀏覽器縮放/CSS transform乘上一個比例，
+                    // 但canvas高度對應的是layout尺寸，兩邊基準不同會讓切點整條偏移(縮到90%就偏約10%，
+                    // 剛好切進題目中間)。offsetTop/offsetHeight不受縮放影響，跟canvas同一個基準。
+                    const canvasScale = canvas.height / pageEl.offsetHeight;
                     const cutPointsPx = Array.from(pageEl.querySelectorAll('.q-item'))
-                        .map(el => Math.round((el.getBoundingClientRect().bottom - pageTop) * canvasScale))
+                        .map(el => {
+                            const top = offsetTopWithin(el, pageEl);
+                            return top === null ? -1 : Math.round((top + el.offsetHeight) * canvasScale);
+                        })
                         .filter(v => v > 0 && v < canvas.height)
                         .sort((a, b) => a - b);
 
