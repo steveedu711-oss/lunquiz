@@ -1,0 +1,136 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - img "鴻綸科技 圓形品牌徽章" [ref=e7]
+    - heading "小綸出題小幫手" [level=1] [ref=e9]
+    - heading "AI 智慧出題系統" [level=2] [ref=e10]
+    - generic [ref=e11]:
+      - button "快速使用（不登入） " [ref=e12] [cursor=pointer]:
+        - generic [ref=e13]: 快速使用（不登入）
+        - generic [ref=e14]: 
+      - generic [ref=e15]:
+        - button " 學生" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: 
+          - generic [ref=e19]: 學生
+        - button " 家長" [ref=e20] [cursor=pointer]:
+          - generic [ref=e21]: 
+          - generic [ref=e23]: 家長
+        - button " 老師" [ref=e24] [cursor=pointer]:
+          - generic [ref=e25]: 
+          - generic [ref=e27]: 老師
+        - button " 管理員" [ref=e28] [cursor=pointer]:
+          - generic [ref=e29]: 
+          - generic [ref=e31]: 管理員
+      - paragraph [ref=e32]: 學生／家長／老師／管理員需要帳號密碼登入
+    - text:  
+    - generic [ref=e33]:
+      - img "鴻綸科技 x Google for Education" [ref=e35]
+      - paragraph [ref=e36]: Created by Hunglun Technology Steve
+      - paragraph [ref=e37]:
+        - text: 有任何問題？請點
+        - link "鴻綸科技官方網站" [ref=e38] [cursor=pointer]:
+          - /url: https://hunglun-new.pages.dev/
+      - generic [ref=e39]:
+        - generic [ref=e40]: 技術支援與回報
+        - link " 作者信箱" [ref=e42] [cursor=pointer]:
+          - /url: https://mail.google.com/mail/?view=cm&fs=1&to=gfeh@hunglun.com
+          - generic [ref=e43]: 
+          - text: 作者信箱
+        - link "💬 作者 Line" [ref=e44] [cursor=pointer]:
+          - /url: https://line.me/R/ti/p/%40gdm6961p
+  - text:      
+  - generic [ref=e45]:
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - button "題目卷" [ref=e48] [cursor=pointer]
+        - button "答案卷" [ref=e49] [cursor=pointer]
+      - generic [ref=e50]: 💡 點擊試卷即可修改內容
+      - generic [ref=e51]:
+        - button " 重新出題" [ref=e52] [cursor=pointer]:
+          - generic [ref=e53]: 
+          - text: 重新出題
+        - button " 直接線上測驗" [ref=e54] [cursor=pointer]:
+          - generic [ref=e55]: 
+          - text: 直接線上測驗
+        - generic [ref=e56]:
+          - button " 下載 ▾" [ref=e57] [cursor=pointer]:
+            - generic [ref=e58]: 
+            - text: 下載 ▾
+          - text:   
+        - text: 
+        - generic [ref=e59]:
+          - button " 分享 ▾" [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]: 
+            - text: 分享 ▾
+          - text:   
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - heading "測試試卷" [level=2] [ref=e65]
+        - generic [ref=e66]:
+          - generic [ref=e67]: 範圍：全部
+          - generic [ref=e68]: 班級：＿＿＿＿＿ 姓名：＿＿＿＿＿ 座號：＿＿＿＿＿
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e71]: 1. ( )
+          - generic [ref=e72]:
+            - button "🔁" [ref=e74] [cursor=pointer]
+            - generic [ref=e75]: 第 1 題：在國際單位制（SI）中，長度的基本單位是什麼？ (10分)
+            - generic [ref=e76]:
+              - generic [ref=e77]: (A) 公分
+              - generic [ref=e78]: (B) 公尺
+              - generic [ref=e79]: (C) 公里
+              - generic [ref=e80]: (D) 毫米
+        - generic [ref=e81]:
+          - generic [ref=e82]: 2. ( )
+          - generic [ref=e83]:
+            - button "🔁" [ref=e85] [cursor=pointer]
+            - generic [ref=e86]: 第 2 題：在國際單位制（SI）中，長度的基本單位是什麼？ (10分)
+            - generic [ref=e87]:
+              - generic [ref=e88]: (A) 公分
+              - generic [ref=e89]: (B) 公尺
+              - generic [ref=e90]: (C) 公里
+              - generic [ref=e91]: (D) 毫米
+        - generic [ref=e92]:
+          - generic [ref=e93]: 3. ( )
+          - generic [ref=e94]:
+            - button "🔁" [ref=e96] [cursor=pointer]
+            - generic [ref=e97]: 第 3 題：在國際單位制（SI）中，長度的基本單位是什麼？ (10分)
+            - generic [ref=e98]:
+              - generic [ref=e99]: (A) 公分
+              - generic [ref=e100]: (B) 公尺
+              - generic [ref=e101]: (C) 公里
+              - generic [ref=e102]: (D) 毫米
+        - generic [ref=e103]:
+          - generic [ref=e104]: 4. ( )
+          - generic [ref=e105]:
+            - button "🔁" [ref=e107] [cursor=pointer]
+            - generic [ref=e108]: 第 4 題：在國際單位制（SI）中，長度的基本單位是什麼？ (10分)
+            - generic [ref=e109]:
+              - generic [ref=e110]: (A) 公分
+              - generic [ref=e111]: (B) 公尺
+              - generic [ref=e112]: (C) 公里
+              - generic [ref=e113]: (D) 毫米
+        - generic [ref=e114]:
+          - generic [ref=e115]: 5. ( )
+          - generic [ref=e116]:
+            - button "🔁" [ref=e118] [cursor=pointer]
+            - generic [ref=e119]: 第 5 題：在國際單位制（SI）中，長度的基本單位是什麼？ (10分)
+            - generic [ref=e120]:
+              - generic [ref=e121]: (A) 公分
+              - generic [ref=e122]: (B) 公尺
+              - generic [ref=e123]: (C) 公里
+              - generic [ref=e124]: (D) 毫米
+        - generic [ref=e125]:
+          - generic [ref=e126]: 6. ( )
+          - generic [ref=e127]:
+            - button "🔁" [ref=e129] [cursor=pointer]
+            - generic [ref=e130]: 第 6 題：在國際單位制（SI）中，長度的基本單位是什麼？ (10分)
+            - generic [ref=e131]:
+              - generic [ref=e132]: (A) 公分
+              - generic [ref=e133]: (B) 公尺
+              - generic [ref=e134]: (C) 公里
+              - generic [ref=e135]: (D) 毫米
+      - generic [ref=e136]: 第 1 頁 / 共 1 頁
+    - paragraph [ref=e137]:
+      - text: 有任何問題？請點
+      - link "鴻綸科技官方網站" [ref=e138] [cursor=pointer]:
+        - /url: https://hunglun-new.pages.dev/

@@ -1,0 +1,4 @@
+[     386ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[     511ms] [ERROR] Refused to execute script from 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.umd.cjs' because its MIME type ('application/node') is not executable, and strict MIME type checking is enabled. @ http://localhost:8899/index.html:0
+[    1043ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8899/index.html:0
+[    1618ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8899/favicon.ico:0
