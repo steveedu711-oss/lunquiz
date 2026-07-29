@@ -128,6 +128,25 @@
         }
         .lq-cta:hover::before, .lq-cta:focus-visible::before, .lq-cta.is-working::before { opacity: 1; }
 
+        /* 進場頁：告訴使用者登入拿得到什麼，不登入也能用但功能較少 */
+        .hl-login-perk {
+            width: 100%; max-width: 22rem; text-align: center; line-height: 1.5;
+            padding: 0.6rem 0.8rem; border-radius: 0.9rem; margin-top: -0.35rem;
+            background: rgba(26,115,232,0.07); border: 1px dashed rgba(26,115,232,0.35);
+            font-size: 0.78rem; color: #3c4043;
+        }
+        .hl-login-perk b { display: block; color: var(--hl-blue); font-size: 0.85rem; margin-bottom: 0.15rem; }
+
+        /* 返回鈕固定在左下角：頂部是sticky工具列(題目卷/答案卷/下載/分享)，放上面會互相擋到 */
+        #btnGlobalBack {
+            position: fixed; left: 0.9rem; bottom: 0.9rem; z-index: 90;
+            background: #fff; color: var(--hl-text); border: 1.5px solid var(--hl-border);
+            border-radius: 999px; padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 700;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.18); cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        #btnGlobalBack:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.24); }
+
         .lq-card { background: #fff; border-radius: var(--lq-radius); box-shadow: var(--lq-shadow-sm); border: 1px solid #eef0f3; }
 
         .lq-input {
@@ -396,6 +415,10 @@
                     <span>快速使用（不登入）</span>
                     <span class="ph-duotone ph-rocket-launch" style="font-size:1.75rem;"></span>
                 </button>
+                <div class="hl-login-perk">
+                    <b>登入可解鎖更多功能</b>
+                    <span>⚡ 每題即時看結果的作答模式 ・ 🔗 分享題目與答案連結 ・ 📊 全班即時進度 ・ 📚 班級歷史</span>
+                </div>
                 <div class="hl-identity-grid">
                     <button type="button" class="hl-identity-btn role-student" onclick="splashSelectIdentity('student')">
                         <span class="hl-identity-chip"><span class="ph-duotone ph-student"></span></span><span>學生</span>
@@ -763,6 +786,9 @@
         </div>
     </div>
 
+    <!-- 全域返回：作答頁/儀表板/監看頁/結果頁等各種畫面都看得到，回到上一頁或首頁 -->
+    <button id="btnGlobalBack" onclick="goBackOrHome()" class="hidden no-print" aria-label="返回上一頁">← 返回上一頁</button>
+
     <!-- 「直接線上測驗」身分選擇：學生直接作答，家長/老師改走監看流程 -->
     <div id="quizEntryModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
         <div class="lq-card max-w-md w-full max-h-[85vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
@@ -1089,6 +1115,39 @@
             }
         }
 
+        // ---- 全域「返回上一頁」----
+        // 有瀏覽歷史就退回上一頁；沒有(例如別人直接把分享連結貼給你、這是分頁的第一頁)
+        // 就回到這個站的首頁，不要讓使用者卡在單一畫面沒有出口
+        function goBackOrHome() {
+            if (window.history.length > 1 && document.referrer && document.referrer.indexOf(location.origin) === 0) {
+                window.history.back();
+            } else if (window.history.length > 1 && !location.search) {
+                window.history.back();
+            } else {
+                location.href = location.origin + location.pathname;
+            }
+        }
+
+        function updateGlobalBackBtn() {
+            const btn = document.getElementById('btnGlobalBack');
+            if (!btn) return;
+            const inputForm = document.getElementById('inputForm');
+            const splash = document.getElementById('hlSplash');
+            const splashVisible = splash && splash.style.display !== 'none' && getComputedStyle(splash).display !== 'none';
+            // 首頁(還在填出題條件)跟進場頁本來就是起點，不需要返回鈕
+            const onHome = !inputForm || !inputForm.classList.contains('hidden');
+            btn.classList.toggle('hidden', splashVisible || onHome);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputForm = document.getElementById('inputForm');
+            const splash = document.getElementById('hlSplash');
+            const obs = new MutationObserver(updateGlobalBackBtn);
+            if (inputForm) obs.observe(inputForm, { attributes: true, attributeFilter: ['class'] });
+            if (splash) obs.observe(splash, { attributes: true, attributeFilter: ['class', 'style'] });
+            updateGlobalBackBtn();
+        });
+
         // 儀表板連結：帶上金鑰才不用登入/密碼。沒拿到金鑰(舊分享)就退回原本要密碼的連結
         function liveDashboardUrl(shareId) {
             const base = location.origin + location.pathname + "?live=" + shareId;
@@ -1243,7 +1302,17 @@
         // --- 分享題目(給學生線上作答) / 分享答案(給家長查看) ---
         // 老師常常一次出好幾份測驗、對每份都各分享學生/家長連結，光看網址完全分不出誰是誰，
         // 所以複製到剪貼簿的內容前面固定加上「【題目名稱】連結類型」，貼到LINE/Email時對方也看得出這是哪份測驗的連結
+        // 分享出去的連結會佔用伺服器儲存(KV)、也可能被大量產生，所以限定登入使用者才能用。
+        // 未登入者仍可自己出題、下載、預覽線上作答，只是不能發連結給別人
+        function requireLoginForShare() {
+            if (window.currentUser) return true;
+            alert('🔒 分享功能需要登入帳號才能使用。\n\n登入後可以分享學生作答連結、家長答案連結，以及全班即時進度儀表板。');
+            openAccountModal();
+            return false;
+        }
+
         async function shareQuiz(mode) {
+            if (!requireLoginForShare()) return;
             if (!window.currentItems || window.currentItems.length === 0) {
                 alert('目前沒有題目可以分享');
                 return;
@@ -1282,6 +1351,7 @@
         // 老師用：即時進度儀表板連結，跟shareQuiz('student')共用同一個shareId(靠getOrCreateShareId的快取)，
         // 這樣不管老師先分享學生連結還是先開儀表板，兩邊看到的都是同一批學生的進度
         async function shareLiveDashboardLink() {
+            if (!requireLoginForShare()) return;
             if (!window.currentItems || window.currentItems.length === 0) {
                 alert('目前沒有題目可以分享');
                 return;
@@ -2488,12 +2558,20 @@
                 "<input id='ansStuName' placeholder='姓名' class='lq-input text-sm py-1.5'>" +
                 "</div></div>";
 
-            html += "<div class='lq-card p-4 mb-5'>" +
+            // 「每題即時看結果」是需要登入的功能：即時回饋會一題一題回報到伺服器(老師/家長監看也靠這個)，
+            // 未登入者只給「全部寫完再送出」，並直接告訴他登入就能解鎖
+            const canInstant = !!window.currentUser;
+            html += "<div class='lq-card p-4 mb-5' id='ansModeBox'>" +
                 "<div class='text-sm text-gray-500 mb-3 text-center font-semibold'>請選擇作答模式</div>" +
                 "<div class='flex items-center justify-center gap-4 sm:gap-6 text-sm flex-wrap'>" +
-                "<label class='flex items-center gap-1.5 cursor-pointer font-semibold'><input type='radio' name='ansGradeMode' value='instant' checked> ⚡ 每題即時看結果</label>" +
-                "<label class='flex items-center gap-1.5 cursor-pointer font-semibold'><input type='radio' name='ansGradeMode' value='batch'> 📋 全部寫完再送出</label>" +
-                "</div></div>";
+                "<label class='flex items-center gap-1.5 font-semibold " + (canInstant ? "cursor-pointer" : "opacity-50 cursor-not-allowed") + "'>" +
+                    "<input type='radio' name='ansGradeMode' value='instant'" + (canInstant ? " checked" : " disabled") + "> ⚡ 每題即時看結果" + (canInstant ? "" : "🔒") + "</label>" +
+                "<label class='flex items-center gap-1.5 cursor-pointer font-semibold'><input type='radio' name='ansGradeMode' value='batch'" + (canInstant ? "" : " checked") + "> 📋 全部寫完再送出</label>" +
+                "</div>" +
+                (canInstant ? "" :
+                    "<div class='text-xs text-gray-500 text-center mt-3'>🔒「每題即時看結果」需要登入帳號才能使用。" +
+                    "<button type='button' onclick='openAccountModal()' class='underline font-semibold' style='color:var(--hl-blue);'>登入／註冊</button></div>") +
+                "</div>";
 
             html += "<button onclick='startAnswerQuiz()' class='lq-btn lq-cta lq-btn-primary w-full py-3 rounded-xl text-lg'>🚀 開始測驗</button>";
             html += "</div>";
@@ -2760,7 +2838,11 @@
                 await document.fonts.ready;
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
-                const PAGE_W_MM = 210, PAGE_H_MM = 297;
+                // 內容不能貼滿整張A4：影像若從(0,0)鋪到210mm寬，文字就直接壓在紙張邊緣，
+                // 印表機的不可列印區會把邊緣的字吃掉。留10mm白邊，內容縮到190x277mm。
+                const PAGE_W_MM = 210, PAGE_H_MM = 297, MARGIN_MM = 10;
+                const CONTENT_W_MM = PAGE_W_MM - MARGIN_MM * 2;
+                const CONTENT_H_MM = PAGE_H_MM - MARGIN_MM * 2;
                 let firstSlice = true;
                 for (let i = 0; i < pages.length; i++) {
                     const pageEl = pages[i];
@@ -2771,8 +2853,8 @@
                     // 這裡動態降低scale避免撞到上限，確保整頁內容都真的被截圖進去。
                     const scale = Math.min(2, 14000 / pageEl.scrollHeight);
                     const canvas = await html2canvas(pageEl, { scale, useCORS: true, backgroundColor: '#ffffff' });
-                    const pxPerMm = canvas.width / PAGE_W_MM;
-                    const sliceHeightPx = Math.round(PAGE_H_MM * pxPerMm);
+                    const pxPerMm = canvas.width / CONTENT_W_MM;
+                    const sliceHeightPx = Math.round(CONTENT_H_MM * pxPerMm);
 
                     // 可切頁的位置＝每一題(.q-item)的底部。純照297mm硬切會把一題切成兩半
                     // (上一頁結尾只剩半行字、下一頁又接著半行)，改成切在最靠近頁尾、又不會切斷題目的那個邊界。
@@ -2785,7 +2867,12 @@
                     const cutPointsPx = Array.from(pageEl.querySelectorAll('.q-item'))
                         .map(el => {
                             const top = offsetTopWithin(el, pageEl);
-                            return top === null ? -1 : Math.round((top + el.offsetHeight) * canvasScale);
+                            if (top === null) return -1;
+                            // 多帶半個題間距當緩衝：offsetHeight是layout高度，但實際描繪的字會有下伸部/
+                            // 行高捨入，剛好切在offsetHeight會讓最後一行的底部1~3px殘留到下一頁。
+                            // 題目之間本來就有12pt空白，往下多留一點不會吃到下一題
+                            const mb = parseFloat(getComputedStyle(el).marginBottom) || 0;
+                            return Math.round((top + el.offsetHeight + mb * 0.5) * canvasScale);
                         })
                         .filter(v => v > 0 && v < canvas.height)
                         .sort((a, b) => a - b);
@@ -2809,7 +2896,7 @@
                         sliceCanvas.width = canvas.width;
                         sliceCanvas.height = thisSlicePx;
                         sliceCanvas.getContext('2d').drawImage(canvas, 0, offsetPx, canvas.width, thisSlicePx, 0, 0, canvas.width, thisSlicePx);
-                        pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, PAGE_W_MM, thisSlicePx / pxPerMm);
+                        pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN_MM, MARGIN_MM, CONTENT_W_MM, thisSlicePx / pxPerMm);
                         offsetPx = endPx;
                     }
                 }
@@ -2822,7 +2909,25 @@
         }
 
         async function dlDoc() {
+            // 網頁上的分頁(每頁10題)是螢幕預覽用的，Word 一頁塞得下的題數跟它不一樣。
+            // 舊版把每個 .quiz-page 之後都插入強制分頁，Word 自己又會再斷一次，
+            // 結果每張紙只印到5題就跳頁、後面一大片空白很浪費紙(Steve反映)。
+            // 改成只保留一次表頭，題目連續輸出讓 Word 自然排版填滿每一頁，
+            // 只有「答案卷」之前才真的強制分頁。
             let content = "";
+            let headerDone = false;
+
+            const qItemToTable = (item) => {
+                const numBox = item.querySelector('.q-num-box').innerHTML;
+                const contentBox = item.querySelector('.q-content-box').innerHTML;
+                // 整題包在一個 table 裡，Word 預設不會把同一列拆到兩頁，題目就不會被斷開
+                return '<table width="100%" style="margin-bottom:9pt; border-collapse:collapse;">' +
+                    '<tr>' +
+                        '<td valign="top" width="80" style="width:80px; font-weight:bold; padding-right:5px;">' + numBox + '</td>' +
+                        '<td valign="top">' + contentBox + '</td>' +
+                    '</tr></table>';
+            };
+
             document.querySelectorAll('#paperContainer > .quiz-page').forEach(page => {
                 if(page.style.display === 'none') return;
 
@@ -2831,40 +2936,28 @@
                 pageClone.querySelectorAll('.no-print').forEach(el => el.remove());
                 pageClone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
 
-                let qItems = pageClone.querySelectorAll('.q-item');
-                qItems.forEach(item => {
-                    let numBox = item.querySelector('.q-num-box').innerHTML;
-                    let contentBox = item.querySelector('.q-content-box').innerHTML;
+                const header = pageClone.querySelector('.paper-header');
+                if (header && !headerDone) { content += header.outerHTML; headerDone = true; }
 
-                    let tableHTML = '<table width="100%" style="margin-bottom:12pt; border-collapse:collapse;">' +
-                        '<tr>' +
-                            '<td valign="top" width="90" style="width:90px; font-weight:bold; padding-right:5px;">' + numBox + '</td>' +
-                            '<td valign="top">' + contentBox + '</td>' +
-                        '</tr>' +
-                    '</table>';
-
-                    let wrapper = document.createElement('div');
-                    wrapper.innerHTML = tableHTML;
-                    item.parentNode.replaceChild(wrapper.firstChild, item);
-                });
-
-                let footer = pageClone.querySelector('.page-footer');
-                if(footer) footer.remove();
-
-                content += pageClone.innerHTML + "<br clear=all style='page-break-before:always'>";
+                pageClone.querySelectorAll('.q-item').forEach(item => { content += qItemToTable(item); });
             });
 
+            let keyContent = "";
             document.querySelectorAll('.key-page').forEach(p => {
-                if(p.style.display !== 'none') content += p.innerHTML;
+                if(p.style.display !== 'none') keyContent += p.innerHTML;
             });
+            if (keyContent) content += "<br clear=all style='page-break-before:always'>" + keyContent;
 
             const style = "<style>" +
-                "@page { size: A4; margin: 1cm 1.25cm; } " +
-                "body { font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PMingLiU', sans-serif; font-size: 11pt; line-height: 1.35; }" +
-                "h2 { text-align: center; font-size: 20pt; margin-bottom: 20pt; }" +
-                ".paper-info { text-align: center; margin-bottom: 20pt; font-size: 11pt; }" +
+                "@page { size: A4; margin: 1.2cm 1.5cm; } " +
+                "body { font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'PMingLiU', sans-serif; font-size: 11pt; line-height: 1.25; }" +
+                "h2 { text-align: center; font-size: 18pt; margin: 0 0 10pt 0; }" +
+                ".paper-header { border-bottom: 1.5pt solid #000; padding-bottom: 6pt; margin-bottom: 12pt; }" +
+                ".paper-info { font-size: 10.5pt; }" +
+                ".q-text { font-weight: bold; margin-bottom: 2pt; }" +
+                ".q-opt { margin-bottom: 1pt; }" +
                 "table { width: 100%; }" +
-                ".writing-space { height: 45pt; border-bottom: 1px dashed #000; }" +
+                ".writing-space { height: 42pt; border-bottom: 1px dashed #000; }" +
                 "</style>";
 
             let html = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'>" + style + "</head><body>" + content + "</body></html>";
@@ -2937,6 +3030,14 @@
         function refreshAnswerLoginBox() {
             const box = document.getElementById('ansLoginBox');
             if (box) box.innerHTML = buildAnswerLoginBoxHtml();
+            // 登入狀態變了就重畫作答模式選項（「每題即時看結果」要登入才開放），
+            // 只在還沒開始作答(仍停在開始畫面)時重畫，免得寫到一半整頁被洗掉
+            const startScreen = document.getElementById('ansStartScreen');
+            const ansContainer = document.getElementById('answerModeContainer');
+            if (startScreen && ansContainer && ansContainer.dataset.rendered) {
+                renderAnswerMode();
+                ansContainer.dataset.rendered = '1';
+            }
         }
 
         function doLogout() {
