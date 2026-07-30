@@ -1741,32 +1741,72 @@
         // ---- 全域「返回上一頁」----
         // 有瀏覽歷史就退回上一頁；沒有(例如別人直接把分享連結貼給你、這是分頁的第一頁)
         // 就回到這個站的首頁，不要讓使用者卡在單一畫面沒有出口
+        // 這個站切畫面是「顯示/隱藏 div」，從頭到尾沒有寫進瀏覽器歷史，
+        // 所以原本的 history.back() 退的是「進站前那一頁」——按下去直接離開網站(Steve回報)。
+        // 改成照目前顯示中的畫面決定上一步，不碰瀏覽器歷史。
+        function isViewVisible(el) {
+            return !!el && !el.classList.contains('hidden') && el.style.display !== 'none';
+        }
+
         function goBackOrHome() {
-            if (window.history.length > 1 && document.referrer && document.referrer.indexOf(location.origin) === 0) {
-                window.history.back();
-            } else if (window.history.length > 1 && !location.search) {
-                window.history.back();
-            } else {
+            const splash = document.getElementById('hlSplash');
+            const studentHome = document.getElementById('studentHome');
+            const inputForm = document.getElementById('inputForm');
+            const resultSection = document.getElementById('resultSection');
+
+            // 分享連結／即時監看連結開的分頁：站內沒有上一步(網址本身就是入口)，回站台首頁
+            if (window.isSharedView || location.search) {
                 location.href = location.origin + location.pathname;
+                return;
             }
+
+            if (isViewVisible(resultSection)) {
+                // 題目還留在 window.currentItems 與出題紀錄裡，這裡只是把畫面收起來
+                resultSection.classList.add('hidden');
+                if (window.practiceMode && studentHome) {
+                    studentHome.classList.remove('hidden');
+                    renderStudentHome();
+                } else if (inputForm) {
+                    inputForm.classList.remove('hidden');
+                }
+                window.scrollTo(0, 0);
+                updateGlobalBackBtn();
+                return;
+            }
+
+            // 學生首頁／出題設定頁的上一步都是進場頁的身分選擇
+            if (isViewVisible(studentHome) || isViewVisible(inputForm)) {
+                if (studentHome) studentHome.classList.add('hidden');
+                if (inputForm) inputForm.classList.add('hidden');
+                if (splash) splash.style.display = '';
+                splashBackToIdentity();
+                window.scrollTo(0, 0);
+                updateGlobalBackBtn();
+                return;
+            }
+
+            location.href = location.origin + location.pathname;
         }
 
         function updateGlobalBackBtn() {
             const btn = document.getElementById('btnGlobalBack');
             if (!btn) return;
-            const inputForm = document.getElementById('inputForm');
             const splash = document.getElementById('hlSplash');
             const splashVisible = splash && splash.style.display !== 'none' && getComputedStyle(splash).display !== 'none';
-            // 首頁(還在填出題條件)跟進場頁本來就是起點，不需要返回鈕
-            const onHome = !inputForm || !inputForm.classList.contains('hidden');
+            // 進場頁是起點；出題設定頁與學生首頁各自是該身分的主畫面，
+            // 上方本來就有「換身分／登出」可以離開，不再多一顆返回鈕
+            const onHome = isViewVisible(document.getElementById('inputForm'))
+                || isViewVisible(document.getElementById('studentHome'));
             btn.classList.toggle('hidden', splashVisible || onHome);
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            const inputForm = document.getElementById('inputForm');
-            const splash = document.getElementById('hlSplash');
             const obs = new MutationObserver(updateGlobalBackBtn);
-            if (inputForm) obs.observe(inputForm, { attributes: true, attributeFilter: ['class'] });
+            ['inputForm', 'studentHome', 'resultSection'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+            });
+            const splash = document.getElementById('hlSplash');
             if (splash) obs.observe(splash, { attributes: true, attributeFilter: ['class', 'style'] });
             updateGlobalBackBtn();
         });
