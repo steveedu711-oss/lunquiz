@@ -149,6 +149,47 @@
 
         .lq-card { background: #fff; border-radius: var(--lq-radius); box-shadow: var(--lq-shadow-sm); border: 1px solid #eef0f3; }
 
+        /* 身分列（學生首頁最上方）：解決「不知道自己在哪個身分的頁面、也找不到登出」的問題。
+           sticky 釘在頂端，捲到哪都看得到自己是誰、隨時可以離開。 */
+        .lq-appbar {
+            position: sticky; top: 0.5rem; z-index: 40;
+            display: flex; align-items: center; gap: 0.7rem;
+            padding: 0.6rem 0.75rem;
+            background: rgba(255,255,255,0.92);
+            -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            border: 1px solid #e8ebef; border-radius: var(--lq-radius);
+            box-shadow: var(--lq-shadow-sm);
+            margin-bottom: 1rem;
+        }
+        .lq-appbar-avatar {
+            width: 2.4rem; height: 2.4rem; border-radius: 999px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 1.05rem; color: #fff;
+            background: linear-gradient(135deg, var(--hl-blue) 0%, #6d5bd0 100%);
+        }
+        .lq-appbar-avatar.is-guest { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); }
+        .lq-appbar-id { min-width: 0; flex: 1; }
+        .lq-appbar-name {
+            font-weight: 800; font-size: 0.95rem; color: #0f172a; line-height: 1.25;
+            display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+        }
+        .lq-appbar-sub {
+            font-size: 0.72rem; color: #94a3b8; line-height: 1.3; margin-top: 0.1rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .lq-appbar-actions { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; }
+        /* 身分標籤：藍＝已登入的學生身分，琥珀＝未登入（只存在這台裝置） */
+        .lq-role-chip {
+            font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em;
+            padding: 0.1rem 0.45rem; border-radius: 999px; line-height: 1.5; white-space: nowrap;
+            background: rgba(26,115,232,0.1); color: var(--hl-blue); border: 1px solid rgba(26,115,232,0.22);
+        }
+        .lq-role-chip.is-guest { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+        @media (max-width: 420px) {
+            .lq-appbar { gap: 0.5rem; padding: 0.55rem 0.6rem; }
+            .lq-appbar-actions .lq-btn { padding-left: 0.5rem; padding-right: 0.5rem; }
+        }
+
         .lq-input {
             width: 100%; padding: 0.75rem 0.9rem; border: 1.5px solid #e2e8f0; border-radius: var(--lq-radius-sm);
             background: #fff; transition: border-color 0.15s ease, box-shadow 0.15s ease; font-size: 0.95rem;
@@ -1350,12 +1391,32 @@
             const subjects = ['國語文', '英語文', '數學', '自然科學', '社會', '理化', '生物', '地球科學', '歷史', '地理', '公民'];
             const box = document.getElementById('studentHome');
 
-            let html = "<div class='lq-card p-5 mb-4 text-center'>" +
-                "<div class='text-xl font-black mb-1'>👋 " + escapeHtml(name) + "，歡迎回來</div>" +
-                (infoLine ? "<div class='text-sm text-gray-500'>" + escapeHtml(infoLine) + "</div>" : "") +
-                (u ? "" : "<div class='text-xs text-gray-400 mt-2'>目前是免登入模式，練習紀錄只留在這台裝置。" +
-                    "<button onclick='openAccountModal()' class='underline font-semibold' style='color:var(--hl-blue);'>登入帳號</button>可跨裝置保存，家長也才看得到你的即時作答。</div>") +
-                "</div>";
+            // 身分列：頭像 + 姓名 + 「學生」標籤 + 班級資訊，右側固定放帳號/登出出口。
+            // 未登入時頭像轉灰、標籤轉琥珀色「學生・未登入」，一眼看得出紀錄只在這台裝置。
+            // 頭像字：英數帳號取第一個字母（大寫），中文姓名取最後一個字（王小明→明），比較符合稱呼習慣
+            const rawName = (name || '同學').trim();
+            const initial = escapeHtml(/^[A-Za-z0-9]/.test(rawName) ? rawName.charAt(0).toUpperCase() : rawName.slice(-1));
+            const subLine = infoLine || (u ? '學生帳號：' + u.username : '練習紀錄只留在這台裝置');
+            let html = "<div class='lq-appbar'>" +
+                "<div class='lq-appbar-avatar" + (u ? "" : " is-guest") + "'>" + initial + "</div>" +
+                "<div class='lq-appbar-id'>" +
+                    "<div class='lq-appbar-name'><span class='truncate'>" + escapeHtml(name) + "</span>" +
+                        "<span class='lq-role-chip" + (u ? "" : " is-guest") + "'>" + (u ? "🎒 學生" : "🎒 學生・未登入") + "</span></div>" +
+                    "<div class='lq-appbar-sub'>" + escapeHtml(subLine) + "</div>" +
+                "</div>" +
+                "<div class='lq-appbar-actions'>" +
+                (u
+                    ? "<button onclick='openAccountModal()' class='lq-btn lq-btn-secondary text-xs px-2.5 py-1.5'>👤 我的帳號</button>" +
+                      "<button onclick='studentLogout()' class='lq-btn lq-btn-danger text-xs px-2.5 py-1.5'>登出</button>"
+                    : "<button onclick='openAccountModal()' class='lq-btn lq-btn-primary text-xs px-2.5 py-1.5'>登入</button>" +
+                      "<button onclick='studentLeaveHome()' class='lq-btn lq-btn-secondary text-xs px-2.5 py-1.5'>換身分</button>") +
+                "</div></div>";
+
+            if (!u) {
+                html += "<div class='lq-card p-3 mb-4 text-xs text-gray-500' style='border-color:#fde68a;background:#fffbeb;'>" +
+                    "登入學生帳號可以跨裝置保存練習紀錄，家長也才看得到你的即時作答。" +
+                    "<button onclick='openAccountModal()' class='underline font-bold' style='color:var(--hl-blue);'>現在登入</button></div>";
+            }
 
             html += "<div class='lq-card p-5 mb-4'>" +
                 "<div class='font-bold text-lg mb-1'>🎯 進入老師的測驗</div>" +
@@ -1387,7 +1448,7 @@
                 "<div class='font-bold text-lg mb-2'>📊 我的練習紀錄</div>" +
                 renderPracticeLog() + "</div>";
 
-            html += "<div class='text-center'><button onclick='studentLeaveHome()' class='lq-btn lq-btn-ghost text-sm px-4 py-2'>切換身分／回到首頁</button></div>";
+            // 離開這個畫面的出口統一收在上方身分列（登出／換身分），這裡不再重複一顆按鈕
             box.innerHTML = html;
 
             if (!u && prof.grade) {
@@ -1417,6 +1478,16 @@
 
         function studentLeaveHome() {
             localStorage.removeItem(STUDENT_PROFILE_KEY);
+            location.href = location.origin + location.pathname;
+        }
+
+        // 學生首頁的登出：session token 與這台裝置的學生資料一起清掉，再回到進場頁。
+        // 不能只呼叫 doLogout()——那只更新出題工具那邊的帳號列，學生首頁會停在原畫面看起來沒登出。
+        function studentLogout() {
+            if (!confirm('要登出嗎？登出後要重新輸入帳號密碼才能看到跨裝置的練習紀錄。')) return;
+            localStorage.removeItem('lun_session_token');
+            localStorage.removeItem(STUDENT_PROFILE_KEY);
+            window.currentUser = null;
             location.href = location.origin + location.pathname;
         }
 
@@ -3758,6 +3829,12 @@
             localStorage.removeItem('lun_session_token');
             window.currentUser = null;
             updateAccountUI();
+            // 學生首頁整頁內容都是依身分算出來的，只更新帳號列會看起來像沒登出，直接回進場頁
+            const sh = document.getElementById('studentHome');
+            if (sh && !sh.classList.contains('hidden')) {
+                localStorage.removeItem(STUDENT_PROFILE_KEY);
+                location.href = location.origin + location.pathname;
+            }
         }
 
         function openAccountModal() {
