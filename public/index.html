@@ -190,6 +190,8 @@
             .lq-appbar-actions .lq-btn { padding-left: 0.5rem; padding-right: 0.5rem; }
         }
 
+        /* .hl-line-hint / .hl-line-id（電腦版 LINE ID 提示）已收進 assets/brand.css，這裡不重複定義 */
+
         .lq-input {
             width: 100%; padding: 0.75rem 0.9rem; border: 1.5px solid #e2e8f0; border-radius: var(--lq-radius-sm);
             background: #fff; transition: border-color 0.15s ease, box-shadow 0.15s ease; font-size: 0.95rem;
@@ -566,6 +568,10 @@
                     </a>
                     <a href="https://line.me/R/ti/p/%40gdm6961p" target="_blank" rel="noopener noreferrer" class="hl-contact-btn line">💬 作者 Line</a>
                 </div>
+                <!-- 電腦版點 LINE 連結不會自動開 App，一定要給可以搜尋的 ID -->
+                <p class="hl-line-hint">💻 使用電腦版請在 LINE 搜尋 ID
+                    <button type="button" class="hl-line-id" onclick="copyLineId(this)">safezone0619</button>
+                    加入好友</p>
             </div>
         </div>
     </section>
@@ -1474,6 +1480,31 @@
             try { log = JSON.parse(localStorage.getItem(PRACTICE_LOG_KEY) || '[]'); } catch (e) {}
             log.unshift({ title: title, score: score, at: Date.now() });
             localStorage.setItem(PRACTICE_LOG_KEY, JSON.stringify(log.slice(0, 30)));
+        }
+
+        // 進場頁的 LINE ID：點一下複製，複製不到（舊瀏覽器/非 https）就整段選起來讓使用者自己複製
+        function copyLineId(btnEl) {
+            const id = btnEl.textContent.trim();
+            const done = function () {
+                const original = btnEl.textContent;
+                btnEl.classList.add('is-copied');
+                btnEl.textContent = '已複製 ✓';
+                setTimeout(function () { btnEl.textContent = original; btnEl.classList.remove('is-copied'); }, 1600);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(id).then(done).catch(function () { selectElementText(btnEl); });
+            } else {
+                selectElementText(btnEl);
+            }
+        }
+        function selectElementText(el) {
+            try {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            } catch (e) {}
         }
 
         function studentLeaveHome() {

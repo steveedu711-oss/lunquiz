@@ -228,6 +228,23 @@
 }
 .hl-contact-btn.line:hover { color: #fff; background: #06C755; border-color: #06C755; }
 
+/* 電腦版 LINE ID 提示：手機點連結會自動開 App，電腦版不會，一定要另外給可搜尋的 ID。
+   ID 本身做成可點擊複製的膠囊，用等寬字避免 l/1/0/O 看錯 */
+.hl-line-hint {
+  margin-top: 0.6rem; font-size: 0.78rem; line-height: 1.7;
+  color: var(--hl-text-secondary); text-align: center;
+}
+.hl-line-id {
+  font-family: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+  font-weight: 700; font-size: 0.8125rem; letter-spacing: 0.03em;
+  color: #06835c; background: #e6f9ed; border: 1px solid #b3e8c9;
+  padding: 0.1rem 0.5rem; border-radius: 0.5rem; margin: 0 0.15rem;
+  cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.hl-line-id:hover { background: #06C755; color: #fff; border-color: #06C755; }
+.hl-line-id:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(6,199,85,0.35); }
+.hl-line-id.is-copied { background: #06C755; color: #fff; border-color: #06C755; }
+
 /* ---------- 6b. App 開場品牌頁 (splash-screen) ---------- */
 .hl-splash {
   min-height: 100vh;
