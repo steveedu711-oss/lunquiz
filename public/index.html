@@ -239,6 +239,29 @@
             .hl-enter-btn { font-size: 1.05rem; padding: 1rem 1.25rem; gap: 0.5rem; }
         }
 
+        /* 學生出題等待畫面 */
+        #practiceLoading {
+            position: fixed; inset: 0; z-index: 120;
+            display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+            background: rgba(15,23,42,0.55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+        }
+        #practiceLoading.hidden { display: none; }
+        .lq-practice-loading-card {
+            background: #fff; border-radius: var(--lq-radius); box-shadow: var(--lq-shadow-lg);
+            padding: 2rem 1.75rem; width: 100%; max-width: 20rem; text-align: center;
+        }
+        .lq-practice-spinner {
+            width: 2.75rem; height: 2.75rem; margin: 0 auto 1rem;
+            border: 4px solid rgba(26,115,232,0.15); border-top-color: var(--hl-blue);
+            border-radius: 999px; animation: lq-spin 0.9s linear infinite;
+        }
+        @keyframes lq-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .lq-practice-spinner { animation-duration: 3s; } }
+        .lq-practice-loading-title { font-weight: 800; font-size: 1.05rem; color: var(--hl-text); }
+        .lq-practice-loading-sub { font-size: 0.78rem; color: var(--hl-text-secondary); margin-top: 0.25rem; }
+        .lq-practice-bar { height: 6px; border-radius: 999px; background: #eef0f3; overflow: hidden; margin-top: 1rem; }
+        .lq-practice-bar-fill { height: 100%; width: 0%; background: var(--hl-blue); transition: width 0.25s ease; }
+
         .hl-admin-link {
             background: none; border: none; cursor: pointer; padding: 0.25rem 0.5rem;
             font-size: 0.75rem; color: #9aa0a6; text-decoration: underline; text-underline-offset: 3px;
@@ -604,6 +627,17 @@
     <!-- 學生首頁：學生要的是「進老師的測驗」和「自己練習」，不是出題參數表單，
          所以登入身分是學生時走這個畫面，不進 #inputForm -->
     <div id="studentHome" class="hidden max-w-2xl mx-auto p-4 no-print min-h-screen"></div>
+
+    <!-- 學生按「開始練習」時蓋在畫面上的出題進度。
+         之前是把老師那張出題表單顯示出來借用它的進度條，學生會莫名其妙看到一整頁出題參數 -->
+    <div id="practiceLoading" class="hidden no-print">
+        <div class="lq-practice-loading-card">
+            <div class="lq-practice-spinner" aria-hidden="true"></div>
+            <div class="lq-practice-loading-title">Luno 正在出題…</div>
+            <div id="practiceLoadingSub" class="lq-practice-loading-sub">請稍候，大約十幾秒</div>
+            <div class="lq-practice-bar"><div id="practiceBar" class="lq-practice-bar-fill"></div></div>
+        </div>
+    </div>
 
     <div id="inputForm" class="hidden max-w-5xl mx-auto p-4 no-print bg-gray-50 min-h-screen">
         <!-- 家長專用：孩子狀況面板(出題工具家長跟老師一樣完整，只是上方多這一塊) -->
@@ -1104,10 +1138,27 @@
 
         // 進度條：同時更新寬度(視覺填滿)與裡面顯示的百分比文字，
         // 之前的bug是只更新了style.width，文字內容一直停在HTML裡寫死的"0%"
+        // 出題前的欄位驗證失敗：跳訊息之前先收掉學生的等待遮罩
+        function failGen(msg) { hidePracticeLoading(); alert(msg); }
+
         function setProgressBar(pct) {
             const bar = document.getElementById('bar');
             bar.style.width = pct + "%";
             bar.textContent = pct + "%";
+            // 學生練習時老師表單是隱藏的，進度要同步鏡射到蓋在學生畫面上的那張卡
+            const pBar = document.getElementById('practiceBar');
+            if (pBar) pBar.style.width = pct + "%";
+        }
+
+        function showPracticeLoading() {
+            const el = document.getElementById('practiceLoading');
+            if (el) el.classList.remove('hidden');
+            const pBar = document.getElementById('practiceBar');
+            if (pBar) pBar.style.width = '0%';
+        }
+        function hidePracticeLoading() {
+            const el = document.getElementById('practiceLoading');
+            if (el) el.classList.add('hidden');
         }
 
         window.isSharedView = false;
@@ -1470,6 +1521,11 @@
                     "<select id='practiceGrade' class='lq-input text-sm'>" + practiceGradeOptions() + "</select>" +
                     "<select id='practiceSubject' class='lq-input text-sm'>" + subjects.map(function (x) { return "<option>" + x + "</option>"; }).join('') + "</select>" +
                 "</div>" +
+                // 課本版本：學生知道自己用哪家的課本，選了出題才貼近他實際在讀的內容
+                "<select id='practicePublisher' class='lq-input text-sm mb-2'>" +
+                    "<option value=''>不指定課本版本</option>" +
+                    ['康軒', '翰林', '南一', '部編'].map(function (x) { return "<option value='" + x + "'>" + x + "版</option>"; }).join('') +
+                "</select>" +
                 "<input id='practiceScope' class='lq-input text-sm mb-2' placeholder='想練哪個範圍？（例如：第三章 光的折射；留空就綜合練習）'>" +
                 "<div class='grid grid-cols-2 gap-2 mb-3'>" +
                     "<select id='practiceCount' class='lq-input text-sm'>" + [5, 10, 15, 20].map(function (n) { return "<option value='" + n + "'" + (n === 10 ? " selected" : "") + ">" + n + " 題</option>"; }).join('') + "</select>" +
@@ -1600,10 +1656,15 @@
                 const custom = document.getElementById(customId);
                 if (custom) { el.value = 'Custom'; custom.value = val; }
             };
+            const publisherEl = document.getElementById('practicePublisher');
+            const publisher = publisherEl ? publisherEl.value : '';
+
             set('sourceType', '1');
             setSelect('grade', grade, 'c_grade');
             set('subject', subject);
-            set('publisher', '由小綸自由發揮');
+            // 老師表單的版本只有「自由發揮 / 自訂」兩個選項，學生選了版本就走自訂那條
+            if (publisher) { setSelect('publisher', publisher, 'c_publisher'); }
+            else { set('publisher', '由小綸自由發揮'); }
             set('scope', scope);
             setSelect('count', count, 'c_count');
             setSelect('qType', '全部單選題', 'c_qType');
@@ -1616,8 +1677,9 @@
                 className: u ? (u.className || '') : (prof.className || ''),
                 name: u ? u.displayName : (prof.name || '')
             };
-            document.getElementById('studentHome').classList.add('hidden');
-            document.getElementById('inputForm').classList.remove('hidden');
+            // 不再把老師的出題表單顯示出來（學生會看到一整頁跟他無關的出題參數），
+            // 改成蓋一層出題進度；renderPaperFixed() 成功後才會把學生首頁收起來
+            showPracticeLoading();
             startGen();
         }
 
@@ -2655,20 +2717,20 @@
             if (sType === '2') {
                 let textVal = document.getElementById('uTxt').value.trim();
                 if (uploadItems.length === 0 && textVal === "") {
-                    return alert("❌ 未上傳資料！請上傳檔案、圖片或貼上文字內容。");
+                    return failGen("❌ 未上傳資料！請上傳檔案、圖片或貼上文字內容。");
                 }
             }
 
             let grade = document.getElementById('grade').value;
             if(grade === 'Custom') grade = document.getElementById('c_grade').value.trim();
-            if(sType === '1' && (!grade || grade === '')) return alert("❌ 請選擇或輸入【年級】！");
+            if(sType === '1' && (!grade || grade === '')) return failGen("❌ 請選擇或輸入【年級】！");
 
             let subject = document.getElementById('subject').value.trim();
-            if(sType === '1' && !subject) return alert("❌ 請選擇【科目】！");
+            if(sType === '1' && !subject) return failGen("❌ 請選擇【科目】！");
 
             let publisher = document.getElementById('publisher').value;
             if(publisher === 'Custom') publisher = document.getElementById('c_publisher').value.trim();
-            if(sType === '1' && (!publisher || publisher === '')) return alert("❌ 請選擇或輸入【版本】！");
+            if(sType === '1' && (!publisher || publisher === '')) return failGen("❌ 請選擇或輸入【版本】！");
 
             // 範圍改成選填：出綜合/複習卷的老師本來就不需要指定課次，
             // 空白時明講「整冊」讓 AI 有明確依據，而不是拿到一個空字串自己亂猜
@@ -2678,15 +2740,15 @@
             let countVal = document.getElementById('count').value;
             if(countVal === 'Custom') countVal = document.getElementById('c_count').value.trim();
             let total = parseInt(countVal);
-            if(!total) return alert("❌ 請設定【題數】！");
+            if(!total) return failGen("❌ 請設定【題數】！");
 
             let typeVal = document.getElementById('qType').value;
             if(typeVal === 'Custom') typeVal = document.getElementById('c_qType').value.trim();
-            if(!typeVal || typeVal === '') return alert("❌ 請設定【題型】！");
+            if(!typeVal || typeVal === '') return failGen("❌ 請設定【題型】！");
 
             let diffVal = document.getElementById('difficulty').value;
             if(diffVal === 'Custom') diffVal = document.getElementById('c_diff').value.trim();
-            if(!diffVal || diffVal === '') return alert("❌ 請設定【難度】！");
+            if(!diffVal || diffVal === '') return failGen("❌ 請設定【難度】！");
 
             let langVal = document.getElementById('lang').value;
             let contentText = document.getElementById('uTxt').value;
@@ -2784,6 +2846,7 @@
                     if (geminiRes.status === 429) {
                         let cd = await geminiRes.json().catch(() => ({}));
                         let remaining = (cd.error && cd.error.remaining) || 30;
+                        hidePracticeLoading();
                         startCooldownUI(remaining);
                         return;
                     }
@@ -2845,6 +2908,12 @@
                     alert("⚠️ 第 " + parseFailBatches.join("、") + " 批題目AI回傳格式異常已略過，其餘題目正常產生。若題數不足可以「重新出題」再試一次");
                 }
 
+                // 這兩行一定要在 renderPaperFixed／switchSheet 之前：
+                // renderAnswerMode() 是讀 window.currentItems 畫作答表單的，
+                // 之前寫在後面，學生練習切到作答頁時拿到的還是空陣列——整份題目不見、直接顯示 0/100 分
+                window.currentItems = allItems;
+                window.currentSettings = { sType, grade, subject, publisher, scope, count: total, qType: typeVal, difficulty: diffVal, lang: langVal, contentText };
+
                 renderPaperFixed(allItems);
 
                 // 學生的「我要練習」：出完題直接進線上作答(他要的是寫，不是看考卷排版)，
@@ -2860,11 +2929,10 @@
                     }, 50);
                 }
 
-                window.currentItems = allItems;
-                window.currentSettings = { sType, grade, subject, publisher, scope, count: total, qType: typeVal, difficulty: diffVal, lang: langVal, contentText };
                 saveQuizToHistory();
             } catch(e) {
                 if (simTimer) clearInterval(simTimer);
+                hidePracticeLoading();
                 alert("錯誤: " + e.message);
                 document.getElementById('btnGo').disabled = false;
                 document.getElementById('btnGo').innerText = "🚀 Luno 開始出題";
@@ -3025,6 +3093,9 @@
             const inputForm = document.getElementById('inputForm');
             const resultSection = document.getElementById('resultSection');
             inputForm.classList.add('hidden');
+            hidePracticeLoading();
+            const studentHome = document.getElementById('studentHome');
+            if (studentHome) studentHome.classList.add('hidden');
             resultSection.classList.remove('hidden');
 
             let container = document.getElementById('paperContainer');
