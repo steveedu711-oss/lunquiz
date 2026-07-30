@@ -129,14 +129,6 @@
         .lq-cta:hover::before, .lq-cta:focus-visible::before, .lq-cta.is-working::before { opacity: 1; }
 
         /* 進場頁：告訴使用者登入拿得到什麼，不登入也能用但功能較少 */
-        .hl-login-perk {
-            width: 100%; max-width: 22rem; text-align: center; line-height: 1.5;
-            padding: 0.6rem 0.8rem; border-radius: 0.9rem; margin-top: -0.35rem;
-            background: rgba(26,115,232,0.07); border: 1px dashed rgba(26,115,232,0.35);
-            font-size: 0.78rem; color: #3c4043;
-        }
-        .hl-login-perk b { display: block; color: var(--hl-blue); font-size: 0.85rem; margin-bottom: 0.15rem; }
-
         /* 返回鈕固定在左下角：頂部是sticky工具列(題目卷/答案卷/下載/分享)，放上面會互相擋到 */
         #btnGlobalBack {
             position: fixed; left: 0.9rem; bottom: 0.9rem; z-index: 90;
@@ -224,7 +216,49 @@
         }
         .hl-identity-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--role); }
         .hl-identity-btn:hover .hl-identity-chip { background: var(--role); color: #fff; }
-        .hl-identity-hint { font-size: 0.8125rem; color: var(--hl-text-secondary); margin: 0; }
+
+        /* 進場頁的兩個決策（要不要登入／我是誰）原本平鋪在同一層，中間還插一個沒有歸屬的
+           「登入可解鎖」方框。改成：免登入 CTA → 分隔線「或用帳號登入」→ 登入區，
+           把好處寫進老師卡片裡，那句「學生／家長／老師／管理員需要帳號密碼登入」就不必存在了 */
+        .hl-or-divider {
+            width: 100%; max-width: 22rem; display: flex; align-items: center; gap: 0.75rem;
+            font-size: 0.78rem; font-weight: 700; color: var(--hl-text-secondary); white-space: nowrap;
+        }
+        .hl-or-divider::before, .hl-or-divider::after {
+            content: ""; flex: 1; height: 1px; background: var(--hl-border);
+        }
+        .hl-cta-note { font-size: 0.75rem; color: var(--hl-text-secondary); margin: -0.5rem 0 0; }
+
+        /* 老師是這個工具的主要使用者，給他一整張卡；學生／家長退到下面一排小按鈕 */
+        .hl-role-primary {
+            width: 100%; max-width: 22rem; text-align: left; cursor: pointer;
+            padding: 1rem 1.1rem; border-radius: 1.25rem;
+            border: 2px solid rgba(251,188,4,0.55); background: rgba(251,188,4,0.08);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+        .hl-role-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--hl-yellow-hover); }
+        .hl-role-primary:hover .hl-identity-chip { background: var(--hl-yellow-hover); color: #fff; }
+        .hl-role-primary-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
+        .hl-role-primary-head .hl-identity-chip {
+            width: 2.6rem; height: 2.6rem; font-size: 1.4rem;
+            background: rgba(251,188,4,0.22); color: var(--hl-yellow-hover);
+        }
+        .hl-role-primary-title { font-weight: 800; font-size: 1rem; color: var(--hl-text); line-height: 1.3; }
+        .hl-role-primary-sub { font-size: 0.72rem; color: var(--hl-text-secondary); }
+        .hl-perk-list { display: grid; gap: 0.3rem; font-size: 0.78rem; color: #3c4043; line-height: 1.5; }
+        /* 小手機上 1.25rem 的按鈕字加左右 2rem padding 會把「免登入，直接出題」折成兩行，縮字級與內距讓它保持一行 */
+        @media (max-width: 420px) {
+            .hl-enter-btn { font-size: 1.05rem; padding: 1rem 1.25rem; gap: 0.5rem; }
+        }
+
+        /* 學生／家長是次要入口：改成橫排小按鈕，跟老師那張整卡拉開視覺份量 */
+        .hl-identity-btn.is-compact { flex-direction: row; gap: 0.55rem; padding: 0.7rem 0.5rem; font-size: 0.9rem; }
+        .hl-identity-btn.is-compact .hl-identity-chip { width: 2.1rem; height: 2.1rem; font-size: 1.15rem; }
+        .hl-admin-link {
+            background: none; border: none; cursor: pointer; padding: 0.25rem 0.5rem;
+            font-size: 0.75rem; color: #9aa0a6; text-decoration: underline; text-underline-offset: 3px;
+        }
+        .hl-admin-link:hover { color: var(--hl-red); }
 
         /* 表單頁banner：原本放AI生成的吉祥物插畫，占滿首屏卻沒說明這工具能做什麼。
            改成「產品畫面」路線(同Wayground/MagicSchool)——直接讓使用者看到產出的考卷長什麼樣。
@@ -510,28 +544,39 @@
 
             <div id="hlStepIdentity" class="hl-identity-step">
                 <button type="button" class="hl-enter-btn hl-clickable" style="max-width:22rem;" onclick="splashSelectIdentity('guest')">
-                    <span>快速使用（不登入）</span>
+                    <span>免登入，直接出題</span>
                     <span class="ph-duotone ph-rocket-launch" style="font-size:1.75rem;"></span>
                 </button>
-                <div class="hl-login-perk">
-                    <b>登入可解鎖更多功能</b>
-                    <span>⚡ 每題即時看結果的作答模式 ・ 🔗 分享題目與答案連結 ・ 📊 全班即時進度 ・ 📚 班級歷史</span>
-                </div>
+                <p class="hl-cta-note">不用帳號，選好年級和範圍就開始</p>
+
+                <div class="hl-or-divider">或用帳號登入</div>
+
+                <button type="button" class="hl-role-primary" onclick="splashSelectIdentity('teacher')">
+                    <div class="hl-role-primary-head">
+                        <span class="hl-identity-chip"><span class="ph-duotone ph-presentation"></span></span>
+                        <span>
+                            <span class="hl-role-primary-title">老師登入／註冊</span><br>
+                            <span class="hl-role-primary-sub">登入後多了這四件事</span>
+                        </span>
+                    </div>
+                    <div class="hl-perk-list">
+                        <span>⚡ 學生線上作答，自動批改</span>
+                        <span>🔗 一鍵把考卷傳給學生和家長</span>
+                        <span>📊 全班寫到哪、對幾題即時看</span>
+                        <span>📚 出過的考卷自動留存</span>
+                    </div>
+                </button>
+
                 <div class="hl-identity-grid">
-                    <button type="button" class="hl-identity-btn role-student" onclick="splashSelectIdentity('student')">
+                    <button type="button" class="hl-identity-btn is-compact role-student" onclick="splashSelectIdentity('student')">
                         <span class="hl-identity-chip"><span class="ph-duotone ph-student"></span></span><span>學生</span>
                     </button>
-                    <button type="button" class="hl-identity-btn role-parent" onclick="splashSelectIdentity('parent')">
+                    <button type="button" class="hl-identity-btn is-compact role-parent" onclick="splashSelectIdentity('parent')">
                         <span class="hl-identity-chip"><span class="ph-duotone ph-users-three"></span></span><span>家長</span>
                     </button>
-                    <button type="button" class="hl-identity-btn role-teacher" onclick="splashSelectIdentity('teacher')">
-                        <span class="hl-identity-chip"><span class="ph-duotone ph-presentation"></span></span><span>老師</span>
-                    </button>
-                    <button type="button" class="hl-identity-btn role-admin" onclick="splashSelectIdentity('admin')">
-                        <span class="hl-identity-chip"><span class="ph-duotone ph-gear-six"></span></span><span>管理員</span>
-                    </button>
                 </div>
-                <p class="hl-identity-hint">學生／家長／老師／管理員需要帳號密碼登入</p>
+
+                <button type="button" class="hl-admin-link" onclick="splashSelectIdentity('admin')">管理員登入</button>
             </div>
 
             <div id="hlStepAuth" class="hl-identity-step hidden">
