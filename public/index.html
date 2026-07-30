@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小綸出題小幫手</title>
+    <title>Luno 綸諾・互動式評量</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- mammoth / SheetJS / html2canvas / jsPDF / docx 這五個加起來是首屏最重的一塊，
          但它們只有在「上傳檔案出題」跟「按下載」時才用得到。改成按需載入（見 loadScript()），
@@ -194,32 +194,22 @@
         /* 進場頁身分選擇：快速使用(不登入) / 學生 / 家長 / 老師 / 管理員，
            選了非快速使用的身分要先登入/註冊帳號密碼，才會進到「API Key選擇」那一步 */
         .hl-identity-step { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-        .hl-identity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.85rem; width: 100%; max-width: 22rem; }
-        .hl-identity-btn {
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem;
-            padding: 1.1rem 0.5rem; border-radius: 1.25rem; border: 2px solid var(--hl-border);
-            background: #fff; font-weight: 800; font-size: 0.95rem; color: var(--hl-text);
-            cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-        }
         /* 身分入口改成「每個身分一個專屬顏色＋專屬圖示」的扁平徽章(參考ClassDojo/Seesaw的身分選擇列)。
            原本4張都是同一隻吉祥物換道具的插畫，四個按鈕看起來幾乎一樣、辨識不出差別；
-           這裡把顏色(--role)掛在按鈕上，chip底色/圖示色/hover邊框全部吃同一個變數，加身分只要多一條role-*即可 */
-        .hl-identity-btn.role-student { --role: var(--hl-blue);         --role-soft: rgba(26,115,232,0.12); }
-        .hl-identity-btn.role-parent  { --role: var(--hl-green);        --role-soft: rgba(52,168,83,0.12); }
-        .hl-identity-btn.role-teacher { --role: var(--hl-yellow-hover); --role-soft: rgba(251,188,4,0.20); }
-        .hl-identity-btn.role-admin   { --role: var(--hl-red);          --role-soft: rgba(234,67,53,0.12); }
+           這裡把顏色(--role)掛在 role-* 類別上，chip底色/圖示色/hover邊框全部吃同一個變數，加身分只要多一條role-*即可 */
+        .role-student { --role: var(--hl-blue);         --role-soft: rgba(26,115,232,0.12); }
+        .role-parent  { --role: var(--hl-green);        --role-soft: rgba(52,168,83,0.12); }
+        .role-teacher { --role: var(--hl-yellow-hover); --role-soft: rgba(251,188,4,0.20); }
+        .role-admin   { --role: var(--hl-red);          --role-soft: rgba(234,67,53,0.12); }
         .hl-identity-chip {
             display: flex; align-items: center; justify-content: center;
             width: 3rem; height: 3rem; border-radius: 999px; font-size: 1.65rem;
             background: var(--role-soft); color: var(--role);
             transition: background-color 0.15s ease, color 0.15s ease;
         }
-        .hl-identity-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--role); }
-        .hl-identity-btn:hover .hl-identity-chip { background: var(--role); color: #fff; }
 
-        /* 進場頁的兩個決策（要不要登入／我是誰）原本平鋪在同一層，中間還插一個沒有歸屬的
-           「登入可解鎖」方框。改成：免登入 CTA → 分隔線「或用帳號登入」→ 登入區，
-           把好處寫進老師卡片裡，那句「學生／家長／老師／管理員需要帳號密碼登入」就不必存在了 */
+        /* 進場頁只做兩件事：要不要登入（上方 CTA）→ 你是誰（分隔線下的三個身分）。
+           功能清單/好處說明都拿掉了，那些話要在使用者真的碰到該功能時才講才有用 */
         .hl-or-divider {
             width: 100%; max-width: 22rem; display: flex; align-items: center; gap: 0.75rem;
             font-size: 0.78rem; font-weight: 700; color: var(--hl-text-secondary); white-space: nowrap;
@@ -229,31 +219,26 @@
         }
         .hl-cta-note { font-size: 0.75rem; color: var(--hl-text-secondary); margin: -0.5rem 0 0; }
 
-        /* 老師是這個工具的主要使用者，給他一整張卡；學生／家長退到下面一排小按鈕 */
-        .hl-role-primary {
-            width: 100%; max-width: 22rem; text-align: left; cursor: pointer;
-            padding: 1rem 1.1rem; border-radius: 1.25rem;
-            border: 2px solid rgba(251,188,4,0.55); background: rgba(251,188,4,0.08);
+        /* 身分入口：一行一個、三個等重。左邊是身分專屬色的 icon，右邊箭頭表示「還有下一步」 */
+        .hl-role-list { width: 100%; max-width: 22rem; display: grid; gap: 0.6rem; }
+        .hl-role-row {
+            display: flex; align-items: center; gap: 0.8rem; width: 100%;
+            padding: 0.8rem 1rem; border-radius: 1rem; cursor: pointer;
+            border: 2px solid var(--hl-border); background: #fff;
             transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
         }
-        .hl-role-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--hl-yellow-hover); }
-        .hl-role-primary:hover .hl-identity-chip { background: var(--hl-yellow-hover); color: #fff; }
-        .hl-role-primary-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
-        .hl-role-primary-head .hl-identity-chip {
-            width: 2.6rem; height: 2.6rem; font-size: 1.4rem;
-            background: rgba(251,188,4,0.22); color: var(--hl-yellow-hover);
-        }
-        .hl-role-primary-title { font-weight: 800; font-size: 1rem; color: var(--hl-text); line-height: 1.3; }
-        .hl-role-primary-sub { font-size: 0.72rem; color: var(--hl-text-secondary); }
-        .hl-perk-list { display: grid; gap: 0.3rem; font-size: 0.78rem; color: #3c4043; line-height: 1.5; }
+        .hl-role-row:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: var(--role); }
+        .hl-role-row:hover .hl-identity-chip { background: var(--role); color: #fff; }
+        .hl-role-row:focus-visible { outline: none; border-color: var(--role); box-shadow: 0 0 0 3px var(--role-soft); }
+        .hl-role-row .hl-identity-chip { width: 2.4rem; height: 2.4rem; font-size: 1.3rem; }
+        .hl-role-row-text { flex: 1; text-align: left; font-weight: 800; font-size: 1rem; color: var(--hl-text); }
+        .hl-role-row-arrow { color: #c4c7c5; font-size: 1rem; }
+        .hl-role-row:hover .hl-role-row-arrow { color: var(--role); }
         /* 小手機上 1.25rem 的按鈕字加左右 2rem padding 會把「免登入，直接出題」折成兩行，縮字級與內距讓它保持一行 */
         @media (max-width: 420px) {
             .hl-enter-btn { font-size: 1.05rem; padding: 1rem 1.25rem; gap: 0.5rem; }
         }
 
-        /* 學生／家長是次要入口：改成橫排小按鈕，跟老師那張整卡拉開視覺份量 */
-        .hl-identity-btn.is-compact { flex-direction: row; gap: 0.55rem; padding: 0.7rem 0.5rem; font-size: 0.9rem; }
-        .hl-identity-btn.is-compact .hl-identity-chip { width: 2.1rem; height: 2.1rem; font-size: 1.15rem; }
         .hl-admin-link {
             background: none; border: none; cursor: pointer; padding: 0.25rem 0.5rem;
             font-size: 0.75rem; color: #9aa0a6; text-decoration: underline; text-underline-offset: 3px;
@@ -539,8 +524,8 @@
                 </div>
             </div>
 
-            <h1 class="hl-splash-title">小綸出題小幫手</h1>
-            <h2 class="hl-splash-subtitle">AI 智慧出題系統</h2>
+            <h1 class="hl-splash-title">Luno 綸諾</h1>
+            <h2 class="hl-splash-subtitle">互動式評量</h2>
 
             <div id="hlStepIdentity" class="hl-identity-step">
                 <button type="button" class="hl-enter-btn hl-clickable" style="max-width:22rem;" onclick="splashSelectIdentity('guest')">
@@ -551,28 +536,23 @@
 
                 <div class="hl-or-divider">或用帳號登入</div>
 
-                <button type="button" class="hl-role-primary" onclick="splashSelectIdentity('teacher')">
-                    <div class="hl-role-primary-head">
-                        <span class="hl-identity-chip"><span class="ph-duotone ph-presentation"></span></span>
-                        <span>
-                            <span class="hl-role-primary-title">老師登入／註冊</span><br>
-                            <span class="hl-role-primary-sub">登入後多了這四件事</span>
-                        </span>
-                    </div>
-                    <div class="hl-perk-list">
-                        <span>⚡ 學生線上作答，自動批改</span>
-                        <span>🔗 一鍵把考卷傳給學生和家長</span>
-                        <span>📊 全班寫到哪、對幾題即時看</span>
-                        <span>📚 出過的考卷自動留存</span>
-                    </div>
-                </button>
-
-                <div class="hl-identity-grid">
-                    <button type="button" class="hl-identity-btn is-compact role-student" onclick="splashSelectIdentity('student')">
-                        <span class="hl-identity-chip"><span class="ph-duotone ph-student"></span></span><span>學生</span>
+                <!-- 三個身分平等並列、一行一個：這一步只問「你是誰」，登入能得到什麼留到
+                     使用者真的碰到那個功能時再講（在進場頁堆功能清單只會讓人跳過不看） -->
+                <div class="hl-role-list">
+                    <button type="button" class="hl-role-row role-student" onclick="splashSelectIdentity('student')">
+                        <span class="hl-identity-chip"><span class="ph-duotone ph-student"></span></span>
+                        <span class="hl-role-row-text">我是學生</span>
+                        <span class="hl-role-row-arrow ph-duotone ph-caret-right"></span>
                     </button>
-                    <button type="button" class="hl-identity-btn is-compact role-parent" onclick="splashSelectIdentity('parent')">
-                        <span class="hl-identity-chip"><span class="ph-duotone ph-users-three"></span></span><span>家長</span>
+                    <button type="button" class="hl-role-row role-teacher" onclick="splashSelectIdentity('teacher')">
+                        <span class="hl-identity-chip"><span class="ph-duotone ph-presentation"></span></span>
+                        <span class="hl-role-row-text">我是老師</span>
+                        <span class="hl-role-row-arrow ph-duotone ph-caret-right"></span>
+                    </button>
+                    <button type="button" class="hl-role-row role-parent" onclick="splashSelectIdentity('parent')">
+                        <span class="hl-identity-chip"><span class="ph-duotone ph-users-three"></span></span>
+                        <span class="hl-role-row-text">我是家長</span>
+                        <span class="hl-role-row-arrow ph-duotone ph-caret-right"></span>
                     </button>
                 </div>
 
@@ -669,17 +649,17 @@
 
             <div class="mb-8 bg-blue-50 border border-blue-100 rounded-xl p-3 flex flex-wrap items-center justify-center gap-2 text-sm font-bold text-blue-700">
                 <span>① 填年級/科目/範圍</span><span class="text-blue-300">→</span>
-                <span>② 按「小綸開始出題」</span><span class="text-blue-300">→</span>
+                <span>② 按「Luno 開始出題」</span><span class="text-blue-300">→</span>
                 <span>③ 完成後可下載/列印/線上作答/分享</span>
             </div>
 
             <div id="apiKeyBox" class="mb-8 bg-emerald-50/70 p-4 sm:p-5 rounded-xl border border-emerald-100">
                 <label class="block font-bold mb-2 text-lg text-emerald-800">🔑 你自己的 Google API Key（選填）</label>
                 <div class="flex gap-2">
-                    <input type="password" id="userKey" onchange="localStorage.setItem('lun_key',this.value)" class="lq-input" placeholder="貼上您的 AIza... 金鑰（不填則使用小綸內建額度）">
+                    <input type="password" id="userKey" onchange="localStorage.setItem('lun_key',this.value)" class="lq-input" placeholder="貼上您的 AIza... 金鑰（不填則使用Luno 內建額度）">
                     <button onclick="let x=document.getElementById('userKey');x.type=x.type==='password'?'text':'password'" class="lq-btn lq-btn-secondary px-3 text-lg" aria-label="顯示/隱藏金鑰">👁️</button>
                 </div>
-                <p class="text-sm text-emerald-700 mt-2 font-bold">💡 不填：使用小綸內建額度，每次出題間隔 30 秒冷卻。填入自己的 Key：不受冷卻限制，用量算在自己的額度上。</p>
+                <p class="text-sm text-emerald-700 mt-2 font-bold">💡 不填：使用Luno 內建額度，每次出題間隔 30 秒冷卻。填入自己的 Key：不受冷卻限制，用量算在自己的額度上。</p>
                 <div class="flex justify-between items-center mt-3 text-sm flex-wrap gap-2">
                     <div class="flex gap-4">
                         <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-emerald-700 underline font-bold hover:text-emerald-900">👉 申請 Google API Key</a>
@@ -726,7 +706,8 @@
                 <div>
                     <label class="font-bold text-sm">版本</label>
                     <select id="publisher" onchange="checkCustom(this, 'c_publisher')" class="lq-input">
-                        <option value="由小綸自由發揮" selected>由小綸自由發揮 (不限版本)</option>
+                        <!-- value 是存進 localStorage / 拿去比對的鍵，改名時刻意不動，只改顯示文字 -->
+                        <option value="由小綸自由發揮" selected>由 Luno 自由發揮 (不限版本)</option>
                         <option value="Custom">✍️ 依照課本資訊填入</option>
                     </select>
                     <input type="text" id="c_publisher" class="input-custom" placeholder="請輸入自定義版本資訊">
@@ -795,7 +776,7 @@
 
             <!-- 主 CTA 獨佔一排。原本正下方並排三顆同樣醒目的按鈕在跟它搶焦點，
                  其中「清除所有條件」還是破壞性操作卻放在最順手的位置，已移到卡片右上角 -->
-            <button onclick="startGen()" id="btnGo" class="lq-btn lq-cta lq-btn-primary w-full py-4 rounded-xl text-xl">🚀 小綸開始出題</button>
+            <button onclick="startGen()" id="btnGo" class="lq-btn lq-cta lq-btn-primary w-full py-4 rounded-xl text-xl">🚀 Luno 開始出題</button>
             <div class="flex justify-center gap-4 mt-3">
                 <button onclick="saveDefaultSettings()" class="lq-btn lq-btn-ghost text-sm px-3 py-2"><span class="ph-duotone ph-floppy-disk lq-icon-chip"></span> 記住這些條件</button>
                 <button onclick="copySettingsLink()" class="lq-btn lq-btn-ghost text-sm px-3 py-2"><span class="ph-duotone ph-link-simple lq-icon-chip"></span> 複製設定連結</button>
@@ -811,7 +792,7 @@
                 <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
                     <li>本系統為輔助工具，試題由 AI 生成，<strong>務必自行審核、校對並修改</strong>。</li>
                     <li>請確認擁有上傳教材之合法使用權。本工具不儲存使用者檔案，亦不承擔版權責任。</li>
-                    <li>使用小綸內建額度時，每次出題間隔 30 秒冷卻時間；填入自己的 API Key 則不受此限制。</li>
+                    <li>使用Luno 內建額度時，每次出題間隔 30 秒冷卻時間；填入自己的 API Key 則不受此限制。</li>
                     <li>公用電腦請務必使用「清除記憶 / 登出」功能。</li>
                 </ul>
                 <p class="text-center text-sm text-gray-500 mt-4">有任何問題？請點<a href="https://hunglun-new.pages.dev/" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-bold hover:text-blue-800">鴻綸科技官方網站</a></p>
@@ -883,21 +864,21 @@
     <div id="usageGuideModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
         <div class="lq-card max-w-xl w-full max-h-[85vh] overflow-y-auto p-6" style="box-shadow: var(--lq-shadow-lg);">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-lg">❓ 小綸出題小幫手 使用說明</h3>
+                <h3 class="font-bold text-lg">❓ Luno 綸諾 使用說明</h3>
                 <button onclick="closeUsageGuide()" class="lq-btn lq-btn-ghost text-2xl leading-none px-2 py-0" aria-label="關閉">&times;</button>
             </div>
             <div class="space-y-4 text-sm text-gray-700 leading-relaxed">
                 <div>
                     <p class="font-bold text-emerald-700 mb-1">🚀 快速開始</p>
                     <ol class="list-decimal list-inside space-y-1">
-                        <li>選擇出題模式：「🤖 AI智慧出題」直接用課綱知識出題；「📂 上傳檔案/圖片」讓小綸讀你的教材出題</li>
+                        <li>選擇出題模式：「🤖 AI智慧出題」直接用課綱知識出題；「📂 上傳檔案/圖片」讓 Luno 讀你的教材出題</li>
                         <li>填年級/科目/版本/範圍（AI出題模式）或上傳檔案（上傳模式），設定題數/題型/難度/語言</li>
-                        <li>按「🚀 小綸開始出題」，等待生成完成</li>
+                        <li>按「🚀 Luno 開始出題」，等待生成完成</li>
                     </ol>
                 </div>
                 <div>
                     <p class="font-bold text-emerald-700 mb-1">🔑 關於 API Key</p>
-                    <p>不填自己的Key：用小綸內建額度，每次出題間隔30秒冷卻。有自己的Google API Key：不受冷卻限制，用量算自己的（點畫面最上方進場頁的「我有自己的API Key」，或表單裡的小連結可以叫回填Key的欄位）。</p>
+                    <p>不填自己的Key：用Luno 內建額度，每次出題間隔30秒冷卻。有自己的Google API Key：不受冷卻限制，用量算自己的（點畫面最上方進場頁的「我有自己的API Key」，或表單裡的小連結可以叫回填Key的欄位）。</p>
                 </div>
                 <div>
                     <p class="font-bold text-emerald-700 mb-1">📝 出題完成後可以做什麼</p>
@@ -1201,7 +1182,8 @@
                 "<div class='space-y-3'>" +
                 "<button onclick='renderStudentGuestForm()' class='lq-btn lq-btn-primary w-full py-3'>📝 我要練習（不用註冊）</button>" +
                 "<button onclick=\"renderSplashAuthForm('login')\" class='lq-btn lq-btn-secondary w-full py-2'>🔑 我有帳號，要登入</button>" +
-                "<div style='font-size:0.72rem;color:#80868b;line-height:1.5;'>登入的好處：練習紀錄跨裝置保存、可以用「每題即時看結果」、家長能看到你的即時作答。</div>" +
+                // 誘因要講學生自己拿得到什麼。原本寫「家長能看到你的即時作答」——沒有學生會為了這個去登入
+                "<div style='font-size:0.72rem;color:#80868b;line-height:1.5;'>登入才有：寫一題就馬上知道對不對、換手機或電腦也看得到自己的練習紀錄與分數。</div>" +
                 "<button onclick='splashBackToIdentity()' class='lq-btn lq-btn-ghost w-full py-2 text-sm'>← 重選身分</button>" +
                 "</div>";
         }
@@ -1465,7 +1447,7 @@
 
             if (!u) {
                 html += "<div class='lq-card p-3 mb-4 text-xs text-gray-500' style='border-color:#fde68a;background:#fffbeb;'>" +
-                    "登入學生帳號可以跨裝置保存練習紀錄，家長也才看得到你的即時作答。" +
+                    "登入才有：寫一題就馬上知道對不對、換手機或電腦也看得到自己的練習紀錄與分數。" +
                     "<button onclick='openAccountModal()' class='underline font-bold' style='color:var(--hl-blue);'>現在登入</button></div>";
             }
 
@@ -1483,7 +1465,7 @@
 
             html += "<div class='lq-card p-5 mb-4'>" +
                 "<div class='font-bold text-lg mb-1'>📝 我要練習</div>" +
-                "<div class='text-xs text-gray-500 mb-3'>小綸幫你出一份練習卷，寫完自動對答案（每次間隔 30 秒）</div>" +
+                "<div class='text-xs text-gray-500 mb-3'>Luno 幫你出一份練習卷，寫完自動對答案（每次間隔 30 秒）</div>" +
                 "<div class='grid grid-cols-2 gap-2 mb-2'>" +
                     "<select id='practiceGrade' class='lq-input text-sm'>" + practiceGradeOptions() + "</select>" +
                     "<select id='practiceSubject' class='lq-input text-sm'>" + subjects.map(function (x) { return "<option>" + x + "</option>"; }).join('') + "</select>" +
@@ -2633,7 +2615,7 @@
         let cooldownTimer = null;
         function startCooldownUI(seconds) {
             const btn = document.getElementById('btnGo');
-            const original = "🚀 小綸開始出題";
+            const original = "🚀 Luno 開始出題";
             let remaining = Math.max(1, Math.ceil(seconds));
             btn.disabled = true;
             document.getElementById('barBox').classList.add('hidden');
@@ -2862,7 +2844,7 @@
                 if (simTimer) clearInterval(simTimer);
                 alert("錯誤: " + e.message);
                 document.getElementById('btnGo').disabled = false;
-                document.getElementById('btnGo').innerText = "🚀 小綸開始出題";
+                document.getElementById('btnGo').innerText = "🚀 Luno 開始出題";
                 document.getElementById('btnGo').classList.remove('is-working');
                 document.getElementById('barBox').classList.add('hidden');
                 document.getElementById('loadingAnim').classList.add('hidden');
@@ -3344,7 +3326,7 @@
             // 登入狀態區塊：只有透過分享連結進來作答的學生需要(家長監看要靠學生帳號)，
             // 老師自己預覽/家長答案檢視模式都不用看到
             if (window.isSharedView && window.sharedMode === 'student') {
-                html += "<div id='ansLoginBox' class='mb-4'>" + buildAnswerLoginBoxHtml() + "</div>";
+                html += "<div id='ansLoginBox'>" + buildAnswerLoginBoxHtml() + "</div>";
             }
 
             html += "<div class='lq-card p-4 mb-4'>" +
@@ -3367,7 +3349,7 @@
                 "<label class='flex items-center gap-1.5 cursor-pointer font-semibold'><input type='radio' name='ansGradeMode' value='batch'" + (canInstant ? "" : " checked") + "> 📋 全部寫完再送出</label>" +
                 "</div>" +
                 (canInstant ? "" :
-                    "<div class='text-xs text-gray-500 text-center mt-3'>🔒「每題即時看結果」需要登入帳號才能使用。" +
+                    "<div class='text-xs text-gray-500 text-center mt-3'>想寫一題就馬上知道對不對？登入帳號就能用，分數也會存進你自己的紀錄。" +
                     "<button type='button' onclick='openAccountModal()' class='underline font-semibold' style='color:var(--hl-blue);'>登入／註冊</button></div>") +
                 "</div>";
 
@@ -3876,17 +3858,18 @@
         function buildAnswerLoginBoxHtml() {
             const u = window.currentUser;
             if (u && u.role === 'student') {
-                return "<div class='lq-card p-3 text-sm flex items-center justify-between gap-2 flex-wrap' style='border-color:var(--hl-green);'>" +
-                    "<span>✅ 已登入：" + escapeHtml(u.displayName) + "（帳號：" + escapeHtml(u.username) + "），家長可用這組帳號連結監看你的作答</span>" +
+                return "<div class='lq-card p-3 mb-4 text-sm flex items-center justify-between gap-2 flex-wrap' style='border-color:var(--hl-green);'>" +
+                    "<span>✅ 已登入：" + escapeHtml(u.displayName) + "，這次的成績會存進你的紀錄</span>" +
                     "<button onclick='doLogout()' class='lq-btn lq-btn-ghost text-xs px-2 py-1'>登出</button></div>";
             }
             if (u) {
-                return "<div class='lq-card p-3 text-sm text-gray-500 flex items-center justify-between gap-2 flex-wrap'>" +
-                    "<span>目前登入身分為「" + escapeHtml(u.displayName) + "」，家長即時監看需要用學生帳號登入</span>" +
+                return "<div class='lq-card p-3 mb-4 text-sm text-gray-500 flex items-center justify-between gap-2 flex-wrap'>" +
+                    "<span>目前登入身分為「" + escapeHtml(u.displayName) + "」，成績要存進學生自己的紀錄請改用學生帳號登入</span>" +
                     "<button onclick='doLogout()' class='lq-btn lq-btn-ghost text-xs px-2 py-1'>登出</button></div>";
             }
-            return "<div class='lq-card p-3 text-sm text-center'>" +
-                "<button onclick='openAccountModal()' class='lq-btn lq-btn-secondary text-sm px-3 py-1.5'>🔑 登入學生帳號以啟用家長即時監看</button></div>";
+            // 未登入不再單獨放一塊登入邀請：下面的作答模式選擇已經在該講的位置講了，
+            // 學生一進來就被推銷登入只會被略過（而且原文案講的是「讓家長監看」，對學生根本不是好處）
+            return "";
         }
         function refreshAnswerLoginBox() {
             const box = document.getElementById('ansLoginBox');
