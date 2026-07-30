@@ -1473,7 +1473,8 @@
                 "<input id='practiceScope' class='lq-input text-sm mb-2' placeholder='想練哪個範圍？（例如：第三章 光的折射；留空就綜合練習）'>" +
                 "<div class='grid grid-cols-2 gap-2 mb-3'>" +
                     "<select id='practiceCount' class='lq-input text-sm'>" + [5, 10, 15, 20].map(function (n) { return "<option value='" + n + "'" + (n === 10 ? " selected" : "") + ">" + n + " 題</option>"; }).join('') + "</select>" +
-                    "<select id='practiceDiff' class='lq-input text-sm'>" + ['基礎', '普通', '進階', '挑戰', '熟練'].map(function (d) { return "<option" + (d === '普通' ? " selected" : "") + ">" + d + "</option>"; }).join('') + "</select>" +
+                    // 難度跟老師表單一樣是四階（「熟練」講的是學生狀態不是題目難度，早先已移除）
+                    "<select id='practiceDiff' class='lq-input text-sm'>" + ['基礎', '普通', '進階', '挑戰'].map(function (d) { return "<option" + (d === '普通' ? " selected" : "") + ">" + d + "</option>"; }).join('') + "</select>" +
                 "</div>" +
                 "<button id='btnPractice' onclick='startPractice(this)' class='lq-btn lq-cta lq-btn-primary w-full py-3 text-lg'>🚀 開始練習</button></div>";
 
@@ -1586,15 +1587,27 @@
             const count = document.getElementById('practiceCount').value;
             const diff = document.getElementById('practiceDiff').value;
 
+            // 這裡是把學生首頁的選擇「灌進老師那張表單」再送出。
+            // 坑：<select> 設一個不在 option 清單裡的值會靜靜變成空字串，startGen 只會跳
+            // 「請設定【題型】」這種看不出原因的錯誤（題型曾經寫成 '單選題'，但選項其實叫「全部單選題」）。
+            // 改成設不進去就退回該欄位的「自定義」輸入框，學生首頁的選項就不必跟老師表單的清單綁死。
             const set = function (id, val) { const el = document.getElementById(id); if (el) el.value = val; };
+            const setSelect = function (id, val, customId) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = val;
+                if (el.value === val) return;
+                const custom = document.getElementById(customId);
+                if (custom) { el.value = 'Custom'; custom.value = val; }
+            };
             set('sourceType', '1');
-            set('grade', grade);
+            setSelect('grade', grade, 'c_grade');
             set('subject', subject);
             set('publisher', '由小綸自由發揮');
             set('scope', scope);
-            set('count', count);
-            set('qType', '單選題');
-            set('difficulty', diff);
+            setSelect('count', count, 'c_count');
+            setSelect('qType', '全部單選題', 'c_qType');
+            setSelect('difficulty', diff, 'c_diff');
 
             // 出題完成後直接進線上作答：學生要的是「寫」，不是看考卷排版
             window.practiceMode = true;
@@ -2701,6 +2714,7 @@
             let scorePerQ = Math.floor(100 / total);
             let allItems = [];
             let parseFailBatches = [];
+            let batchRetried = {};
             let simTimer = null;
 
             uploadItems.filter(item => item.type === 'docx').forEach(item => { contentText += "\n[附件 " + item.name + "]:\n" + item.content; });
@@ -2754,7 +2768,9 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Batch-Index': String(i),
+                            // 重試第 0 批時要送非 0 的批次序號：冷卻只算第 0 批，
+                            // 重試若還報 0 會被自己 30 秒前那次擋成 429，整份考卷就沒了
+                            'X-Batch-Index': String(batchRetried[i] ? i + 1 : i),
                             'X-Admin-Pass': adminPass,
                             'X-Gemini-Api-Key': userKey,
                             'X-Client-Id': getClientId()
@@ -2806,6 +2822,13 @@
                         if (recovered.length > 0) {
                             allItems = allItems.concat(recovered);
                             console.warn("第 " + (i + 1) + " 批JSON解析失敗，但搶救回 " + recovered.length + " 題（可能是AI輸出被截斷）", e);
+                        } else if (!batchRetried[i]) {
+                            // 整批一題都救不回來(常見是這次回應根本沒有文字)，先自動重試一次同一批，
+                            // 不要讓使用者看到「請重新嘗試出題一次」還得自己再按一輪、又要等冷卻
+                            batchRetried[i] = true;
+                            console.warn("第 " + (i + 1) + " 批完全無法解析，自動重試一次", e);
+                            i--;
+                            continue;
                         } else {
                             console.error(e);
                             parseFailBatches.push(i + 1);

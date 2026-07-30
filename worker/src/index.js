@@ -762,15 +762,38 @@ async function handleGenerate(request, env) {
     }
 
     const payload = await request.json();
-    const requestBody = JSON.stringify({
-      contents: payload.contents,
-      generationConfig: payload.generationConfig || {
-        responseMimeType: "application/json",
-        // 原本8192太容易被題數多/計算解析題較長的輸出截斷,導致JSON陣列沒收尾解析失敗
-        // (Steve回報「AI回傳的內容無法解析成題目格式」常出現),提高上限降低截斷機率
-        maxOutputTokens: 32768,
-      },
-    });
+    const baseConfig = payload.generationConfig || {
+      responseMimeType: "application/json",
+      // 原本8192太容易被題數多/計算解析題較長的輸出截斷,導致JSON陣列沒收尾解析失敗
+      // (Steve回報「AI回傳的內容無法解析成題目格式」常出現),提高上限降低截斷機率
+      maxOutputTokens: 32768,
+      // gemini-3.x 是思考模型,思考用掉的 token 也算在 maxOutputTokens 裡。
+      // 實測一批 10 題國語文:預設思考 4804 tokens、輸出才 1699,思考是輸出的 2.8 倍;
+      // 改成 low 之後思考降到 1571(-68%),截斷風險與延遲都明顯下降,題目品質沒有差別。
+      thinkingConfig: { thinkingLevel: "low" },
+    };
+    const requestBody = JSON.stringify({ contents: payload.contents, generationConfig: baseConfig });
+    // 萬一某個模型不吃 thinkingConfig(例如舊模型),同一組 Key 拿掉它再試一次,不要整批失敗
+    const noThinkConfig = { ...baseConfig };
+    delete noThinkConfig.thinkingConfig;
+    const requestBodyNoThink = JSON.stringify({ contents: payload.contents, generationConfig: noThinkConfig });
+
+    // 回應有 200 但拿不到文字的情況(思考吃光額度被 MAX_TOKENS 截斷、被安全機制擋掉…),
+    // 前端只會看到「AI回傳的內容無法解析成題目格式」。這裡先判掉,讓它換下一組 Key／模型重試。
+    const extractText = (d) => {
+      const parts = d?.candidates?.[0]?.content?.parts;
+      if (!Array.isArray(parts)) return "";
+      return parts.map((p) => (typeof p.text === "string" ? p.text : "")).join("");
+    };
+
+    const callGemini = async (url, body) => {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      return await res.json();
+    };
 
     // 每次請求隨機挑一個起始 Key，讓多組 Key 的用量平均分散，
     // 而不是永遠先打第一組（第一組額度用完前，後面的 Key 都閒置）。
@@ -784,14 +807,18 @@ async function handleGenerate(request, env) {
         const apiKey = apiKeys[(startIdx + i) % apiKeys.length];
         const googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         try {
-          const googleRes = await fetch(googleUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: requestBody,
-          });
-          const resData = await googleRes.json();
+          let resData = await callGemini(googleUrl, requestBody);
+          if (resData.error && /thinking|thinkingConfig|thinkingLevel/i.test(resData.error.message || "")) {
+            resData = await callGemini(googleUrl, requestBodyNoThink);
+          }
           if (resData.error) {
             lastError = resData.error;
+            continue;
+          }
+          if (!extractText(resData)) {
+            // 200 但沒有可用文字：記下 finishReason 方便日後追，然後換下一組 Key／模型
+            const reason = resData?.candidates?.[0]?.finishReason || "UNKNOWN";
+            lastError = { message: `模型 ${model} 回應沒有文字內容（finishReason=${reason}）` };
             continue;
           }
           data = resData;
