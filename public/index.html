@@ -709,6 +709,9 @@
                 <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <div id="btnSourceAI" class="source-btn" style="background-color: #d1fae5; border-color: #10b981; color: #065f46;" onclick="toggleSource('1')">🤖 AI 智慧出題</div>
                     <div id="btnSourceFile" class="source-btn" style="background-color: #ffffff; border-color: #e5e7eb; color: #6b7280;" onclick="toggleSource('2')">📂 上傳檔案 / 圖片</div>
+                    <!-- 第三種模式跟前兩種不同：它不出新題目，而是把老師手上現成的卷子原樣變成線上作業，
+                         所以點下去直接切到專屬的原卷編輯畫面，不留在這張表單（題型/難度/題數那些欄位都用不到） -->
+                    <div id="btnSourcePaper" class="source-btn" style="background-color: #ffffff; border-color: #e5e7eb; color: #6b7280;" onclick="startPaperFlow()">📄 現成卷子直接派</div>
                     <input type="hidden" id="sourceType" value="1">
                 </div>
             </div>
@@ -1084,6 +1087,9 @@
             // 真正的 .docx 產生器(Office Open XML)。CDN 必須用 unpkg：
             // jsdelivr 對 .cjs 回傳 application/node，瀏覽器會拒絕執行
             docx: "https://unpkg.com/docx@9.7.1/dist/index.umd.cjs",
+            // 原卷直上：老師常常直接丟 PDF 考卷，得在瀏覽器端先轉成圖片再上傳
+            pdfjs: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+            pdfjsWorker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
         };
 
         // 題目內容(q.q/q.o/q.a/q.e)來自AI回傳,分享題目(/api/share)又是任何人都能未經驗證寫入的公開端點,
@@ -1174,6 +1180,12 @@
             buildChoiceChips();
 
             initAuthUI();
+
+            // 原卷直上的連結（?paper=…）走自己的畫面，不經過出題表單／分享題目那條路
+            if (await loadPaperRouteIfAny()) {
+                document.getElementById('hlSplash').style.display = 'none';
+                return;
+            }
 
             fetch(API_BASE + "/api/visit")
                 .then(r => r.json())

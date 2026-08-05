@@ -10,3 +10,10 @@ id = "53865c1abe754d3faf61c3492b4060cd"
 binding = "DB"
 database_name = "lunquiz-db"
 database_id = "ab80b00a-bdb1-41b6-b998-f0d7e93d6334"
+
+# 原卷直上：老師上傳的考卷影像、學生手寫作答的截圖都放這裡。
+# 影像不進 D1／KV——D1 免費層 5GB 且單列有大小限制，KV 每日只有 1000 次寫入，
+# 一個班考一次就吃光。R2 免費層 10GB、下載不計流量費，才撐得住掃描卷這種尺寸。
+[[r2_buckets]]
+binding = "PAPERS_R2"
+bucket_name = "lunquiz-papers"

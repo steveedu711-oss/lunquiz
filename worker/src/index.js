@@ -33,9 +33,18 @@ const LIVE_PROGRESS_TTL_SECONDS = 60 * 60 * 8; // 即時進度8小時後自動�
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 登入session 30天後需要重新登入
 const HISTORY_MAX_PER_CLASS = 50; // 每個班級最多存50份出題歷史,超過自動刪最舊的
 
+// 原卷直上：保留一學年，單卷 10 頁／5MB（Steve 2026-08-05 定案）
+const PAPER_TTL_SECONDS = 60 * 60 * 24 * 365;
+const PAPER_MAX_PAGES = 10;
+const PAPER_MAX_BYTES = 5 * 1024 * 1024;
+// 學生手寫作答的截圖：單一作答區 400KB、整份 3MB。手寫是線條，PNG 壓完通常只有幾十 KB，
+// 這個上限是擋「有人把整張高解析照片塞進來」，不是給正常使用者踩的
+const HAND_MAX_BYTES = 400 * 1024;
+const SUBMIT_MAX_BYTES = 3 * 1024 * 1024;
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, X-Admin-Pass, X-Batch-Index, X-Gemini-Api-Key, X-Client-Id, X-Session-Token, X-Dash-Key",
 };
 
@@ -130,6 +139,45 @@ export default {
       if (request.method === "DELETE") return handleAdminUsersDelete(request, env, idStr);
       if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
     }
+    // 原卷直上（/api/paper/...）
+    if (url.pathname === "/api/paper" && request.method === "POST") {
+      return handlePaperCreate(request, env);
+    }
+    if (url.pathname.startsWith("/api/paper/")) {
+      const seg = url.pathname.slice("/api/paper/".length).split("/").filter(Boolean).map(decodeURIComponent);
+      if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+      const id = seg[0] || "";
+      if (seg.length === 1) {
+        if (request.method === "GET") return handlePaperGet(request, env, id);
+        if (request.method === "PATCH") return handlePaperUpdate(request, env, id);
+        if (request.method === "DELETE") return handlePaperDelete(request, env, id);
+      }
+      if (seg.length === 3 && seg[1] === "page") {
+        if (request.method === "PUT") return handlePaperPageUpload(request, env, id, seg[2]);
+        if (request.method === "GET") return handlePaperPageGet(request, env, id, seg[2]);
+      }
+      if (seg.length === 2 && seg[1] === "detect" && request.method === "POST") {
+        return handlePaperDetect(request, env, id);
+      }
+      if (seg.length === 2 && seg[1] === "submit" && request.method === "POST") {
+        return handlePaperSubmit(request, env, id);
+      }
+      if (seg.length === 2 && seg[1] === "submissions" && request.method === "GET") {
+        return handlePaperSubmissionList(request, env, id);
+      }
+      if (seg.length === 3 && seg[1] === "submission") {
+        if (request.method === "GET") return handlePaperSubmissionGet(request, env, id, seg[2]);
+        if (request.method === "PATCH") return handlePaperSubmissionGrade(request, env, id, seg[2]);
+      }
+      if (seg.length === 4 && seg[1] === "submission" && seg[3] === "ai-grade" && request.method === "POST") {
+        return handlePaperAiGrade(request, env, id, seg[2]);
+      }
+      if (seg.length === 4 && seg[1] === "hand" && request.method === "GET") {
+        // /api/paper/:id/hand/:studentId/:regionId — 學生手寫作答的截圖
+        return handlePaperHandGet(request, env, id, seg[2], seg[3]);
+      }
+    }
+
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: CORS_HEADERS });
     }
@@ -1426,6 +1474,721 @@ async function handleAdminUsersDelete(request, env, idStr) {
 
     await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(id).run();
     return json({ ok: true });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+// ==================== 原卷直上（Kami 式文件互動，AI 大腦用我們自己的） ====================
+// 流程：老師上傳現成考卷影像 → Gemini 視覺自動抓每題作答區 → 老師拖拉微調 → 發分享連結
+//      → 學生在原卷上作答（選擇題點選／填空打字／計算題手寫）→ 自動判選擇填空
+//      → 老師批改介面按「AI 協助批改」讀手寫給建議，老師確認才算數。
+//
+// 權限模型沿用既有的 dashKey：建立卷子時發一把只有出題者拿得到的金鑰（KV `dashkey:<paperId>`），
+// 卷子 ID 本身只夠拿來作答，不足以看答案、看全班成績、改分數。
+
+// 影像本身不做身分驗證（跟現有分享連結同一套信任模型：拿得到連結就看得到卷子），
+// 但答案、成績、批改一律要 dashKey 或老師帳號。
+async function isPaperOwner(request, env, paperId) {
+  if (await hasValidDashKey(request, env, paperId)) return true;
+  const session = await verifySession(request, env);
+  if (!session) return false;
+  if (session.role === "superadmin") return true;
+  if (session.role !== "teacher") return false;
+  const row = await env.DB.prepare("SELECT owner_user_id FROM papers WHERE id = ?").bind(paperId).first();
+  return !!row && Number(row.owner_user_id) === Number(session.uid);
+}
+
+async function getPaperRow(env, paperId) {
+  if (!paperId) return null;
+  const row = await env.DB.prepare("SELECT * FROM papers WHERE id = ?").bind(paperId).first();
+  if (!row) return null;
+  // 過期的卷子當作不存在（實體檔案由刪除流程清掉）
+  if (Number(row.expires_at) < Date.now()) return null;
+  return row;
+}
+
+function safeParse(text, fallback) {
+  try {
+    const v = JSON.parse(text);
+    return v === null || v === undefined ? fallback : v;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+// 呼叫 Gemini 並要求回 JSON。沿用 /api/generate 那套「隨機起始 Key → 換 Key → 換模型」的容錯，
+// 差別是這裡吃的是多模態 parts（圖片 inlineData + 文字），而且回傳的是解析後的物件。
+async function geminiJson(env, parts, maxOutputTokens) {
+  const apiKeys = getApiKeys(env);
+  if (apiKeys.length === 0) {
+    throw new Error("伺服器未設定 GEMINI_API_KEYS");
+  }
+  const body = JSON.stringify({
+    contents: [{ parts }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      maxOutputTokens: maxOutputTokens || 8192,
+      // 3.x 的 thinking token 算在 maxOutputTokens 裡，不壓就會被截斷成沒有文字的 200
+      thinkingConfig: { thinkingLevel: "minimal" },
+    },
+  });
+
+  const startIdx = Math.floor(Math.random() * apiKeys.length);
+  let lastError = null;
+
+  for (const model of GEMINI_MODELS) {
+    for (let i = 0; i < apiKeys.length; i++) {
+      const apiKey = apiKeys[(startIdx + i) % apiKeys.length];
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+        const data = await res.json();
+        if (data.error) {
+          lastError = data.error;
+          continue;
+        }
+        const textParts = data && data.candidates && data.candidates[0] && data.candidates[0].content
+          ? data.candidates[0].content.parts
+          : null;
+        const text = Array.isArray(textParts)
+          ? textParts.map((p) => (typeof p.text === "string" ? p.text : "")).join("")
+          : "";
+        if (!text) {
+          const reason = (data && data.candidates && data.candidates[0] && data.candidates[0].finishReason) || "UNKNOWN";
+          lastError = { message: "模型 " + model + " 回應沒有文字內容（finishReason=" + reason + "）" };
+          continue;
+        }
+        // 模型偶爾會用 markdown 圍欄包起來，先剝掉再解析
+        const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+        const parsed = safeParse(cleaned, null);
+        if (parsed === null) {
+          lastError = { message: "AI 回傳的內容不是合法 JSON" };
+          continue;
+        }
+        return parsed;
+      } catch (err) {
+        lastError = { message: err.message };
+      }
+    }
+  }
+  throw new Error((lastError && lastError.message) || "所有 Key／模型皆呼叫失敗");
+}
+
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  // 一次全部丟給 fromCharCode 會在大檔案時爆堆疊，分塊處理
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+
+// ---- 建立卷子 ----
+async function handlePaperCreate(request, env) {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (!env.PAPERS_R2) return json({ error: { message: "伺服器尚未開通原卷儲存空間（R2）" } }, 503);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    body = {};
+  }
+  const title = String(body.title || "原卷測驗").slice(0, 200);
+  const clientId = (request.headers.get("X-Client-Id") || "").trim();
+  const session = await verifySession(request, env);
+  const now = Date.now();
+  const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+  const dashKey = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+
+  try {
+    await env.DB.prepare(
+      "INSERT INTO papers (id, title, owner_client_id, owner_user_id, page_count, total_bytes," +
+        " regions_json, answer_key_json, status, created_at, expires_at)" +
+        " VALUES (?, ?, ?, ?, 0, 0, '[]', '{}', 'draft', ?, ?)"
+    ).bind(id, title, clientId, session ? session.uid : null, now, now + PAPER_TTL_SECONDS * 1000).run();
+
+    await env.COOLDOWN_KV.put("dashkey:" + id, dashKey, { expirationTtl: PAPER_TTL_SECONDS });
+    return json({ id, dashKey, maxPages: PAPER_MAX_PAGES, maxBytes: PAPER_MAX_BYTES });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+// ---- 上傳一頁原卷影像（PUT，body 就是圖片本體）----
+async function handlePaperPageUpload(request, env, paperId, pageStr) {
+  if (!env.PAPERS_R2) return json({ error: { message: "伺服器尚未開通原卷儲存空間（R2）" } }, 503);
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子，可能已過期" } }, 404);
+  if (!(await isPaperOwner(request, env, paperId))) {
+    return json({ error: { message: "只有這份卷子的老師可以上傳頁面" } }, 403);
+  }
+
+  const page = parseInt(pageStr, 10);
+  if (!Number.isInteger(page) || page < 1 || page > PAPER_MAX_PAGES) {
+    return json({ error: { message: "頁碼必須是 1～" + PAPER_MAX_PAGES } }, 400);
+  }
+
+  const contentType = request.headers.get("Content-Type") || "image/jpeg";
+  if (!/^image\//.test(contentType)) {
+    return json({ error: { message: "只接受圖片格式（PDF 請在前端先轉成圖片再上傳）" } }, 400);
+  }
+
+  const buf = await request.arrayBuffer();
+  const size = buf.byteLength;
+  if (size === 0) return json({ error: { message: "沒有收到影像內容" } }, 400);
+
+  // 同一頁重傳要換算差額，不能直接累加，否則老師重拍幾次就假性超額
+  const key = "papers/" + paperId + "/p" + page;
+  const existing = await env.PAPERS_R2.head(key);
+  const prevSize = existing ? existing.size : 0;
+  const newTotal = Number(paper.total_bytes) - prevSize + size;
+  if (newTotal > PAPER_MAX_BYTES) {
+    return json(
+      { error: { message: "整份卷子上限 " + Math.round(PAPER_MAX_BYTES / 1024 / 1024) + "MB，這一頁放不下了（請降低掃描解析度或減少頁數）" } },
+      413
+    );
+  }
+
+  await env.PAPERS_R2.put(key, buf, { httpMetadata: { contentType } });
+  const pageCount = Math.max(Number(paper.page_count), page);
+  await env.DB.prepare("UPDATE papers SET page_count = ?, total_bytes = ? WHERE id = ?")
+    .bind(pageCount, newTotal, paperId)
+    .run();
+
+  return json({ ok: true, page, pageCount, totalBytes: newTotal });
+}
+
+// ---- 取一頁原卷影像（學生要看，不做身分驗證，跟分享連結同一套信任模型）----
+async function handlePaperPageGet(request, env, paperId, pageStr) {
+  if (!env.PAPERS_R2) return json({ error: { message: "伺服器尚未開通原卷儲存空間（R2）" } }, 503);
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子，可能已過期" } }, 404);
+
+  const page = parseInt(pageStr, 10);
+  const obj = await env.PAPERS_R2.get("papers/" + paperId + "/p" + page);
+  if (!obj) return json({ error: { message: "找不到這一頁" } }, 404);
+
+  return new Response(obj.body, {
+    headers: Object.assign({}, CORS_HEADERS, {
+      "Content-Type": (obj.httpMetadata && obj.httpMetadata.contentType) || "image/jpeg",
+      // 卷子影像上傳後就不會變（重傳等於換內容、前端會帶 cache-buster），可以放心長快取
+      "Cache-Control": "public, max-age=86400",
+    }),
+  });
+}
+
+// ---- AI 自動抓作答區 ----
+// 回傳座標一律 0~1 正規化，前端不管螢幕多寬都能還原到影像上。
+// 抓不準是常態：這裡只負責給老師一個起點，微調由前端的拖拉框負責。
+async function handlePaperDetect(request, env, paperId) {
+  if (!env.PAPERS_R2) return json({ error: { message: "伺服器尚未開通原卷儲存空間（R2）" } }, 503);
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子，可能已過期" } }, 404);
+  if (!(await isPaperOwner(request, env, paperId))) {
+    return json({ error: { message: "只有這份卷子的老師可以使用自動辨識" } }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    body = {};
+  }
+  const page = parseInt(body.page, 10) || 1;
+  const obj = await env.PAPERS_R2.get("papers/" + paperId + "/p" + page);
+  if (!obj) return json({ error: { message: "找不到這一頁，請先上傳" } }, 404);
+
+  const buf = await obj.arrayBuffer();
+  const prompt = [
+    "你是台灣國中小考卷的版面分析助手。這是一張考卷影像。",
+    "請找出「學生需要作答的位置」，每一題一個作答區，並用影像的相對比例回報座標。",
+    "",
+    "回傳格式（只回 JSON 陣列，不要任何說明文字）：",
+    '[{"no":"1","type":"choice","x":0.12,"y":0.21,"w":0.30,"h":0.04,"label":"第1題","options":["A","B","C","D"],"score":5}]',
+    "",
+    "欄位規則：",
+    "- no：題號（照卷面上的編號，字串）",
+    "- type：choice（選擇題／是非題）、fill（填空、單行短答）、hand（需要計算、作圖、長文，得手寫）",
+    "- x,y,w,h：作答區左上角座標與寬高，全部是 0~1 之間、相對於整張影像的比例",
+    "- 選擇題的作答區請框「選項那一列」或「答案格」，不要框整段題目文字",
+    "- options：選擇題的選項代號陣列（例如 A B C D 或 甲乙丙丁）；非選擇題給空陣列",
+    "- score：這題配分，看不出來就填 5",
+    "",
+    "找不到任何題目時回傳空陣列 []。寧可少框也不要框錯位置。",
+  ].join("\n");
+
+  try {
+    const parsed = await geminiJson(
+      env,
+      [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: (obj.httpMetadata && obj.httpMetadata.contentType) || "image/jpeg",
+            data: arrayBufferToBase64(buf),
+          },
+        },
+      ],
+      8192
+    );
+    const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed.regions) ? parsed.regions : [];
+    const clamp = (v) => Math.min(1, Math.max(0, Number(v) || 0));
+    const regions = list.slice(0, 100).map((r, i) => ({
+      id: "p" + page + "q" + (i + 1) + "_" + Math.random().toString(36).slice(2, 7),
+      page,
+      no: String(r.no || i + 1),
+      type: ["choice", "fill", "hand"].includes(r.type) ? r.type : "fill",
+      x: clamp(r.x),
+      y: clamp(r.y),
+      w: Math.max(0.02, clamp(r.w)),
+      h: Math.max(0.02, clamp(r.h)),
+      label: String(r.label || "第" + (r.no || i + 1) + "題").slice(0, 60),
+      options: Array.isArray(r.options) ? r.options.slice(0, 10).map((o) => String(o).slice(0, 6)) : [],
+      score: Number(r.score) > 0 ? Number(r.score) : 5,
+    }));
+    return json({ regions, page });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 502);
+  }
+}
+
+// ---- 老師微調存檔 ----
+async function handlePaperUpdate(request, env, paperId) {
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子，可能已過期" } }, 404);
+  if (!(await isPaperOwner(request, env, paperId))) {
+    return json({ error: { message: "只有這份卷子的老師可以修改" } }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return json({ error: { message: "格式錯誤" } }, 400);
+  }
+
+  const sets = [];
+  const binds = [];
+  if (typeof body.title === "string") {
+    sets.push("title = ?");
+    binds.push(body.title.slice(0, 200));
+  }
+  if (Array.isArray(body.regions)) {
+    sets.push("regions_json = ?");
+    binds.push(JSON.stringify(body.regions.slice(0, 300)));
+  }
+  if (body.answerKey && typeof body.answerKey === "object") {
+    sets.push("answer_key_json = ?");
+    binds.push(JSON.stringify(body.answerKey));
+  }
+  if (body.status === "draft" || body.status === "published") {
+    sets.push("status = ?");
+    binds.push(body.status);
+  }
+  if (sets.length === 0) return json({ ok: true });
+
+  binds.push(paperId);
+  try {
+    const stmt = env.DB.prepare("UPDATE papers SET " + sets.join(", ") + " WHERE id = ?");
+    await stmt.bind(...binds).run();
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+// ---- 讀卷子資訊 ----
+// 學生只拿得到題目與作答區；標準答案只在確認是老師時才附上。
+async function handlePaperGet(request, env, paperId) {
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子，可能已過期或連結錯誤" } }, 404);
+
+  const out = {
+    id: paper.id,
+    title: paper.title,
+    pageCount: Number(paper.page_count),
+    status: paper.status,
+    regions: safeParse(paper.regions_json, []),
+    createdAt: Number(paper.created_at),
+    expiresAt: Number(paper.expires_at),
+  };
+  if (await isPaperOwner(request, env, paperId)) {
+    out.answerKey = safeParse(paper.answer_key_json, {});
+    out.isOwner = true;
+  }
+  return json(out);
+}
+
+async function handlePaperDelete(request, env, paperId) {
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子" } }, 404);
+  if (!(await isPaperOwner(request, env, paperId))) {
+    return json({ error: { message: "只有這份卷子的老師可以刪除" } }, 403);
+  }
+  try {
+    const prefixes = ["papers/" + paperId + "/", "subs/" + paperId + "/"];
+    for (const prefix of prefixes) {
+      let cursor;
+      do {
+        const listed = await env.PAPERS_R2.list({ prefix, cursor });
+        if (listed.objects.length) {
+          await env.PAPERS_R2.delete(listed.objects.map((o) => o.key));
+        }
+        cursor = listed.truncated ? listed.cursor : undefined;
+      } while (cursor);
+    }
+    await env.DB.prepare("DELETE FROM paper_submissions WHERE paper_id = ?").bind(paperId).run();
+    await env.DB.prepare("DELETE FROM papers WHERE id = ?").bind(paperId).run();
+    await env.COOLDOWN_KV.delete("dashkey:" + paperId);
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+// 選擇／填空的自動比對。手寫題一律不在這裡判分，交給老師（可按「AI 協助批改」拿建議）。
+function autoGradeAnswer(region, given, want) {
+  const norm = (s) =>
+    String(s == null ? "" : s)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[，。、．.,]/g, "");
+  if (region.type === "hand") return null;
+  if (want === undefined || want === null || String(want).trim() === "") return null;
+  return norm(given) === norm(want) ? 1 : 0;
+}
+
+// ---- 學生送出作答 ----
+async function handlePaperSubmit(request, env, paperId) {
+  if (!env.PAPERS_R2) return json({ error: { message: "伺服器尚未開通原卷儲存空間（R2）" } }, 503);
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子，可能已過期" } }, 404);
+
+  const raw = await request.text();
+  if (raw.length > SUBMIT_MAX_BYTES) {
+    return json({ error: { message: "作答內容太大，請減少手寫塗鴉的範圍後再送出" } }, 413);
+  }
+  const body = safeParse(raw, null);
+  if (!body) return json({ error: { message: "格式錯誤" } }, 400);
+
+  const clientId = (request.headers.get("X-Client-Id") || "").trim();
+  const session = await verifySession(request, env);
+  const studentId = String(body.studentId || (session ? "u" + session.uid : clientId) || "").trim();
+  if (!studentId) return json({ error: { message: "缺少學生識別碼" } }, 400);
+
+  const regions = safeParse(paper.regions_json, []);
+  const answerKey = safeParse(paper.answer_key_json, {});
+  const given = body.answers && typeof body.answers === "object" ? body.answers : {};
+
+  const answers = {};
+  const auto = {};
+  let score = 0;
+  let maxScore = 0;
+  let hasHand = false;
+
+  for (const region of regions) {
+    const rScore = Number(region.score) > 0 ? Number(region.score) : 0;
+    maxScore += rScore;
+    const a = given[region.id];
+    if (!a) continue;
+
+    if (typeof a.img === "string" && a.img.indexOf("data:image/") === 0) {
+      // 手寫作答：把該作答區的塗鴉截圖存進 R2，D1 只留 key
+      const b64 = a.img.split(",")[1] || "";
+      const bytes = base64ToBytes(b64);
+      if (bytes.length > HAND_MAX_BYTES) {
+        return json({ error: { message: "第 " + region.no + " 題的手寫內容太大，請簡化後再送出" } }, 413);
+      }
+      const key = "subs/" + paperId + "/" + studentId + "/" + region.id + ".png";
+      await env.PAPERS_R2.put(key, bytes, { httpMetadata: { contentType: "image/png" } });
+      answers[region.id] = { img: key };
+      hasHand = true;
+      continue;
+    }
+
+    const v = String(a.v == null ? "" : a.v).slice(0, 2000);
+    answers[region.id] = { v };
+    const ok = autoGradeAnswer(region, v, answerKey[region.id]);
+    if (ok !== null) {
+      auto[region.id] = { ok, got: v, want: String(answerKey[region.id]) };
+      if (ok === 1) score += rScore;
+    }
+  }
+
+  const now = Date.now();
+  try {
+    await env.DB.prepare(
+      "INSERT INTO paper_submissions" +
+        " (paper_id, student_id, student_username, grade, class_name, seat, name," +
+        "  answers_json, auto_json, ai_json, teacher_json, marks_json, score, max_score, status, submitted_at, updated_at)" +
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', '{}', '[]', ?, ?, 'submitted', ?, ?)" +
+        " ON CONFLICT(paper_id, student_id) DO UPDATE SET" +
+        "   student_username = excluded.student_username," +
+        "   grade = excluded.grade, class_name = excluded.class_name," +
+        "   seat = excluded.seat, name = excluded.name," +
+        "   answers_json = excluded.answers_json, auto_json = excluded.auto_json," +
+        "   score = excluded.score, max_score = excluded.max_score," +
+        "   status = 'submitted', updated_at = excluded.updated_at"
+    )
+      .bind(
+        paperId,
+        studentId,
+        session && session.username ? String(session.username) : "",
+        String(body.grade || "").slice(0, 20),
+        String(body.className || "").slice(0, 40),
+        String(body.seat || "").slice(0, 10),
+        String(body.name || "").slice(0, 40),
+        JSON.stringify(answers),
+        JSON.stringify(auto),
+        score,
+        maxScore,
+        now,
+        now
+      )
+      .run();
+
+    return json({
+      ok: true,
+      score,
+      maxScore,
+      auto,
+      // 有手寫題就老實說分數還沒算完，不要讓學生以為這是最終成績
+      pending: hasHand,
+    });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 500);
+  }
+}
+
+// ---- 老師端：全班作答清單 ----
+async function handlePaperSubmissionList(request, env, paperId) {
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子" } }, 404);
+  if (!(await isPaperOwner(request, env, paperId))) {
+    return json({ error: { message: "需要老師的批改連結才能看全班成績" } }, 403);
+  }
+  const rows = await env.DB.prepare(
+    "SELECT student_id, name, seat, class_name, grade, score, max_score, status, submitted_at, updated_at" +
+      " FROM paper_submissions WHERE paper_id = ? ORDER BY seat, submitted_at"
+  ).bind(paperId).all();
+  return json({ submissions: rows.results || [] });
+}
+
+// ---- 單筆作答：老師看得到，學生看得到自己的，家長看得到已連結孩子的 ----
+async function canReadSubmission(request, env, paperId, studentId) {
+  if (await isPaperOwner(request, env, paperId)) return true;
+  const clientId = (request.headers.get("X-Client-Id") || "").trim();
+  if (clientId && clientId === studentId) return true;
+  const session = await verifySession(request, env);
+  if (!session) return false;
+  if ("u" + session.uid === studentId) return true;
+  if (session.role === "parent") {
+    const row = await env.DB.prepare(
+      "SELECT 1 FROM paper_submissions s" +
+        " JOIN users u ON u.username = s.student_username" +
+        " JOIN parent_child_links l ON l.student_id = u.id" +
+        " WHERE l.parent_id = ? AND s.paper_id = ? AND s.student_id = ? LIMIT 1"
+    ).bind(session.uid, paperId, studentId).first();
+    return !!row;
+  }
+  return false;
+}
+
+async function handlePaperSubmissionGet(request, env, paperId, studentId) {
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子" } }, 404);
+  if (!(await canReadSubmission(request, env, paperId, studentId))) {
+    return json({ error: { message: "沒有權限看這份作答" } }, 403);
+  }
+  const row = await env.DB.prepare(
+    "SELECT * FROM paper_submissions WHERE paper_id = ? AND student_id = ?"
+  ).bind(paperId, studentId).first();
+  if (!row) return json({ error: { message: "這位學生還沒有作答紀錄" } }, 404);
+
+  return json({
+    studentId: row.student_id,
+    name: row.name,
+    seat: row.seat,
+    className: row.class_name,
+    grade: row.grade,
+    answers: safeParse(row.answers_json, {}),
+    auto: safeParse(row.auto_json, {}),
+    ai: safeParse(row.ai_json, {}),
+    teacher: safeParse(row.teacher_json, {}),
+    marks: safeParse(row.marks_json, []),
+    score: row.score,
+    maxScore: row.max_score,
+    status: row.status,
+    submittedAt: Number(row.submitted_at),
+    updatedAt: Number(row.updated_at),
+  });
+}
+
+// ---- 學生手寫作答的截圖 ----
+async function handlePaperHandGet(request, env, paperId, studentId, regionIdRaw) {
+  if (!env.PAPERS_R2) return json({ error: { message: "伺服器尚未開通原卷儲存空間（R2）" } }, 503);
+  if (!(await canReadSubmission(request, env, paperId, studentId))) {
+    return json({ error: { message: "沒有權限看這份作答" } }, 403);
+  }
+  const regionId = regionIdRaw.replace(/\.png$/, "");
+  const obj = await env.PAPERS_R2.get("subs/" + paperId + "/" + studentId + "/" + regionId + ".png");
+  if (!obj) return json({ error: { message: "找不到這一題的手寫內容" } }, 404);
+  return new Response(obj.body, {
+    headers: Object.assign({}, CORS_HEADERS, {
+      "Content-Type": "image/png",
+      "Cache-Control": "private, max-age=600",
+    }),
+  });
+}
+
+// ---- AI 協助批改（老師按鈕才觸發，建議分數不會自動生效）----
+// 一次把這位學生所有手寫題送給 Gemini，回建議分數與評語。Gemini 免費層每個模型每天 20 次，
+// 所以刻意做成「一位學生一次呼叫」而不是「一題一次」，30 人班級批完是 30 次而不是幾百次。
+async function handlePaperAiGrade(request, env, paperId, studentId) {
+  if (!env.PAPERS_R2) return json({ error: { message: "伺服器尚未開通原卷儲存空間（R2）" } }, 503);
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子" } }, 404);
+  if (!(await isPaperOwner(request, env, paperId))) {
+    return json({ error: { message: "只有老師可以使用 AI 協助批改" } }, 403);
+  }
+
+  const row = await env.DB.prepare(
+    "SELECT * FROM paper_submissions WHERE paper_id = ? AND student_id = ?"
+  ).bind(paperId, studentId).first();
+  if (!row) return json({ error: { message: "這位學生還沒有作答紀錄" } }, 404);
+
+  const regions = safeParse(paper.regions_json, []);
+  const answerKey = safeParse(paper.answer_key_json, {});
+  const answers = safeParse(row.answers_json, {});
+
+  const parts = [];
+  const wanted = [];
+  for (const region of regions) {
+    const a = answers[region.id];
+    if (!a || !a.img) continue;
+    const obj = await env.PAPERS_R2.get(a.img);
+    if (!obj) continue;
+    const max = Number(region.score) > 0 ? Number(region.score) : 5;
+    wanted.push({ id: region.id, no: region.no, score: max });
+    parts.push({
+      text:
+        "以下是第 " + region.no + " 題（作答區代號 " + region.id + "，滿分 " + max + " 分" +
+        (answerKey[region.id] ? "，參考答案：" + answerKey[region.id] : "，沒有提供參考答案") +
+        "）的學生手寫作答：",
+    });
+    parts.push({ inlineData: { mimeType: "image/png", data: arrayBufferToBase64(await obj.arrayBuffer()) } });
+  }
+
+  if (wanted.length === 0) {
+    return json({ error: { message: "這位學生沒有手寫題需要 AI 協助批改" } }, 400);
+  }
+
+  parts.unshift({
+    text: [
+      "你是台灣國中小老師的批改助手。以下是一位學生的手寫作答影像，請逐題判讀並給建議分數。",
+      "",
+      "注意事項：",
+      "- 學生是小孩，字跡潦草是常態。看不清楚就在 comment 說明「字跡難以辨識」，不要亂猜。",
+      "- 有參考答案時以參考答案為準；沒有參考答案時就依作答過程的合理性給分。",
+      "- 計算題請看過程，過程對但算錯給部分分數。",
+      "- comment 用繁體中文、台灣用語，寫給小學生看得懂，20 字以內，語氣鼓勵但要指出錯在哪。",
+      "",
+      "只回 JSON 陣列，不要任何說明文字：",
+      '[{"id":"作答區代號","score":3,"comment":"步驟對，最後一步進位算錯"}]',
+      "",
+      "作答區代號必須原樣使用，不要自己編。",
+    ].join("\n"),
+  });
+
+  try {
+    const parsed = await geminiJson(env, parts, 4096);
+    const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed.results) ? parsed.results : [];
+    const byId = {};
+    for (const w of wanted) byId[w.id] = w;
+    const ai = safeParse(row.ai_json, {});
+    for (const r of list) {
+      const id = String(r.id || "");
+      if (!byId[id]) continue;
+      ai[id] = {
+        score: Math.min(byId[id].score, Math.max(0, Number(r.score) || 0)),
+        comment: String(r.comment || "").slice(0, 100),
+      };
+    }
+    await env.DB.prepare("UPDATE paper_submissions SET ai_json = ?, updated_at = ? WHERE paper_id = ? AND student_id = ?")
+      .bind(JSON.stringify(ai), Date.now(), paperId, studentId)
+      .run();
+    return json({ ok: true, ai });
+  } catch (err) {
+    return json({ error: { message: err.message } }, 502);
+  }
+}
+
+// ---- 老師確認批改（最終分數以這裡為準）----
+async function handlePaperSubmissionGrade(request, env, paperId, studentId) {
+  const paper = await getPaperRow(env, paperId);
+  if (!paper) return json({ error: { message: "找不到這份卷子" } }, 404);
+  if (!(await isPaperOwner(request, env, paperId))) {
+    return json({ error: { message: "只有老師可以批改" } }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return json({ error: { message: "格式錯誤" } }, 400);
+  }
+
+  const row = await env.DB.prepare(
+    "SELECT * FROM paper_submissions WHERE paper_id = ? AND student_id = ?"
+  ).bind(paperId, studentId).first();
+  if (!row) return json({ error: { message: "這位學生還沒有作答紀錄" } }, 404);
+
+  const regions = safeParse(paper.regions_json, []);
+  const auto = safeParse(row.auto_json, {});
+  const teacher = body.teacher && typeof body.teacher === "object" ? body.teacher : safeParse(row.teacher_json, {});
+  const marks = Array.isArray(body.marks) ? body.marks.slice(0, 500) : safeParse(row.marks_json, []);
+
+  // 總分重算：老師給過分的題以老師為準，其餘用自動判分的結果
+  let score = 0;
+  let maxScore = 0;
+  for (const region of regions) {
+    const rScore = Number(region.score) > 0 ? Number(region.score) : 0;
+    maxScore += rScore;
+    const t = teacher[region.id];
+    if (t && t.score !== undefined && t.score !== null && t.score !== "") {
+      score += Math.min(rScore, Math.max(0, Number(t.score) || 0));
+    } else if (auto[region.id] && auto[region.id].ok === 1) {
+      score += rScore;
+    }
+  }
+
+  try {
+    await env.DB.prepare(
+      "UPDATE paper_submissions" +
+        " SET teacher_json = ?, marks_json = ?, score = ?, max_score = ?, status = ?, updated_at = ?" +
+        " WHERE paper_id = ? AND student_id = ?"
+    )
+      .bind(
+        JSON.stringify(teacher),
+        JSON.stringify(marks),
+        score,
+        maxScore,
+        body.status === "graded" ? "graded" : row.status,
+        Date.now(),
+        paperId,
+        studentId
+      )
+      .run();
+    return json({ ok: true, score, maxScore });
   } catch (err) {
     return json({ error: { message: err.message } }, 500);
   }
