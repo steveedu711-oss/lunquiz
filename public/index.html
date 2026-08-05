@@ -4548,5 +4548,907 @@
             window.proctorPollTimer = setInterval(refresh, 5000);
         }
     </script>
+<!-- ==================== 原卷直上：老師編輯 / 學生作答 / 老師批改 ====================
+     學 Kami 的「把靜態文件變成互動作業」，但 AI 大腦用我們自己的（Kami 的 Questions AI 要付費）。
+     刻意做成獨立的三個畫面 + 獨立的 script，跟原本的出題流程互不干擾。 -->
+<style>
+  /* 卷面容器：所有作答區都用百分比定位在影像上，換螢幕寬度不用重算座標 */
+  .pp-stage { position: relative; display: block; width: 100%; margin: 0 auto 18px; background: #fff;
+              box-shadow: 0 2px 10px rgba(0,0,0,.12); border-radius: 6px; overflow: hidden; touch-action: manipulation; }
+  .pp-stage > img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+  .pp-region { position: absolute; box-sizing: border-box; border: 2px solid #10b981;
+               background: rgba(16,185,129,.10); border-radius: 4px; }
+  .pp-region.pp-hand { border-color: #6366f1; background: rgba(99,102,241,.08); }
+  .pp-region.pp-fill { border-color: #f59e0b; background: rgba(245,158,11,.08); }
+  .pp-region.sel { border-width: 3px; border-color: #ef4444; background: rgba(239,68,68,.10); z-index: 5; }
+  /* 編輯模式的框要能拖，作答模式的框不能拖（免得學生把題目拖走） */
+  .pp-edit .pp-region { cursor: move; touch-action: none; }
+  .pp-region .pp-no { position: absolute; top: -1px; left: -1px; background: #10b981; color: #fff;
+                      font-size: 11px; line-height: 1; padding: 3px 5px; border-radius: 4px 0 4px 0; pointer-events: none; }
+  .pp-region .pp-grip { position: absolute; right: -7px; bottom: -7px; width: 16px; height: 16px;
+                        background: #fff; border: 2px solid #ef4444; border-radius: 50%; cursor: nwse-resize; touch-action: none; }
+  /* 學生端：作答控制項疊在框裡 */
+  .pp-ans { position: absolute; box-sizing: border-box; }
+  .pp-opt { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px;
+            margin: 2px; padding: 0 8px; border: 2px solid #cbd5e1; border-radius: 8px; background: #fff;
+            font-weight: 700; color: #334155; cursor: pointer; font-size: 15px; }
+  .pp-opt.on { background: #10b981; border-color: #059669; color: #fff; }
+  .pp-fillbox { width: 100%; height: 100%; min-height: 34px; border: 2px solid #f59e0b; border-radius: 6px;
+                background: rgba(255,255,255,.92); padding: 4px 8px; font-size: 15px; }
+  .pp-handcanvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+  .pp-tool { padding: 6px 10px; border: 2px solid #e5e7eb; border-radius: 8px; background: #fff;
+             font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; }
+  .pp-tool.on { background: #6366f1; border-color: #4f46e5; color: #fff; }
+  .pp-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .pp-btn { padding: 10px 16px; border-radius: 10px; font-weight: 700; border: 2px solid transparent; cursor: pointer; }
+  .pp-btn-main { background: #10b981; color: #fff; }
+  .pp-btn-ghost { background: #fff; color: #475569; border-color: #e5e7eb; }
+  .pp-in { border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px; font-size: 14px; }
+</style>
+
+<div id="paperApp" class="hidden min-h-screen bg-gray-50 no-print">
+  <!-- ---------- 老師：上傳原卷、調作答區 ---------- -->
+  <div id="paperTeacher" class="hidden max-w-6xl mx-auto p-4">
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+      <button class="pp-btn pp-btn-ghost" onclick="paperExit()">← 回出題首頁</button>
+      <input id="ppTitle" class="pp-in flex-1 min-w-[180px]" placeholder="卷子名稱（例如：五年級數學第三單元小考）">
+      <span id="ppSaveHint" class="text-xs text-gray-500"></span>
+    </div>
+
+    <div class="pp-card">
+      <div class="font-bold mb-2">① 上傳現成卷子</div>
+      <p class="text-sm text-gray-600 mb-3">可以是掃描檔、手機拍的照片，或直接丟 PDF（會自動轉成圖片）。最多 10 頁、整份 5MB。</p>
+      <div onclick="document.getElementById('ppFile').click()"
+           class="border-2 border-dashed border-emerald-300 p-6 text-center cursor-pointer hover:bg-emerald-50 rounded-xl">
+        <p class="text-lg text-emerald-600 font-bold">📂 點此選擇卷子（圖片或 PDF）</p>
+      </div>
+      <input type="file" id="ppFile" multiple accept="image/*,application/pdf" style="display:none" onchange="ppHandleFiles(this)">
+      <div id="ppUploadStatus" class="text-sm mt-2"></div>
+    </div>
+
+    <div id="ppStep2" class="hidden">
+      <div class="pp-card">
+        <div class="font-bold mb-2">② 標出學生要作答的位置</div>
+        <p class="text-sm text-gray-600 mb-3">
+          按「AI 自動抓」讓系統先幫你框一輪，再用滑鼠或手指把框拖到正確位置。
+          <span class="text-amber-700 font-bold">AI 抓不準是正常的</span>，它只負責省掉你從零開始框的力氣。
+        </p>
+        <div class="flex flex-wrap gap-2 items-center">
+          <button class="pp-btn pp-btn-main" onclick="ppDetect()">🤖 AI 自動抓這一頁</button>
+          <button class="pp-btn pp-btn-ghost" onclick="ppAddRegion()">➕ 自己加一個框</button>
+          <button class="pp-btn pp-btn-ghost" onclick="ppDeleteSelected()">🗑️ 刪除選取的框</button>
+          <span id="ppPageTabs" class="flex flex-wrap gap-1 ml-auto"></span>
+        </div>
+        <div id="ppDetectStatus" class="text-sm mt-2"></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2">
+          <div id="ppStageWrap" class="pp-edit"></div>
+        </div>
+        <div>
+          <div class="pp-card">
+            <div class="font-bold mb-2">③ 每題設定與答案</div>
+            <p class="text-xs text-gray-500 mb-2">選擇題／填空題填了答案就會自動判分；手寫題交給你批改（可按 AI 協助）。</p>
+            <div id="ppRegionList" class="text-sm"></div>
+          </div>
+          <div class="pp-card">
+            <div class="font-bold mb-2">④ 派給學生</div>
+            <button class="pp-btn pp-btn-main w-full mb-2" onclick="ppPublish()">🔗 產生學生作答連結</button>
+            <button class="pp-btn pp-btn-ghost w-full" onclick="ppOpenGrading()">📝 打開批改台</button>
+            <div id="ppPublishBox" class="text-sm mt-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- 學生：在原卷上作答 ---------- -->
+  <div id="paperStudentView" class="hidden max-w-3xl mx-auto p-4">
+    <div id="ppStuHeader" class="pp-card sticky top-0 z-20"></div>
+    <div id="ppStuInfo" class="pp-card hidden">
+      <div class="font-bold mb-2">先讓老師知道你是誰</div>
+      <div class="grid grid-cols-2 gap-2">
+        <input id="ppStuGrade" class="pp-in" placeholder="年級（例如 五年級）">
+        <input id="ppStuClass" class="pp-in" placeholder="班級（例如 3 班）">
+        <input id="ppStuSeat" class="pp-in" placeholder="座號">
+        <input id="ppStuName" class="pp-in" placeholder="姓名">
+      </div>
+      <button class="pp-btn pp-btn-main w-full mt-3" onclick="ppStuStart()">開始作答</button>
+    </div>
+    <div id="ppStuBody" class="hidden">
+      <div id="ppStuStages"></div>
+      <button class="pp-btn pp-btn-main w-full my-4" onclick="ppStuSubmit()">✅ 送出答案</button>
+    </div>
+    <div id="ppStuResult" class="hidden pp-card"></div>
+  </div>
+
+  <!-- ---------- 老師：批改台 ---------- -->
+  <div id="paperGradeView" class="hidden max-w-6xl mx-auto p-4">
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+      <button class="pp-btn pp-btn-ghost" onclick="paperExit()">← 離開批改台</button>
+      <div id="ppGradeTitle" class="font-bold text-lg"></div>
+      <button class="pp-btn pp-btn-ghost ml-auto" onclick="ppLoadSubmissions()">🔄 重新整理</button>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div class="lg:col-span-1"><div class="pp-card"><div class="font-bold mb-2">學生</div><div id="ppSubList" class="text-sm"></div></div></div>
+      <div class="lg:col-span-3"><div id="ppGradeBody" class="pp-card text-gray-500">左邊選一位學生開始批改。</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ 原卷直上：共用狀態 ============
+// paper：目前這份卷子的資料（id/title/pageCount/regions/answerKey）
+// ppDashKey：老師的批改金鑰，只有出題者拿得到（存 localStorage，換裝置要靠連結帶）
+let ppPaper = null;
+let ppDashKey = '';
+let ppCurPage = 1;
+let ppSelId = null;
+let ppStuAnswers = {};   // { regionId: {v} | {canvas} }
+let ppHandCanvases = {}; // { regionId: canvas }
+let ppTool = 'pen';
+let ppGradeSub = null;
+
+function ppHeaders(extra) {
+    const h = Object.assign({ 'X-Client-Id': getClientId() }, extra || {});
+    const t = localStorage.getItem('lun_session');
+    if (t) h['X-Session-Token'] = t;
+    if (ppDashKey) h['X-Dash-Key'] = ppDashKey;
+    return h;
+}
+
+async function ppApi(path, opts) {
+    const o = Object.assign({}, opts || {});
+    o.headers = ppHeaders(o.headers);
+    if (o.body && typeof o.body === 'string' && !o.headers['Content-Type']) {
+        o.headers['Content-Type'] = 'application/json';
+    }
+    const res = await fetch(API_BASE + path, o);
+    const ct = res.headers.get('Content-Type') || '';
+    if (!ct.includes('application/json')) {
+        if (!res.ok) throw new Error('伺服器回應異常（' + res.status + '）');
+        return res;
+    }
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error((data.error && data.error.message) || ('請求失敗（' + res.status + '）'));
+    return data;
+}
+
+function ppShow(which) {
+    document.getElementById('inputForm').classList.add('hidden');
+    document.getElementById('studentHome').classList.add('hidden');
+    document.getElementById('resultSection').classList.add('hidden');
+    document.getElementById('paperApp').classList.remove('hidden');
+    ['paperTeacher', 'paperStudentView', 'paperGradeView'].forEach(function (id) {
+        document.getElementById(id).classList.toggle('hidden', id !== which);
+    });
+    window.scrollTo(0, 0);
+}
+
+function paperExit() {
+    // 站內返回，不用 history.back()——這個 SPA 沒有 pushState，退的會是進站前那一頁
+    document.getElementById('paperApp').classList.add('hidden');
+    document.getElementById('inputForm').classList.remove('hidden');
+    window.scrollTo(0, 0);
+}
+
+// ============ 進入點 ============
+// 老師從出題表單第三顆鈕進來：先在後端開一份空白卷子，拿到 id 與批改金鑰
+async function startPaperFlow() {
+    ppShow('paperTeacher');
+    document.getElementById('ppStep2').classList.add('hidden');
+    document.getElementById('ppUploadStatus').textContent = '';
+    document.getElementById('ppTitle').value = '';
+    ppPaper = null;
+    ppDashKey = '';
+    ppCurPage = 1;
+}
+
+// 網址帶 ?paper=<id> 時：有 k=<批改金鑰> 就是老師（編輯或批改），沒有就是學生作答
+async function loadPaperRouteIfAny() {
+    const q = new URLSearchParams(location.search);
+    const id = q.get('paper');
+    if (!id) return false;
+    ppDashKey = q.get('k') || '';
+    try {
+        ppPaper = await ppApi('/api/paper/' + encodeURIComponent(id));
+    } catch (e) {
+        ppShow('paperStudentView');
+        document.getElementById('ppStuHeader').innerHTML =
+            "<div class='text-red-600 font-bold'>打不開這份卷子</div><div class='text-sm text-gray-600 mt-1'>" + escapeHtml(e.message) + "</div>";
+        return true;
+    }
+    if (ppPaper.isOwner && q.get('grade') === '1') {
+        ppShow('paperGradeView');
+        document.getElementById('ppGradeTitle').textContent = ppPaper.title;
+        ppLoadSubmissions();
+        return true;
+    }
+    if (ppPaper.isOwner && q.get('edit') === '1') {
+        ppShow('paperTeacher');
+        document.getElementById('ppTitle').value = ppPaper.title;
+        document.getElementById('ppStep2').classList.remove('hidden');
+        ppRenderPageTabs();
+        ppRenderStage();
+        return true;
+    }
+    ppStuInit();
+    return true;
+}
+
+// ============ 老師：上傳卷子 ============
+async function ppEnsurePaper() {
+    if (ppPaper && ppPaper.id) return ppPaper;
+    const title = document.getElementById('ppTitle').value.trim() || '原卷測驗';
+    const data = await ppApi('/api/paper', { method: 'POST', body: JSON.stringify({ title }) });
+    ppDashKey = data.dashKey;
+    ppPaper = { id: data.id, title, pageCount: 0, regions: [], answerKey: {}, isOwner: true };
+    // 老師關掉分頁後還找得回自己的卷子（金鑰只在這台裝置，不會外流）
+    try {
+        const mine = JSON.parse(localStorage.getItem('lun_papers') || '[]');
+        mine.unshift({ id: data.id, title, dashKey: data.dashKey, at: Date.now() });
+        localStorage.setItem('lun_papers', JSON.stringify(mine.slice(0, 30)));
+    } catch (e) {}
+    return ppPaper;
+}
+
+// 大張掃描圖直接上傳會超過 5MB，所以一律先在瀏覽器縮到長邊 1600px 再送。
+// 1600px 對「看得清楚題目字」跟「AI 抓得到座標」都夠用，再高只是浪費容量。
+function ppCanvasToBlob(canvas, quality) {
+    return new Promise(function (resolve) {
+        canvas.toBlob(function (b) { resolve(b); }, 'image/jpeg', quality || 0.85);
+    });
+}
+
+async function ppShrinkImage(source) {
+    const MAX = 1600;
+    const w = source.width || source.naturalWidth;
+    const h = source.height || source.naturalHeight;
+    const scale = Math.min(1, MAX / Math.max(w, h));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+    return await ppCanvasToBlob(canvas, 0.85);
+}
+
+function ppLoadImage(url) {
+    return new Promise(function (resolve, reject) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function () { resolve(img); };
+        img.onerror = function () { reject(new Error('圖片載入失敗')); };
+        img.src = url;
+    });
+}
+
+async function ppHandleFiles(el) {
+    const files = Array.from(el.files || []);
+    el.value = '';
+    if (!files.length) return;
+    const status = document.getElementById('ppUploadStatus');
+    status.className = 'text-sm mt-2 text-gray-600';
+    status.textContent = '處理中…';
+
+    try {
+        await ppEnsurePaper();
+        const blobs = [];
+        for (const f of files) {
+            if (f.type === 'application/pdf') {
+                await loadScript(LIB_URLS.pdfjs);
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = LIB_URLS.pdfjsWorker;
+                const pdf = await window.pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+                for (let p = 1; p <= pdf.numPages && blobs.length < 10; p++) {
+                    const page = await pdf.getPage(p);
+                    const viewport = page.getViewport({ scale: 2 });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                    blobs.push(await ppShrinkImage(canvas));
+                }
+            } else if (/^image\//.test(f.type)) {
+                const img = await ppLoadImage(URL.createObjectURL(f));
+                blobs.push(await ppShrinkImage(img));
+            }
+        }
+
+        if (!blobs.length) throw new Error('沒有可用的圖片或 PDF');
+
+        let page = Number(ppPaper.pageCount) || 0;
+        for (const blob of blobs) {
+            if (page >= 10) break;
+            page += 1;
+            status.textContent = '上傳第 ' + page + ' 頁…';
+            const r = await ppApi('/api/paper/' + ppPaper.id + '/page/' + page, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'image/jpeg' },
+                body: blob,
+            });
+            ppPaper.pageCount = r.pageCount;
+        }
+
+        status.className = 'text-sm mt-2 text-emerald-700 font-bold';
+        status.textContent = '✅ 已上傳 ' + ppPaper.pageCount + ' 頁';
+        document.getElementById('ppStep2').classList.remove('hidden');
+        ppCurPage = 1;
+        ppRenderPageTabs();
+        ppRenderStage();
+    } catch (e) {
+        status.className = 'text-sm mt-2 text-red-600 font-bold';
+        status.textContent = '❌ ' + e.message;
+    }
+}
+
+// ============ 老師：作答區編輯 ============
+function ppRenderPageTabs() {
+    let html = '';
+    for (let p = 1; p <= (ppPaper.pageCount || 0); p++) {
+        html += "<button class='pp-tool " + (p === ppCurPage ? 'on' : '') + "' onclick='ppGoPage(" + p + ")'>第 " + p + " 頁</button>";
+    }
+    document.getElementById('ppPageTabs').innerHTML = html;
+}
+
+function ppGoPage(p) {
+    ppCurPage = p;
+    ppSelId = null;
+    ppRenderPageTabs();
+    ppRenderStage();
+}
+
+function ppPageUrl(page) {
+    return API_BASE + '/api/paper/' + ppPaper.id + '/page/' + page;
+}
+
+function ppRegionsOfPage(page) {
+    return (ppPaper.regions || []).filter(function (r) { return Number(r.page) === Number(page); });
+}
+
+function ppRenderStage() {
+    const wrap = document.getElementById('ppStageWrap');
+    const regions = ppRegionsOfPage(ppCurPage);
+    let boxes = '';
+    regions.forEach(function (r) {
+        const cls = 'pp-region pp-' + r.type + (r.id === ppSelId ? ' sel' : '');
+        boxes += "<div class='" + cls + "' data-id='" + escapeHtml(r.id) + "' style='left:" + (r.x * 100) + "%;top:" + (r.y * 100) +
+            "%;width:" + (r.w * 100) + "%;height:" + (r.h * 100) + "%'>" +
+            "<span class='pp-no'>" + escapeHtml(r.no) + "</span><span class='pp-grip'></span></div>";
+    });
+    wrap.innerHTML = "<div class='pp-stage' id='ppStage'><img src='" + ppPageUrl(ppCurPage) + "' alt='卷子第 " + ppCurPage + " 頁'>" + boxes + "</div>";
+    ppBindDrag();
+    ppRenderRegionList();
+}
+
+// 拖拉／縮放：一律換算成相對比例存回 region，換裝置或換螢幕寬度都能還原
+function ppBindDrag() {
+    const stage = document.getElementById('ppStage');
+    if (!stage) return;
+    let mode = null, target = null, start = null;
+
+    stage.addEventListener('pointerdown', function (e) {
+        const box = e.target.closest('.pp-region');
+        if (!box) return;
+        const region = (ppPaper.regions || []).find(function (r) { return r.id === box.dataset.id; });
+        if (!region) return;
+        ppSelId = region.id;
+        mode = e.target.classList.contains('pp-grip') ? 'resize' : 'move';
+        target = region;
+        const rect = stage.getBoundingClientRect();
+        start = { px: e.clientX, py: e.clientY, x: region.x, y: region.y, w: region.w, h: region.h, rw: rect.width, rh: rect.height };
+        box.setPointerCapture(e.pointerId);
+        e.preventDefault();
+        ppRenderRegionList();
+        stage.querySelectorAll('.pp-region').forEach(function (b) { b.classList.toggle('sel', b.dataset.id === ppSelId); });
+    });
+
+    stage.addEventListener('pointermove', function (e) {
+        if (!mode || !target) return;
+        const dx = (e.clientX - start.px) / start.rw;
+        const dy = (e.clientY - start.py) / start.rh;
+        const clamp = function (v) { return Math.min(1, Math.max(0, v)); };
+        if (mode === 'move') {
+            target.x = clamp(start.x + dx);
+            target.y = clamp(start.y + dy);
+        } else {
+            target.w = Math.max(0.02, Math.min(1 - target.x, start.w + dx));
+            target.h = Math.max(0.02, Math.min(1 - target.y, start.h + dy));
+        }
+        const box = stage.querySelector(".pp-region[data-id='" + target.id + "']");
+        if (box) {
+            box.style.left = (target.x * 100) + '%';
+            box.style.top = (target.y * 100) + '%';
+            box.style.width = (target.w * 100) + '%';
+            box.style.height = (target.h * 100) + '%';
+        }
+    });
+
+    const end = function () {
+        if (mode) { mode = null; target = null; ppSaveSoon(); }
+    };
+    stage.addEventListener('pointerup', end);
+    stage.addEventListener('pointercancel', end);
+}
+
+function ppRenderRegionList() {
+    const regions = ppRegionsOfPage(ppCurPage);
+    if (!regions.length) {
+        document.getElementById('ppRegionList').innerHTML = "<div class='text-gray-500'>這一頁還沒有作答區，先按「AI 自動抓」。</div>";
+        return;
+    }
+    let html = '';
+    regions.forEach(function (r) {
+        const key = (ppPaper.answerKey || {})[r.id] || '';
+        html += "<div class='border rounded-lg p-2 mb-2 " + (r.id === ppSelId ? 'border-red-400 bg-red-50' : 'border-gray-200') + "'>" +
+            "<div class='flex gap-1 items-center mb-1'>" +
+            "<input class='pp-in w-14' value='" + escapeHtml(r.no) + "' onchange=\"ppSetField('" + r.id + "','no',this.value)\" title='題號'>" +
+            "<select class='pp-in flex-1' onchange=\"ppSetField('" + r.id + "','type',this.value)\">" +
+            "<option value='choice'" + (r.type === 'choice' ? ' selected' : '') + ">選擇題</option>" +
+            "<option value='fill'" + (r.type === 'fill' ? ' selected' : '') + ">填空／短答</option>" +
+            "<option value='hand'" + (r.type === 'hand' ? ' selected' : '') + ">手寫（計算/作圖）</option>" +
+            "</select>" +
+            "<input class='pp-in w-14' type='number' min='0' value='" + Number(r.score || 0) + "' onchange=\"ppSetField('" + r.id + "','score',this.value)\" title='配分'>" +
+            "</div>" +
+            (r.type === 'hand'
+                ? "<div class='text-xs text-indigo-600'>手寫題由老師批改（可按 AI 協助）</div>"
+                : "<input class='pp-in w-full' placeholder='正確答案（留空＝不自動判分）' value='" + escapeHtml(key) + "' onchange=\"ppSetAnswer('" + r.id + "',this.value)\">") +
+            "</div>";
+    });
+    document.getElementById('ppRegionList').innerHTML = html;
+}
+
+function ppSetField(id, field, value) {
+    const r = (ppPaper.regions || []).find(function (x) { return x.id === id; });
+    if (!r) return;
+    r[field] = field === 'score' ? Number(value) || 0 : value;
+    ppSaveSoon();
+    ppRenderStage();
+}
+
+function ppSetAnswer(id, value) {
+    ppPaper.answerKey = ppPaper.answerKey || {};
+    ppPaper.answerKey[id] = value;
+    ppSaveSoon();
+}
+
+function ppAddRegion() {
+    ppPaper.regions = ppPaper.regions || [];
+    const n = ppRegionsOfPage(ppCurPage).length + 1;
+    const r = {
+        id: 'm' + ppCurPage + '_' + Math.random().toString(36).slice(2, 8),
+        page: ppCurPage, no: String(n), type: 'fill',
+        x: 0.1, y: 0.1, w: 0.3, h: 0.06, label: '第' + n + '題', options: [], score: 5,
+    };
+    ppPaper.regions.push(r);
+    ppSelId = r.id;
+    ppSaveSoon();
+    ppRenderStage();
+}
+
+function ppDeleteSelected() {
+    if (!ppSelId) { alert('請先點一下要刪除的框'); return; }
+    ppPaper.regions = (ppPaper.regions || []).filter(function (r) { return r.id !== ppSelId; });
+    ppSelId = null;
+    ppSaveSoon();
+    ppRenderStage();
+}
+
+// 每次調整都存回後端，但用 debounce 避免拖一次框打十幾次 API
+let ppSaveTimer = null;
+function ppSaveSoon() {
+    const hint = document.getElementById('ppSaveHint');
+    if (hint) hint.textContent = '儲存中…';
+    clearTimeout(ppSaveTimer);
+    ppSaveTimer = setTimeout(async function () {
+        try {
+            await ppApi('/api/paper/' + ppPaper.id, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    title: document.getElementById('ppTitle').value.trim() || ppPaper.title,
+                    regions: ppPaper.regions || [],
+                    answerKey: ppPaper.answerKey || {},
+                }),
+            });
+            if (hint) hint.textContent = '已儲存';
+        } catch (e) {
+            if (hint) hint.textContent = '儲存失敗：' + e.message;
+        }
+    }, 600);
+}
+
+async function ppDetect() {
+    const status = document.getElementById('ppDetectStatus');
+    status.className = 'text-sm mt-2 text-gray-600';
+    status.textContent = '🤖 AI 正在讀這一頁…（大張的卷子要十幾秒）';
+    try {
+        const data = await ppApi('/api/paper/' + ppPaper.id + '/detect', {
+            method: 'POST',
+            body: JSON.stringify({ page: ppCurPage }),
+        });
+        // 只換這一頁的框，其他頁老師調好的不要被蓋掉
+        ppPaper.regions = (ppPaper.regions || []).filter(function (r) { return Number(r.page) !== Number(ppCurPage); });
+        ppPaper.regions = ppPaper.regions.concat(data.regions || []);
+        ppSaveSoon();
+        ppRenderStage();
+        status.className = 'text-sm mt-2 text-emerald-700 font-bold';
+        status.textContent = '✅ 抓到 ' + (data.regions || []).length + ' 個作答區，請確認位置有沒有跑掉，再手動調整。';
+    } catch (e) {
+        status.className = 'text-sm mt-2 text-red-600 font-bold';
+        status.textContent = '❌ ' + e.message + '（可以先用「自己加一個框」手動處理）';
+    }
+}
+
+async function ppPublish() {
+    const box = document.getElementById('ppPublishBox');
+    try {
+        await ppApi('/api/paper/' + ppPaper.id, {
+            method: 'PATCH',
+            body: JSON.stringify({
+                title: document.getElementById('ppTitle').value.trim() || ppPaper.title,
+                regions: ppPaper.regions || [],
+                answerKey: ppPaper.answerKey || {},
+                status: 'published',
+            }),
+        });
+        const link = location.origin + location.pathname + '?paper=' + ppPaper.id;
+        try { await navigator.clipboard.writeText(link); } catch (e) {}
+        box.innerHTML = "<div class='text-emerald-700 font-bold'>✅ 連結已複製，貼到班級群組即可</div>" +
+            "<input class='pp-in w-full mt-1' readonly value='" + escapeHtml(link) + "' onclick='this.select()'>";
+    } catch (e) {
+        box.innerHTML = "<div class='text-red-600 font-bold'>❌ " + escapeHtml(e.message) + "</div>";
+    }
+}
+
+function ppOpenGrading() {
+    if (!ppPaper || !ppPaper.id) { alert('請先上傳卷子'); return; }
+    ppShow('paperGradeView');
+    document.getElementById('ppGradeTitle').textContent = document.getElementById('ppTitle').value || ppPaper.title;
+    ppLoadSubmissions();
+}
+
+// ============ 學生：在原卷上作答 ============
+function ppStuInit() {
+    ppShow('paperStudentView');
+    document.getElementById('ppStuHeader').innerHTML =
+        "<div class='font-bold text-lg'>" + escapeHtml(ppPaper.title) + "</div>" +
+        "<div class='text-sm text-gray-600'>共 " + ppPaper.pageCount + " 頁、" + (ppPaper.regions || []).length + " 題</div>";
+    const me = (function () { try { return JSON.parse(localStorage.getItem('lun_user') || 'null'); } catch (e) { return null; } })();
+    if (me && me.displayName) {
+        document.getElementById('ppStuName').value = me.displayName;
+        if (me.className) document.getElementById('ppStuClass').value = me.className;
+    }
+    document.getElementById('ppStuInfo').classList.remove('hidden');
+}
+
+function ppStuStart() {
+    if (!document.getElementById('ppStuName').value.trim()) { alert('請填姓名，老師才知道這份是誰寫的'); return; }
+    document.getElementById('ppStuInfo').classList.add('hidden');
+    document.getElementById('ppStuBody').classList.remove('hidden');
+    ppStuRenderStages();
+}
+
+function ppStuRenderStages() {
+    let html = '';
+    for (let p = 1; p <= ppPaper.pageCount; p++) {
+        let overlay = '';
+        ppRegionsOfPage(p).forEach(function (r) {
+            const style = "left:" + (r.x * 100) + "%;top:" + (r.y * 100) + "%;width:" + (r.w * 100) + "%;height:" + (r.h * 100) + "%";
+            if (r.type === 'choice') {
+                const opts = (r.options && r.options.length) ? r.options : ['A', 'B', 'C', 'D'];
+                let btns = '';
+                opts.forEach(function (o) {
+                    btns += "<span class='pp-opt' data-region='" + escapeHtml(r.id) + "' data-val='" + escapeHtml(o) +
+                        "' onclick=\"ppStuPick('" + r.id + "','" + o + "')\">" + escapeHtml(o) + "</span>";
+                });
+                overlay += "<div class='pp-ans' style='" + style + "'>" + btns + "</div>";
+            } else if (r.type === 'fill') {
+                overlay += "<div class='pp-ans' style='" + style + "'><input class='pp-fillbox' data-region='" + escapeHtml(r.id) +
+                    "' placeholder='第" + escapeHtml(r.no) + "題' oninput=\"ppStuType('" + r.id + "',this.value)\"></div>";
+            } else {
+                overlay += "<div class='pp-ans pp-region pp-hand' style='" + style + "'>" +
+                    "<canvas class='pp-handcanvas' data-region='" + escapeHtml(r.id) + "'></canvas></div>";
+            }
+        });
+        html += "<div class='pp-stage'><img src='" + ppPageUrl(p) + "' alt='卷子第 " + p + " 頁'>" + overlay + "</div>";
+    }
+    const hasHand = (ppPaper.regions || []).some(function (r) { return r.type === 'hand'; });
+    document.getElementById('ppStuStages').innerHTML =
+        (hasHand ? "<div class='pp-card sticky top-[64px] z-10 flex flex-wrap gap-2 items-center'>" +
+            "<span class='text-sm font-bold'>手寫工具</span>" +
+            "<button class='pp-tool on' id='ppToolPen' onclick=\"ppSetTool('pen')\">✏️ 筆</button>" +
+            "<button class='pp-tool' id='ppToolMark' onclick=\"ppSetTool('mark')\">🖍️ 螢光筆</button>" +
+            "<button class='pp-tool' id='ppToolEraser' onclick=\"ppSetTool('eraser')\">🧽 橡皮擦</button>" +
+            "<button class='pp-tool' onclick='ppUndo()'>↩️ 復原</button></div>" : '') + html;
+    setTimeout(ppInitHandCanvases, 60);
+}
+
+function ppStuPick(regionId, val) {
+    ppStuAnswers[regionId] = { v: val };
+    document.querySelectorAll(".pp-opt[data-region='" + regionId + "']").forEach(function (el) {
+        el.classList.toggle('on', el.dataset.val === val);
+    });
+}
+
+function ppStuType(regionId, val) {
+    ppStuAnswers[regionId] = { v: val };
+}
+
+function ppSetTool(t) {
+    ppTool = t;
+    ['pen', 'mark', 'eraser'].forEach(function (k) {
+        const el = document.getElementById('ppTool' + (k === 'pen' ? 'Pen' : k === 'mark' ? 'Mark' : 'Eraser'));
+        if (el) el.classList.toggle('on', k === t);
+    });
+}
+
+// 手寫畫布：每個手寫作答區一張透明畫布，疊在原卷影像上。
+// 畫布尺寸用該區在畫面上的實際像素，送出時再合成「原卷該區 + 學生筆跡」給 AI 看得懂上下文。
+let ppStrokes = {}; // { regionId: [ [ {x,y}… ], … ] } 相對座標，重畫與復原都靠它
+function ppInitHandCanvases() {
+    document.querySelectorAll('.pp-handcanvas').forEach(function (canvas) {
+        const id = canvas.dataset.region;
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width) return;
+        canvas.width = Math.round(rect.width * 2);   // 2 倍解析度，手寫才不會糊
+        canvas.height = Math.round(rect.height * 2);
+        ppHandCanvases[id] = canvas;
+        ppStrokes[id] = ppStrokes[id] || [];
+        ppRedraw(id);
+
+        let drawing = false, cur = null;
+        const pos = function (e) {
+            const r = canvas.getBoundingClientRect();
+            return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
+        };
+        canvas.addEventListener('pointerdown', function (e) {
+            drawing = true;
+            cur = { tool: ppTool, pts: [pos(e)] };
+            ppStrokes[id].push(cur);
+            canvas.setPointerCapture(e.pointerId);
+            e.preventDefault();
+        });
+        canvas.addEventListener('pointermove', function (e) {
+            if (!drawing) return;
+            cur.pts.push(pos(e));
+            ppRedraw(id);
+            e.preventDefault();
+        });
+        const stop = function () { drawing = false; cur = null; };
+        canvas.addEventListener('pointerup', stop);
+        canvas.addEventListener('pointercancel', stop);
+    });
+}
+
+function ppRedraw(id) {
+    const canvas = ppHandCanvases[id];
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    (ppStrokes[id] || []).forEach(function (s) {
+        if (s.tool === 'eraser') {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+            ctx.lineWidth = 24;
+        } else if (s.tool === 'mark') {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = 'rgba(250,204,21,.45)';
+            ctx.lineWidth = 20;
+        } else {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = '#1d4ed8';
+            ctx.lineWidth = 4;
+        }
+        ctx.beginPath();
+        s.pts.forEach(function (p, i) {
+            const x = p.x * canvas.width, y = p.y * canvas.height;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    });
+    ctx.globalCompositeOperation = 'source-over';
+}
+
+function ppUndo() {
+    // 復原最後一筆（不分是哪一題，就是「上一步」）
+    let latestId = null, latestLen = 0;
+    Object.keys(ppStrokes).forEach(function (id) {
+        if (ppStrokes[id].length > latestLen) { latestLen = ppStrokes[id].length; latestId = id; }
+    });
+    if (!latestId) return;
+    ppStrokes[latestId].pop();
+    ppRedraw(latestId);
+}
+
+// 把「原卷該區的畫面」跟「學生筆跡」合成一張圖再送出，AI 批改時才看得到題目在問什麼
+async function ppComposeHand(region) {
+    const canvas = ppHandCanvases[region.id];
+    if (!canvas) return null;
+    if (!(ppStrokes[region.id] || []).length) return null;
+    const src = await ppLoadImage(ppPageUrl(region.page) + '?cb=1');
+    const out = document.createElement('canvas');
+    out.width = canvas.width;
+    out.height = canvas.height;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(src, region.x * src.naturalWidth, region.y * src.naturalHeight,
+        region.w * src.naturalWidth, region.h * src.naturalHeight, 0, 0, out.width, out.height);
+    ctx.drawImage(canvas, 0, 0);
+    return out.toDataURL('image/png');
+}
+
+async function ppStuSubmit() {
+    const btnText = '✅ 送出答案';
+    const body = document.getElementById('ppStuBody');
+    const btn = body.querySelector('button');
+    btn.disabled = true;
+    btn.textContent = '送出中…';
+    try {
+        const answers = {};
+        Object.keys(ppStuAnswers).forEach(function (k) { answers[k] = ppStuAnswers[k]; });
+        for (const r of (ppPaper.regions || [])) {
+            if (r.type !== 'hand') continue;
+            const img = await ppComposeHand(r);
+            if (img) answers[r.id] = { img: img };
+        }
+        const data = await ppApi('/api/paper/' + ppPaper.id + '/submit', {
+            method: 'POST',
+            body: JSON.stringify({
+                studentId: getClientId(),
+                grade: document.getElementById('ppStuGrade').value.trim(),
+                className: document.getElementById('ppStuClass').value.trim(),
+                seat: document.getElementById('ppStuSeat').value.trim(),
+                name: document.getElementById('ppStuName').value.trim(),
+                answers: answers,
+            }),
+        });
+        body.classList.add('hidden');
+        const result = document.getElementById('ppStuResult');
+        result.classList.remove('hidden');
+        result.innerHTML = "<div class='text-2xl font-bold text-emerald-700 mb-2'>已送出！</div>" +
+            "<div class='text-lg'>自動判分：" + data.score + " / " + data.maxScore + " 分</div>" +
+            (data.pending
+                ? "<div class='text-sm text-amber-700 mt-2'>手寫的題目要等老師批改，這還不是最後分數。</div>"
+                : "<div class='text-sm text-gray-600 mt-2'>老師確認後就是最後分數。</div>");
+        window.scrollTo(0, 0);
+    } catch (e) {
+        alert('送出失敗：' + e.message);
+        btn.disabled = false;
+        btn.textContent = btnText;
+    }
+}
+
+// ============ 老師：批改台 ============
+async function ppLoadSubmissions() {
+    const list = document.getElementById('ppSubList');
+    list.innerHTML = '載入中…';
+    try {
+        const data = await ppApi('/api/paper/' + ppPaper.id + '/submissions');
+        const subs = data.submissions || [];
+        if (!subs.length) { list.innerHTML = "<div class='text-gray-500'>還沒有學生送出。</div>"; return; }
+        let html = '';
+        subs.forEach(function (s) {
+            html += "<button class='w-full text-left border rounded-lg p-2 mb-1 hover:bg-emerald-50 " +
+                (s.status === 'graded' ? 'border-emerald-300' : 'border-gray-200') + "' onclick=\"ppOpenSub('" + s.student_id + "')\">" +
+                "<div class='font-bold'>" + escapeHtml(s.seat ? s.seat + '號 ' : '') + escapeHtml(s.name || '(未填姓名)') + "</div>" +
+                "<div class='text-xs text-gray-500'>" + (s.score == null ? '—' : s.score) + " / " + s.max_score +
+                (s.status === 'graded' ? ' ・已批改' : ' ・待批改') + "</div></button>";
+        });
+        list.innerHTML = html;
+    } catch (e) {
+        list.innerHTML = "<div class='text-red-600'>" + escapeHtml(e.message) + "</div>";
+    }
+}
+
+async function ppOpenSub(studentId) {
+    const box = document.getElementById('ppGradeBody');
+    box.innerHTML = '載入中…';
+    try {
+        ppGradeSub = await ppApi('/api/paper/' + ppPaper.id + '/submission/' + encodeURIComponent(studentId));
+        ppRenderGrade();
+    } catch (e) {
+        box.innerHTML = "<div class='text-red-600'>" + escapeHtml(e.message) + "</div>";
+    }
+}
+
+function ppRenderGrade() {
+    const s = ppGradeSub;
+    const key = ppPaper.answerKey || {};
+    let html = "<div class='flex flex-wrap items-center gap-2 mb-3'>" +
+        "<div class='font-bold text-lg'>" + escapeHtml(s.seat ? s.seat + '號 ' : '') + escapeHtml(s.name || '(未填姓名)') + "</div>" +
+        "<div class='text-sm text-gray-500'>目前 " + (s.score == null ? '—' : s.score) + " / " + s.maxScore + " 分</div>" +
+        "<button class='pp-btn pp-btn-ghost ml-auto' onclick='ppAiGrade()'>🤖 AI 協助批改手寫題</button>" +
+        "<button class='pp-btn pp-btn-main' onclick='ppSaveGrade()'>💾 儲存批改</button></div>" +
+        "<div id='ppAiStatus' class='text-sm mb-2'></div>";
+
+    (ppPaper.regions || []).forEach(function (r) {
+        const a = s.answers[r.id];
+        const auto = s.auto[r.id];
+        const ai = s.ai[r.id];
+        const t = s.teacher[r.id] || {};
+        html += "<div class='border rounded-lg p-3 mb-2'>" +
+            "<div class='font-bold mb-1'>第 " + escapeHtml(r.no) + " 題（滿分 " + (r.score || 0) + "）</div>";
+
+        if (r.type === 'hand') {
+            html += a && a.img
+                ? "<img class='max-w-full border rounded mb-2' src='" + API_BASE + '/api/paper/' + ppPaper.id + '/hand/' +
+                  encodeURIComponent(s.studentId) + '/' + encodeURIComponent(r.id) + "' alt='學生手寫'>"
+                : "<div class='text-gray-400 mb-2'>沒有作答</div>";
+            if (ai) {
+                html += "<div class='text-sm bg-indigo-50 border border-indigo-200 rounded p-2 mb-2'>" +
+                    "🤖 AI 建議 <b>" + ai.score + " 分</b>：" + escapeHtml(ai.comment) +
+                    " <button class='pp-tool' onclick=\"ppUseAi('" + r.id + "')\">採用</button></div>";
+            }
+        } else {
+            const got = a ? (a.v || '') : '';
+            html += "<div class='text-sm mb-2'>學生答：<b>" + escapeHtml(got || '（空白）') + "</b>" +
+                (key[r.id] ? "　正解：<b>" + escapeHtml(key[r.id]) + "</b>" : '') +
+                (auto ? (auto.ok === 1 ? " <span class='text-emerald-600 font-bold'>✅ 自動判對</span>" : " <span class='text-red-600 font-bold'>❌ 自動判錯</span>") : '') +
+                "</div>";
+        }
+
+        html += "<div class='flex flex-wrap gap-2 items-center'>" +
+            "<label class='text-sm'>給分</label>" +
+            "<input class='pp-in w-20' type='number' min='0' max='" + (r.score || 0) + "' id='ppScore_" + r.id + "' value='" +
+            (t.score !== undefined ? t.score : (auto ? (auto.ok === 1 ? (r.score || 0) : 0) : '')) + "'>" +
+            "<input class='pp-in flex-1 min-w-[160px]' id='ppComment_" + r.id + "' placeholder='給學生的話（選填）' value='" +
+            escapeHtml(t.comment || (ai ? ai.comment : '')) + "'>" +
+            "</div></div>";
+    });
+
+    document.getElementById('ppGradeBody').innerHTML = html;
+}
+
+function ppUseAi(regionId) {
+    const ai = ppGradeSub.ai[regionId];
+    if (!ai) return;
+    document.getElementById('ppScore_' + regionId).value = ai.score;
+    document.getElementById('ppComment_' + regionId).value = ai.comment;
+}
+
+async function ppAiGrade() {
+    const status = document.getElementById('ppAiStatus');
+    status.className = 'text-sm mb-2 text-gray-600';
+    status.textContent = '🤖 AI 正在讀這位學生的手寫作答…';
+    try {
+        const data = await ppApi('/api/paper/' + ppPaper.id + '/submission/' + encodeURIComponent(ppGradeSub.studentId) + '/ai-grade', { method: 'POST' });
+        ppGradeSub.ai = data.ai || {};
+        ppRenderGrade();
+        document.getElementById('ppAiStatus').className = 'text-sm mb-2 text-emerald-700 font-bold';
+        document.getElementById('ppAiStatus').textContent = '✅ AI 給了建議分數，確認沒問題再按「採用」，最後要按儲存才算數。';
+    } catch (e) {
+        status.className = 'text-sm mb-2 text-red-600 font-bold';
+        status.textContent = '❌ ' + e.message;
+    }
+}
+
+async function ppSaveGrade() {
+    const teacher = {};
+    (ppPaper.regions || []).forEach(function (r) {
+        const sEl = document.getElementById('ppScore_' + r.id);
+        const cEl = document.getElementById('ppComment_' + r.id);
+        if (!sEl) return;
+        if (sEl.value !== '' || (cEl && cEl.value)) {
+            teacher[r.id] = { score: sEl.value === '' ? 0 : Number(sEl.value), comment: cEl ? cEl.value : '' };
+        }
+    });
+    try {
+        const data = await ppApi('/api/paper/' + ppPaper.id + '/submission/' + encodeURIComponent(ppGradeSub.studentId), {
+            method: 'PATCH',
+            body: JSON.stringify({ teacher: teacher, status: 'graded' }),
+        });
+        ppGradeSub.teacher = teacher;
+        ppGradeSub.score = data.score;
+        ppGradeSub.status = 'graded';
+        ppRenderGrade();
+        ppLoadSubmissions();
+    } catch (e) {
+        alert('儲存失敗：' + e.message);
+    }
+}
+</script>
+
 </body>
 </html>
