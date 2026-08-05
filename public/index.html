@@ -4553,8 +4553,11 @@
      刻意做成獨立的三個畫面 + 獨立的 script，跟原本的出題流程互不干擾。 -->
 <style>
   /* 卷面容器：所有作答區都用百分比定位在影像上，換螢幕寬度不用重算座標 */
+  /* 作答控制項的尺寸一律用 em，跟著卷面寬度縮放：卷子在手機上本來就縮小了，
+     選項按鈕若維持固定 34px，就會脹得比作答框還大、壓到下一題（實測踩過） */
   .pp-stage { position: relative; display: block; width: 100%; margin: 0 auto 18px; background: #fff;
-              box-shadow: 0 2px 10px rgba(0,0,0,.12); border-radius: 6px; overflow: hidden; touch-action: manipulation; }
+              box-shadow: 0 2px 10px rgba(0,0,0,.12); border-radius: 6px; overflow: hidden;
+              touch-action: manipulation; font-size: clamp(9px, 2.4vw, 15px); }
   .pp-stage > img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
   .pp-region { position: absolute; box-sizing: border-box; border: 2px solid #10b981;
                background: rgba(16,185,129,.10); border-radius: 4px; }
@@ -4568,13 +4571,14 @@
   .pp-region .pp-grip { position: absolute; right: -7px; bottom: -7px; width: 16px; height: 16px;
                         background: #fff; border: 2px solid #ef4444; border-radius: 50%; cursor: nwse-resize; touch-action: none; }
   /* 學生端：作答控制項疊在框裡 */
-  .pp-ans { position: absolute; box-sizing: border-box; }
-  .pp-opt { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px;
-            margin: 2px; padding: 0 8px; border: 2px solid #cbd5e1; border-radius: 8px; background: #fff;
-            font-weight: 700; color: #334155; cursor: pointer; font-size: 15px; }
+  .pp-ans { position: absolute; box-sizing: border-box; display: flex; align-items: center; flex-wrap: wrap; }
+  .pp-opt { display: inline-flex; align-items: center; justify-content: center; min-width: 2.2em; height: 2.2em;
+            margin: .1em; padding: 0 .4em; border: 2px solid #cbd5e1; border-radius: .5em; background: #fff;
+            font-weight: 700; color: #334155; cursor: pointer; font-size: 1em; line-height: 1; }
   .pp-opt.on { background: #10b981; border-color: #059669; color: #fff; }
-  .pp-fillbox { width: 100%; height: 100%; min-height: 34px; border: 2px solid #f59e0b; border-radius: 6px;
-                background: rgba(255,255,255,.92); padding: 4px 8px; font-size: 15px; }
+  .pp-fillbox { box-sizing: border-box; width: 100%; height: 100%; min-height: 2em;
+                border: 2px solid #f59e0b; border-radius: .4em;
+                background: rgba(255,255,255,.92); padding: .2em .5em; font-size: 1em; }
   .pp-handcanvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
   .pp-tool { padding: 6px 10px; border: 2px solid #e5e7eb; border-radius: 8px; background: #fff;
              font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; }
@@ -4658,7 +4662,7 @@
     </div>
     <div id="ppStuBody" class="hidden">
       <div id="ppStuStages"></div>
-      <button class="pp-btn pp-btn-main w-full my-4" onclick="ppStuSubmit()">✅ 送出答案</button>
+      <button id="ppStuSubmitBtn" class="pp-btn pp-btn-main w-full my-4" onclick="ppStuSubmit()">✅ 送出答案</button>
     </div>
     <div id="ppStuResult" class="hidden pp-card"></div>
   </div>
@@ -5127,7 +5131,7 @@ function ppStuStart() {
     ppStuRenderStages();
 }
 
-function ppStuRenderStages() {
+async function ppStuRenderStages() {
     let html = '';
     for (let p = 1; p <= ppPaper.pageCount; p++) {
         let overlay = '';
@@ -5159,7 +5163,18 @@ function ppStuRenderStages() {
             "<button class='pp-tool' id='ppToolMark' onclick=\"ppSetTool('mark')\">🖍️ 螢光筆</button>" +
             "<button class='pp-tool' id='ppToolEraser' onclick=\"ppSetTool('eraser')\">🧽 橡皮擦</button>" +
             "<button class='pp-tool' onclick='ppUndo()'>↩️ 復原</button></div>" : '') + html;
-    setTimeout(ppInitHandCanvases, 60);
+    // 一定要等卷面影像載完再算手寫畫布尺寸：圖片還沒載入時 <img> 高度是 0，
+    // 疊在上面的作答區跟著變成高度 0，畫布會建成 0 px，送出時合成手寫圖就整個炸掉
+    await ppWaitImages(document.getElementById('ppStuStages'));
+    ppInitHandCanvases();
+}
+
+function ppWaitImages(container) {
+    const imgs = Array.from(container.querySelectorAll('img'));
+    return Promise.all(imgs.map(function (im) {
+        if (im.complete && im.naturalHeight) return Promise.resolve();
+        return new Promise(function (resolve) { im.onload = resolve; im.onerror = resolve; });
+    }));
 }
 
 function ppStuPick(regionId, val) {
@@ -5188,12 +5203,16 @@ function ppInitHandCanvases() {
     document.querySelectorAll('.pp-handcanvas').forEach(function (canvas) {
         const id = canvas.dataset.region;
         const rect = canvas.getBoundingClientRect();
-        if (!rect.width) return;
+        if (!rect.width || !rect.height) return;
         canvas.width = Math.round(rect.width * 2);   // 2 倍解析度，手寫才不會糊
         canvas.height = Math.round(rect.height * 2);
         ppHandCanvases[id] = canvas;
         ppStrokes[id] = ppStrokes[id] || [];
         ppRedraw(id);
+
+        // 筆跡存的是相對座標，所以轉螢幕方向／改視窗大小只要重新配置尺寸再重畫就好
+        if (canvas.dataset.bound === '1') return;
+        canvas.dataset.bound = '1';
 
         let drawing = false, cur = null;
         const pos = function (e) {
@@ -5250,6 +5269,14 @@ function ppRedraw(id) {
     ctx.globalCompositeOperation = 'source-over';
 }
 
+// 轉螢幕方向或改視窗大小後，畫布的 CSS 尺寸變了但內部像素沒變，筆跡會歪掉，重新配置一次
+let ppResizeTimer = null;
+window.addEventListener('resize', function () {
+    if (!document.getElementById('ppStuBody') || document.getElementById('ppStuBody').classList.contains('hidden')) return;
+    clearTimeout(ppResizeTimer);
+    ppResizeTimer = setTimeout(ppInitHandCanvases, 200);
+});
+
 function ppUndo() {
     // 復原最後一筆（不分是哪一題，就是「上一步」）
     let latestId = null, latestLen = 0;
@@ -5282,7 +5309,9 @@ async function ppComposeHand(region) {
 async function ppStuSubmit() {
     const btnText = '✅ 送出答案';
     const body = document.getElementById('ppStuBody');
-    const btn = body.querySelector('button');
+    // 一定要指名送出鈕：#ppStuBody 裡排在最前面的是手寫工具列那幾顆，
+    // 用 querySelector('button') 會抓到「筆」，變成把筆停用、送出鈕原封不動
+    const btn = document.getElementById('ppStuSubmitBtn');
     btn.disabled = true;
     btn.textContent = '送出中…';
     try {
